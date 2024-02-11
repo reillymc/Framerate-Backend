@@ -1,0 +1,13 @@
+// README at: https://github.com/devcontainers/templates/tree/main/src/rust-postgres
+{
+    "name": "Untitled Movie TV App Backend",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "postCreateCommand": "cargo install cargo-watch && cargo install diesel_cli --no-default-features --features postgres && rustc --version",
+    "customizations": {
+        "vscode": {
+            "extensions": ["mtxr.sqltools", "mtxr.sqltools-driver-pg"]
+        }
+    }
+}
