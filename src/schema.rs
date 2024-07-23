@@ -1,17 +1,27 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    ratings (rating_id) {
-        rating_id -> Uuid,
+    review_company (review_id, user_id) {
+        review_id -> Uuid,
         user_id -> Uuid,
-        movie_id -> Int4,
-        movie_title -> Text,
-        movie_poster_uri -> Text,
-        movie_release_year -> Int2,
-        date -> Date,
-        value -> Int2,
+    }
+}
+
+diesel::table! {
+    reviews (review_id) {
+        review_id -> Uuid,
+        user_id -> Uuid,
+        media_id -> Int4,
+        imdb_id -> Nullable<Text>,
+        media_type -> Text,
+        media_title -> Text,
+        media_poster_uri -> Nullable<Text>,
+        media_release_year -> Int2,
+        date -> Nullable<Date>,
+        rating -> Int2,
         review_title -> Nullable<Text>,
         review_description -> Nullable<Text>,
+        venue -> Nullable<Text>,
     }
 }
 
@@ -28,9 +38,12 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(ratings -> users (user_id));
+diesel::joinable!(review_company -> reviews (review_id));
+diesel::joinable!(review_company -> users (user_id));
+diesel::joinable!(reviews -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    ratings,
+    review_company,
+    reviews,
     users,
 );

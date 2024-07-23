@@ -10,7 +10,7 @@ use std::env;
 
 mod db;
 mod error_handler;
-mod rating;
+mod review;
 mod routes;
 mod schema;
 mod user;
@@ -23,7 +23,11 @@ async fn main() -> std::io::Result<()> {
     // connection.run_pending_migrations(MIGRATIONS);
 
     let mut listenfd = ListenFd::from_env();
-    let mut server = HttpServer::new(|| App::new().configure(routes::init_routes));
+    let mut server = HttpServer::new(|| {
+        App::new()
+            .wrap(actix_cors::Cors::permissive())
+            .configure(routes::init_routes)
+    });
 
     server = match listenfd.take_tcp_listener(0)? {
         Some(listener) => server.listen(listener)?,
@@ -36,7 +40,7 @@ async fn main() -> std::io::Result<()> {
 
     // log ip to console
     println!(
-        "Server running at http:// {}:{}",
+        "Server running at http://{}:{}",
         env::var("HOST").unwrap(),
         env::var("PORT").unwrap()
     );

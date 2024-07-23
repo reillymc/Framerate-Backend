@@ -9,9 +9,9 @@
             "request": "launch",
             "name": "Debug",
             "cargo": {
-                "args": ["build", "--bin=ratingapi", "--package=ratingapi"],
+                "args": ["build", "--bin=reviewapi", "--package=reviewapi"],
                 "filter": {
-                    "name": "ratingapi",
+                    "name": "reviewapi",
                     "kind": "bin"
                 }
             },

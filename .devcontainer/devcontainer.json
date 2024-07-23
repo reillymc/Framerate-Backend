@@ -9,5 +9,6 @@
         "vscode": {
             "extensions": ["mtxr.sqltools", "mtxr.sqltools-driver-pg"]
         }
-    }
+    },
+    "forwardPorts": [3000, 5432]
 }

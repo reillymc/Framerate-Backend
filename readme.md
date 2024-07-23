@@ -1,4 +1,4 @@
-# Untitled Movie / TV Rating App Backend
+# Untitled Movie / TV Review App Backend
 
 ## Requirements
 
