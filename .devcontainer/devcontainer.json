@@ -1,6 +1,6 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/rust-postgres
 {
-    "name": "Untitled Movie TV App Backend",
+    "name": "Framerate Backend",
     "dockerComposeFile": "docker-compose.yml",
     "service": "app",
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",

@@ -9,9 +9,9 @@
             "request": "launch",
             "name": "Debug",
             "cargo": {
-                "args": ["build", "--bin=reviewapi", "--package=reviewapi"],
+                "args": ["build", "--bin=framerate", "--package=framerate"],
                 "filter": {
-                    "name": "reviewapi",
+                    "name": "framerate",
                     "kind": "bin"
                 }
             },

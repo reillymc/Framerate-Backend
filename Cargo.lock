@@ -646,6 +646,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "framerate"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-rt",
+ "actix-web",
+ "chrono",
+ "diesel",
+ "diesel_migrations",
+ "dotenvy",
+ "env_logger",
+ "lazy_static",
+ "listenfd",
+ "r2d2",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "futures-core"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1140,26 +1160,6 @@ name = "regex-syntax"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
-
-[[package]]
-name = "reviewapi"
-version = "0.1.0"
-dependencies = [
- "actix-cors",
- "actix-rt",
- "actix-web",
- "chrono",
- "diesel",
- "diesel_migrations",
- "dotenvy",
- "env_logger",
- "lazy_static",
- "listenfd",
- "r2d2",
- "serde",
- "serde_json",
- "uuid",
-]
 
 [[package]]
 name = "rustc-demangle"
