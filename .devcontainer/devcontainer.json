@@ -1,7 +1,7 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/rust-postgres
 {
     "name": "Framerate Backend",
-    "dockerComposeFile": "docker-compose.yml",
+    "dockerComposeFile": "compose.yml",
     "service": "app",
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
     "postCreateCommand": "cargo install cargo-watch && cargo install diesel_cli --no-default-features --features postgres && rustc --version",

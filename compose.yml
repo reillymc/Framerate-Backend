@@ -1,0 +1,30 @@
+services:
+    framerate-backend:
+        image: framerate-backend:latest
+        container_name: framerate-backend
+        depends_on:
+            - db
+        build: .
+        restart: unless-stopped
+        env_file: .env
+        ports:
+            - $PORT:$PORT
+        networks:
+            - framerate-network
+
+    db:
+        image: postgres:14.1
+        restart: unless-stopped
+        env_file: .env
+        volumes:
+            - db:/var/lib/postgresql/data
+        networks:
+            - framerate-network
+        ports:
+            - "5432:5432"
+
+volumes:
+    db:
+
+networks:
+    framerate-network: {}
