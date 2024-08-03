@@ -1,5 +1,5 @@
 use crate::{db::establish_connection, error_handler::CustomError, schema::users};
-use chrono::NaiveDate;
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -8,15 +8,19 @@ use uuid::Uuid;
 #[diesel(table_name = users)]
 pub struct User {
     pub user_id: Uuid,
+    pub email: String,
+    pub password: String,
     pub first_name: String,
     pub last_name: String,
-    pub email: String,
     pub avatar_uri: Option<String>,
-    pub date_created: NaiveDate,
+    pub date_created: NaiveDateTime,
     pub permission_level: i16,
     pub public: bool,
 }
 
+pub fn placeholder_user() -> Uuid {
+    Uuid::parse_str("82986e28-47e7-4fb4-9c48-986f6e8715b4").unwrap_or_else(|_| Uuid::nil())
+}
 impl User {
     pub fn find(user_id: Uuid) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();

@@ -1,8 +1,8 @@
-use crate::db::establish_connection;
 use crate::error_handler::CustomError;
 use crate::schema::reviews;
 use crate::user;
-use chrono::{DateTime, NaiveDate, Utc};
+use crate::{db::establish_connection, user::placeholder_user};
+use chrono::NaiveDate;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -34,6 +34,7 @@ pub struct ReviewSummary {
     pub user_id: Uuid,
     pub media_id: i32,
     pub media_title: String,
+    pub media_type: String,
     pub media_poster_uri: Option<String>,
     pub media_release_year: i16,
     pub date: Option<NaiveDate>,
@@ -51,7 +52,7 @@ pub struct NewReview {
     pub media_title: String,
     pub media_poster_uri: Option<String>,
     pub media_release_year: i16,
-    pub date: Option<DateTime<Utc>>,
+    pub date: Option<NaiveDate>,
     pub rating: i16,
     pub review_title: Option<String>,
     pub review_description: Option<String>,
@@ -59,25 +60,6 @@ pub struct NewReview {
 }
 
 impl Review {
-    pub fn find_all() -> Result<Vec<ReviewSummary>, CustomError> {
-        let connection = &mut establish_connection();
-        let reviews = reviews::table
-            .select((
-                reviews::review_id,
-                reviews::user_id,
-                reviews::media_id,
-                reviews::media_title,
-                reviews::media_poster_uri,
-                reviews::media_release_year,
-                reviews::date,
-                reviews::rating,
-                reviews::review_title,
-            ))
-            .load::<ReviewSummary>(connection)
-            .expect("Error loading reviews");
-        Ok(reviews)
-    }
-
     pub fn find(review_id: Uuid) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
         let reviews = reviews::table
@@ -88,12 +70,23 @@ impl Review {
         Ok(reviews)
     }
 
-    pub fn find_by_user(user_id: Uuid) -> Result<Vec<Self>, CustomError> {
+    pub fn find_by_user(user_id: Uuid) -> Result<Vec<ReviewSummary>, CustomError> {
         let connection = &mut establish_connection();
         let reviews = reviews::table
             .filter(reviews::user_id.eq(user_id))
             .order(reviews::date.desc())
-            .select(Review::as_select())
+            .select((
+                reviews::review_id,
+                reviews::user_id,
+                reviews::media_id,
+                reviews::media_title,
+                reviews::media_type,
+                reviews::media_poster_uri,
+                reviews::media_release_year,
+                reviews::date,
+                reviews::rating,
+                reviews::review_title,
+            ))
             .load(connection)
             .expect("Error loading reviews");
         Ok(reviews)
@@ -125,14 +118,14 @@ impl Review {
     pub fn create(review: NewReview) -> Result<Self, CustomError> {
         let review_to_save = Review {
             review_id: Uuid::new_v4(),
-            user_id: Uuid::parse_str("82986e28-47e7-4fb4-9c48-986f6e8715b4").unwrap_or_default(),
+            user_id: placeholder_user(),
             media_id: review.media_id,
             imdb_id: review.imdb_id,
             media_type: review.media_type,
             media_title: review.media_title,
             media_poster_uri: review.media_poster_uri,
             media_release_year: review.media_release_year,
-            date: Some(review.date.unwrap().date_naive()), // Unsafe, revisit and provide a default date
+            date: review.date,
             rating: review.rating,
             review_title: review.review_title,
             review_description: review.review_description,
@@ -147,11 +140,27 @@ impl Review {
         Ok(new_review)
     }
 
-    pub fn update(id: Uuid, review: Review) -> Result<Self, CustomError> {
+    pub fn update(id: Uuid, review: NewReview) -> Result<Self, CustomError> {
+        let review_to_save = Review {
+            review_id: id,
+            user_id: placeholder_user(),
+            media_id: review.media_id,
+            imdb_id: review.imdb_id,
+            media_type: review.media_type,
+            media_title: review.media_title,
+            media_poster_uri: review.media_poster_uri,
+            media_release_year: review.media_release_year,
+            date: review.date,
+            rating: review.rating,
+            review_title: review.review_title,
+            review_description: review.review_description,
+            venue: review.venue,
+        };
+
         let connection = &mut establish_connection();
         let updated_review = diesel::update(reviews::table)
             .filter(reviews::review_id.eq(id))
-            .set(review)
+            .set(review_to_save)
             .get_result(connection)
             .expect("Error updating review");
         Ok(updated_review)
@@ -165,10 +174,3 @@ impl Review {
         Ok(res)
     }
 }
-
-// impl NewReview {
-//     /// Constructs new user details from name.
-//     pub fn new(name: impl Into<String>) -> Self {
-//         Self { name: name.into() }
-//     }
-// }

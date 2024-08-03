@@ -1,5 +1,6 @@
 use crate::error_handler::CustomError;
-use actix_web::{get, post, web, HttpResponse};
+use crate::user::placeholder_user;
+use actix_web::{get, post, put, web, HttpResponse};
 use uuid::Uuid;
 
 use super::NewReview;
@@ -19,12 +20,22 @@ async fn find_by_media(media_id: web::Path<i32>) -> Result<HttpResponse, CustomE
 
 #[get("/reviews")]
 async fn find_all() -> Result<HttpResponse, CustomError> {
-    let reviews = Review::find_all()?;
+    let user_id = placeholder_user();
+    let reviews = Review::find_by_user(user_id)?;
     Ok(HttpResponse::Ok().json(reviews))
 }
 
 #[post("/reviews")]
 async fn create(review: web::Json<NewReview>) -> Result<HttpResponse, CustomError> {
     let review = Review::create(review.into_inner())?;
+    Ok(HttpResponse::Ok().json(review))
+}
+
+#[put("/reviews/{review_id}")]
+async fn update(
+    review: web::Json<NewReview>,
+    review_id: web::Path<Uuid>,
+) -> Result<HttpResponse, CustomError> {
+    let review = Review::update(review_id.into_inner(), review.into_inner())?;
     Ok(HttpResponse::Ok().json(review))
 }
