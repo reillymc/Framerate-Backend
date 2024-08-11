@@ -74,7 +74,7 @@ impl Review {
         let connection = &mut establish_connection();
         let reviews = reviews::table
             .filter(reviews::user_id.eq(user_id))
-            .order(reviews::date.desc())
+            .order(reviews::date.desc().nulls_last())
             .select((
                 reviews::review_id,
                 reviews::user_id,
@@ -96,7 +96,7 @@ impl Review {
         let connection = &mut establish_connection();
         let reviews = reviews::table
             .filter(reviews::media_id.eq(media_id))
-            .order(reviews::date.desc())
+            .order(reviews::date.desc().nulls_last())
             .select(Review::as_select())
             .load(connection)
             .expect("Error loading reviews");
@@ -108,7 +108,7 @@ impl Review {
         let reviews = reviews::table
             .filter(reviews::user_id.eq(user_id))
             .filter(reviews::media_id.eq(media_id))
-            .order(reviews::date.desc())
+            .order(reviews::date.desc().nulls_last())
             .select(Review::as_select())
             .load(connection)
             .expect("Error loading reviews");

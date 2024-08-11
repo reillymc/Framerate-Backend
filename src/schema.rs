@@ -36,6 +36,7 @@ diesel::table! {
         date_created -> Timestamp,
         permission_level -> Int2,
         public -> Bool,
+        configuration -> Jsonb,
     }
 }
 

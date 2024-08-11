@@ -10,11 +10,12 @@ actix-web = "4.5"
 actix-rt = "2.9"
 chrono = { version = "0.4", features = ["serde"] }
 diesel = { version = "2.1", features = [
-    "postgres",
-    "postgres_backend",
-    "r2d2",
-    "uuid",
     "chrono",
+    "postgres_backend",
+    "postgres",
+    "r2d2",
+    "serde_json",
+    "uuid",
 ] }
 dotenvy = "0.15"
 diesel_migrations = "2.1"
