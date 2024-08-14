@@ -36,23 +36,19 @@ impl Watchlist {
             )
             .first(connection);
 
-        let watchlist = match watchlist {
-            Ok(watchlist) => watchlist,
-            Err(_) => {
-                let name = match media_type.as_str() {
-                    "movie" => "Movie Watchlist",
-                    "show" => "TV Watchlist",
-                    _ => "Watchlist",
-                }
-                .to_string();
+        if let Ok(existing_watchlist) = watchlist {
+            return Ok(existing_watchlist);
+        }
 
-                let new_watchlist = NewWatchlist { name, media_type };
-                let watchlist = Watchlist::create(new_watchlist)?;
-                return Ok(watchlist);
-            }
-        };
+        let name = match media_type.as_str() {
+            "movie" => "Movie Watchlist",
+            "show" => "Shows Watchlist",
+            _ => "Watchlist",
+        }
+        .to_string();
 
-        Ok(watchlist)
+        let new_watchlist = Watchlist::create(NewWatchlist { name, media_type })?;
+        return Ok(new_watchlist);
     }
 
     pub fn find_by_user(user_id: Uuid) -> Result<Vec<Self>, CustomError> {

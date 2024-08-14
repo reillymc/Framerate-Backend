@@ -1,4 +1,5 @@
 use crate::error_handler::CustomError;
+use crate::review_company::ReviewCompanySummary;
 use crate::schema::reviews;
 use crate::user;
 use crate::{db::establish_connection, user::placeholder_user};
@@ -20,6 +21,7 @@ pub struct Review {
     pub media_title: String,
     pub media_poster_uri: Option<String>,
     pub media_release_year: i16,
+    #[diesel(treat_none_as_null = true)]
     pub date: Option<NaiveDate>,
     pub rating: i16,
     pub review_title: Option<String>,
@@ -42,7 +44,7 @@ pub struct ReviewSummary {
     pub review_title: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewReview {
     pub review_id: Option<Uuid>,
@@ -57,6 +59,7 @@ pub struct NewReview {
     pub review_title: Option<String>,
     pub review_description: Option<String>,
     pub venue: Option<String>,
+    pub company: Option<Vec<ReviewCompanySummary>>,
 }
 
 impl Review {

@@ -1,7 +1,6 @@
 use actix_web::web;
 
 use crate::review;
-use crate::review_company;
 use crate::user;
 use crate::watchlist;
 use crate::watchlist_entry;
@@ -24,7 +23,4 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(watchlist::find_all);
     config.service(watchlist::create);
     config.service(watchlist::update);
-    config.service(review_company::find_all);
-    config.service(review_company::create);
-    config.service(review_company::delete);
 }

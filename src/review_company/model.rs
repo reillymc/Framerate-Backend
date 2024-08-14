@@ -1,4 +1,6 @@
 use crate::error_handler::CustomError;
+use crate::schema::users;
+use crate::user::User;
 use crate::{db::establish_connection, schema::review_company};
 use crate::{review, user};
 use diesel::prelude::*;
@@ -15,41 +17,75 @@ pub struct ReviewCompany {
     pub user_id: Uuid,
 }
 
+#[derive(Serialize, Deserialize, AsChangeset, Associations, Selectable, Queryable, Clone)]
+#[diesel(belongs_to(user::User))]
+#[diesel(table_name = review_company)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewCompanySummary {
+    pub user_id: Uuid,
+}
+
+impl From<ReviewCompany> for ReviewCompanySummary {
+    fn from(review_company_summary: ReviewCompany) -> Self {
+        ReviewCompanySummary {
+            user_id: review_company_summary.user_id,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+
+pub struct ReviewCompanyDetails {
+    pub user_id: Uuid,
+    pub first_name: String,
+    pub last_name: String,
+}
+
 impl ReviewCompany {
-    pub fn find_all(review_id: Uuid) -> Result<Self, CustomError> {
+    pub fn find_by_review(review_id: Uuid) -> Result<Vec<ReviewCompanyDetails>, CustomError> {
         let connection = &mut establish_connection();
         let review_company = review_company::table
             .filter(review_company::review_id.eq(review_id))
-            .select(ReviewCompany::as_select())
-            .first(connection)
+            .inner_join(users::table)
+            .select((ReviewCompanySummary::as_select(), User::as_select()))
+            .load::<(ReviewCompanySummary, User)>(connection)
             .expect("Error loading reviews");
-        Ok(review_company)
+
+        let review_company_details: Vec<ReviewCompanyDetails> = review_company
+            .into_iter()
+            .map(|(review_company_summary, user)| ReviewCompanyDetails {
+                user_id: review_company_summary.user_id,
+                first_name: user.first_name,
+                last_name: user.last_name,
+            })
+            .collect();
+        Ok(review_company_details)
     }
 
-    pub fn create(review_id: Uuid, review_company: ReviewCompany) -> Result<Self, CustomError> {
-        let review_company_to_save = ReviewCompany {
-            review_id,
-            user_id: review_company.user_id,
-        };
-        let connection = &mut establish_connection();
-        let new_review = diesel::insert_into(review_company::table)
-            .values(review_company_to_save)
-            .get_result(connection)
-            .expect("Error creating review");
-        Ok(new_review)
-    }
+    pub fn replace(
+        review_id: Uuid,
+        review_company: Vec<ReviewCompanySummary>,
+    ) -> Result<Vec<ReviewCompanyDetails>, CustomError> {
+        let review_company_items: Vec<ReviewCompany> = review_company
+            .into_iter()
+            .map(|review_company_summary| ReviewCompany {
+                review_id,
+                user_id: review_company_summary.user_id,
+            })
+            .collect();
 
-    pub fn delete(review_id: Uuid, user_id: Uuid) -> Result<usize, CustomError> {
         let connection = &mut establish_connection();
-        let res = diesel::delete(
-            review_company::table.filter(
-                review_company::review_id
-                    .eq(review_id)
-                    .and(review_company::user_id.eq(user_id)),
-            ),
-        )
-        .execute(connection)
-        .expect("Error deleting review");
-        Ok(res)
+        connection.transaction::<_, diesel::result::Error, _>(|conn| {
+            diesel::delete(review_company::table.filter(review_company::review_id.eq(review_id)))
+                .execute(conn)?;
+            diesel::insert_into(review_company::table)
+                .values(review_company_items)
+                .execute(conn)?;
+            Ok(())
+        })?;
+
+        let review_company_details: Vec<ReviewCompanyDetails> = Self::find_by_review(review_id)?;
+        Ok(review_company_details)
     }
 }

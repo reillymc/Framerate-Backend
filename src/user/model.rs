@@ -33,7 +33,7 @@ pub struct NewUser {
 }
 
 #[derive(Debug, Clone, Deserialize, AsChangeset)]
-#[table_name = "users"]
+#[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatedUser {
     pub user_id: Uuid,
@@ -41,7 +41,7 @@ pub struct UpdatedUser {
 }
 
 #[derive(Serialize, Debug, Clone, Queryable, Deserialize, AsChangeset)]
-#[table_name = "users"]
+#[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UserResponse {
     pub user_id: Uuid,
@@ -51,7 +51,7 @@ pub struct UserResponse {
 }
 
 #[derive(Serialize, Debug, Clone, Queryable, Deserialize, AsChangeset)]
-#[table_name = "users"]
+#[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UserFindResponse {
     pub user_id: Uuid,
