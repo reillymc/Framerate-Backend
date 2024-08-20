@@ -1,5 +1,7 @@
 use crate::error_handler::CustomError;
+use crate::review::UpdatedReview;
 use crate::review_company::ReviewCompanyDetails;
+use crate::review_company::ReviewCompanySummary;
 use crate::user::placeholder_user;
 use actix_web::{get, post, put, web, HttpResponse};
 use chrono::NaiveDate;
@@ -20,7 +22,7 @@ pub struct ReviewReadResponse {
     pub media_type: String,
     pub media_title: String,
     pub media_poster_uri: Option<String>,
-    pub media_release_year: i16,
+    pub media_release_date: Option<NaiveDate>,
     pub date: Option<NaiveDate>,
     pub rating: i16,
     pub review_title: Option<String>,
@@ -39,7 +41,7 @@ impl From<Review> for ReviewReadResponse {
             media_type: review.media_type,
             media_title: review.media_title,
             media_poster_uri: review.media_poster_uri,
-            media_release_year: review.media_release_year,
+            media_release_date: review.media_release_date,
             date: review.date,
             rating: review.rating,
             review_title: review.review_title,
@@ -48,6 +50,20 @@ impl From<Review> for ReviewReadResponse {
             company: None,
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveReviewRequest {
+    pub review_id: Option<Uuid>,
+    pub media_id: i32,
+    pub media_type: String,
+    pub date: Option<NaiveDate>,
+    pub rating: i16,
+    pub review_title: Option<String>,
+    pub review_description: Option<String>,
+    pub venue: Option<String>,
+    pub company: Option<Vec<ReviewCompanySummary>>,
 }
 
 #[get("/reviews/{review_id}")]
@@ -75,45 +91,102 @@ async fn find_all() -> Result<HttpResponse, CustomError> {
 }
 
 #[post("/reviews")]
-async fn create(review: web::Json<NewReview>) -> Result<HttpResponse, CustomError> {
-    let company = review.company.clone();
-    let created_review = Review::create(review.into_inner())?;
+async fn create(review: web::Json<SaveReviewRequest>) -> Result<HttpResponse, CustomError> {
+    let movie = crate::movie::Movie::find(review.media_id).await;
 
-    if company.is_none() {
-        return Ok(HttpResponse::Ok().json(created_review));
-    } else {
-        let company = crate::review_company::ReviewCompany::replace(
-            created_review.review_id,
-            company.unwrap(),
-        )?;
-        return Ok(HttpResponse::Ok().json({
-            let mut review = ReviewReadResponse::from(created_review);
-            review.company = Some(company.into_iter().map(|c| c.into()).collect());
-            review
-        }));
-    }
+    let movie_details = match movie {
+        Ok(movie) => movie,
+        Err(_) => {
+            return Err(CustomError::new(
+                404,
+                "The requested movie was not found".to_string(),
+            ))
+        }
+    };
+
+    let review_to_save = NewReview {
+        review_id: review.review_id,
+        user_id: placeholder_user(),
+        media_id: review.media_id,
+        imdb_id: movie_details.imdb_id,
+        media_type: review.media_type.clone(),
+        media_title: movie_details.title,
+        media_poster_uri: movie_details.poster_path,
+        media_release_date: movie_details.release_date,
+        date: review.date,
+        rating: review.rating,
+        review_title: review.review_title.clone(),
+        review_description: review.review_description.clone(),
+        venue: review.venue.clone(),
+    };
+
+    let created_review = Review::create(review_to_save)?;
+
+    let review_company = match review.company.clone() {
+        Some(review_company) => review_company,
+        None => {
+            return Ok(HttpResponse::Ok().json(created_review));
+        }
+    };
+
+    let company =
+        crate::review_company::ReviewCompany::replace(created_review.review_id, review_company)?;
+
+    return Ok(HttpResponse::Ok().json({
+        let mut review = ReviewReadResponse::from(created_review);
+        review.company = Some(company.into_iter().map(|c| c.into()).collect());
+        review
+    }));
 }
 
 #[put("/reviews/{review_id}")]
 async fn update(
-    review: web::Json<NewReview>,
+    review: web::Json<SaveReviewRequest>,
     review_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, CustomError> {
-    let company = review.company.clone();
+    let movie = crate::movie::Movie::find(review.media_id).await;
 
-    let updated_review = Review::update(review_id.into_inner(), review.into_inner())?;
+    let movie_details = match movie {
+        Ok(movie) => movie,
+        Err(_) => {
+            return Err(CustomError::new(
+                404,
+                "The requested movie was not found".to_string(),
+            ))
+        }
+    };
 
-    if company.is_none() {
-        return Ok(HttpResponse::Ok().json(updated_review));
-    } else {
-        let company = crate::review_company::ReviewCompany::replace(
-            updated_review.review_id,
-            company.unwrap(),
-        )?;
-        return Ok(HttpResponse::Ok().json({
-            let mut review = ReviewReadResponse::from(updated_review);
-            review.company = Some(company.into_iter().map(|c| c.into()).collect());
-            review
-        }));
-    }
+    let review_to_save = UpdatedReview {
+        review_id: review_id.into_inner(),
+        user_id: placeholder_user(),
+        media_id: review.media_id,
+        imdb_id: movie_details.imdb_id,
+        media_type: review.media_type.clone(),
+        media_title: movie_details.title,
+        media_poster_uri: movie_details.poster_path,
+        media_release_date: movie_details.release_date,
+        date: review.date,
+        rating: review.rating,
+        review_title: review.review_title.clone(),
+        review_description: review.review_description.clone(),
+        venue: review.venue.clone(),
+    };
+
+    let updated_review = Review::update(review_to_save.review_id, review_to_save)?;
+
+    let review_company = match review.company.clone() {
+        Some(review_company) => review_company,
+        None => {
+            return Ok(HttpResponse::Ok().json(updated_review));
+        }
+    };
+
+    let company =
+        crate::review_company::ReviewCompany::replace(updated_review.review_id, review_company)?;
+
+    return Ok(HttpResponse::Ok().json({
+        let mut review = ReviewReadResponse::from(updated_review);
+        review.company = Some(company.into_iter().map(|c| c.into()).collect());
+        review
+    }));
 }

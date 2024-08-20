@@ -16,12 +16,12 @@ diesel::table! {
         media_type -> Text,
         media_title -> Text,
         media_poster_uri -> Nullable<Text>,
-        media_release_year -> Int2,
         date -> Nullable<Date>,
         rating -> Int2,
         review_title -> Nullable<Text>,
         review_description -> Nullable<Text>,
         venue -> Nullable<Text>,
+        media_release_date -> Nullable<Date>,
     }
 }
 

@@ -12,6 +12,7 @@ use std::env;
 
 mod db;
 mod error_handler;
+mod movie;
 mod review;
 mod review_company;
 mod routes;

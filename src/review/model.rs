@@ -1,8 +1,7 @@
+use crate::db::establish_connection;
 use crate::error_handler::CustomError;
-use crate::review_company::ReviewCompanySummary;
 use crate::schema::reviews;
 use crate::user;
-use crate::{db::establish_connection, user::placeholder_user};
 use chrono::NaiveDate;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -20,13 +19,14 @@ pub struct Review {
     pub media_type: String,
     pub media_title: String,
     pub media_poster_uri: Option<String>,
-    pub media_release_year: i16,
     #[diesel(treat_none_as_null = true)]
     pub date: Option<NaiveDate>,
     pub rating: i16,
     pub review_title: Option<String>,
     pub review_description: Option<String>,
     pub venue: Option<String>,
+    #[diesel(treat_none_as_null = true)]
+    pub media_release_date: Option<NaiveDate>,
 }
 
 #[derive(Queryable, Serialize)]
@@ -38,10 +38,10 @@ pub struct ReviewSummary {
     pub media_title: String,
     pub media_type: String,
     pub media_poster_uri: Option<String>,
-    pub media_release_year: i16,
     pub date: Option<NaiveDate>,
     pub rating: i16,
-    pub review_title: Option<String>,
+    pub review_description: Option<String>,
+    pub media_release_date: Option<NaiveDate>,
 }
 
 #[derive(Clone, Deserialize)]
@@ -50,16 +50,34 @@ pub struct NewReview {
     pub review_id: Option<Uuid>,
     pub media_id: i32,
     pub imdb_id: Option<String>,
+    pub user_id: Uuid,
     pub media_type: String,
     pub media_title: String,
     pub media_poster_uri: Option<String>,
-    pub media_release_year: i16,
     pub date: Option<NaiveDate>,
     pub rating: i16,
     pub review_title: Option<String>,
     pub review_description: Option<String>,
     pub venue: Option<String>,
-    pub company: Option<Vec<ReviewCompanySummary>>,
+    pub media_release_date: Option<NaiveDate>,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatedReview {
+    pub review_id: Uuid,
+    pub media_id: i32,
+    pub imdb_id: Option<String>,
+    pub user_id: Uuid,
+    pub media_type: String,
+    pub media_title: String,
+    pub media_poster_uri: Option<String>,
+    pub media_release_date: Option<NaiveDate>,
+    pub date: Option<NaiveDate>,
+    pub rating: i16,
+    pub review_title: Option<String>,
+    pub review_description: Option<String>,
+    pub venue: Option<String>,
 }
 
 impl Review {
@@ -85,10 +103,10 @@ impl Review {
                 reviews::media_title,
                 reviews::media_type,
                 reviews::media_poster_uri,
-                reviews::media_release_year,
                 reviews::date,
                 reviews::rating,
-                reviews::review_title,
+                reviews::review_description,
+                reviews::media_release_date,
             ))
             .load(connection)
             .expect("Error loading reviews");
@@ -121,13 +139,13 @@ impl Review {
     pub fn create(review: NewReview) -> Result<Self, CustomError> {
         let review_to_save = Review {
             review_id: Uuid::new_v4(),
-            user_id: placeholder_user(),
+            user_id: review.user_id,
             media_id: review.media_id,
             imdb_id: review.imdb_id,
             media_type: review.media_type,
             media_title: review.media_title,
             media_poster_uri: review.media_poster_uri,
-            media_release_year: review.media_release_year,
+            media_release_date: review.media_release_date,
             date: review.date,
             rating: review.rating,
             review_title: review.review_title,
@@ -143,16 +161,16 @@ impl Review {
         Ok(new_review)
     }
 
-    pub fn update(id: Uuid, review: NewReview) -> Result<Self, CustomError> {
+    pub fn update(id: Uuid, review: UpdatedReview) -> Result<Self, CustomError> {
         let review_to_save = Review {
             review_id: id,
-            user_id: placeholder_user(),
+            user_id: review.user_id,
             media_id: review.media_id,
             imdb_id: review.imdb_id,
             media_type: review.media_type,
             media_title: review.media_title,
             media_poster_uri: review.media_poster_uri,
-            media_release_year: review.media_release_year,
+            media_release_date: review.media_release_date,
             date: review.date,
             rating: review.rating,
             review_title: review.review_title,

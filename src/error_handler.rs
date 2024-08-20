@@ -38,6 +38,12 @@ impl From<DieselError> for CustomError {
     }
 }
 
+impl From<reqwest::Error> for CustomError {
+    fn from(error: reqwest::Error) -> CustomError {
+        CustomError::new(500, format!("Reqwest error: {}", error))
+    }
+}
+
 impl ResponseError for CustomError {
     fn error_response(&self) -> HttpResponse {
         let status_code = match StatusCode::from_u16(self.error_status_code) {
