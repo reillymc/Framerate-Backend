@@ -2,7 +2,7 @@ use std::env;
 
 use chrono::NaiveDate;
 use reqwest::header::AUTHORIZATION;
-use serde::{Deserialize, Serialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
 
 use crate::error_handler::CustomError;
 
@@ -14,34 +14,44 @@ pub struct Movie {
     pub title: String,
     pub poster_path: Option<String>,
     pub backdrop_path: Option<String>,
+    #[serde(deserialize_with = "empty_string_as_none")]
     pub release_date: Option<NaiveDate>,
     pub overview: Option<String>,
     pub tagline: Option<String>,
     pub popularity: f32,
-    pub runtime: i32,
+    pub runtime: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all(serialize = "camelCase"))]
-pub struct MovieSearchResult {
-    pub id: i32,
-    pub title: String,
-    pub poster_path: Option<String>,
-    pub backdrop_path: Option<String>,
-    pub release_date: Option<NaiveDate>,
-    pub overview: Option<String>,
-    pub popularity: f32,
+fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    let opt = Option::<String>::deserialize(de)?;
+    let opt = opt.as_ref().map(String::as_str);
+    match opt {
+        None | Some("") => Ok(None),
+        Some(s) => T::deserialize(s.into_deserializer()).map(Some),
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MovieSearchResults {
     pub page: i32,
-    pub results: Vec<MovieSearchResult>,
+    pub results: Vec<Movie>,
 }
 
 impl Movie {
     pub async fn find(id: i32) -> Result<Movie, CustomError> {
-        let tbdb_api_key = env::var("TMDB_API_KEY").expect("TMDB API key must be set");
+        let tbdb_api_key = match env::var("TMDB_API_KEY") {
+            Ok(val) => val,
+            Err(_) => {
+                return Err(CustomError::new(
+                    500,
+                    "TMDB API key must be set".to_string(),
+                ))
+            }
+        };
 
         let request_url = format!("https://api.themoviedb.org/3/movie/{id}?language=en-AU");
 
@@ -64,9 +74,16 @@ impl Movie {
         Ok(movie)
     }
 
-    pub async fn search(query: &str) -> Result<Vec<MovieSearchResult>, CustomError> {
-        let tbdb_api_key = env::var("TMDB_API_KEY").expect("TMDB API key must be set");
-
+    pub async fn search(query: &str) -> Result<Vec<Movie>, CustomError> {
+        let tbdb_api_key = match env::var("TMDB_API_KEY") {
+            Ok(val) => val,
+            Err(_) => {
+                return Err(CustomError::new(
+                    500,
+                    "TMDB API key must be set".to_string(),
+                ))
+            }
+        };
         let request_url = format!(
             "https://api.themoviedb.org/3/search/movie?query={query}&include_adult=false&language=en-US&page=1"
         );
@@ -90,9 +107,16 @@ impl Movie {
         Ok(search_results.results)
     }
 
-    pub async fn popular() -> Result<Vec<MovieSearchResult>, CustomError> {
-        let tbdb_api_key = env::var("TMDB_API_KEY").expect("TMDB API key must be set");
-
+    pub async fn popular() -> Result<Vec<Movie>, CustomError> {
+        let tbdb_api_key = match env::var("TMDB_API_KEY") {
+            Ok(val) => val,
+            Err(_) => {
+                return Err(CustomError::new(
+                    500,
+                    "TMDB API key must be set".to_string(),
+                ))
+            }
+        };
         let min_date = (chrono::Utc::now().date_naive() - chrono::Duration::days(30)).to_string();
         let max_date = (chrono::Utc::now().date_naive() + chrono::Duration::days(7)).to_string();
 

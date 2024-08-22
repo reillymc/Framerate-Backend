@@ -13,7 +13,7 @@ async fn search(params: web::Query<SearchParameters>) -> Result<HttpResponse, Cu
 
     match movies {
         Ok(_) => Ok(HttpResponse::Ok().json(movies.unwrap())),
-        Err(_) => Err(CustomError::new(500, "Internal error".to_string())),
+        Err(err) => Err(err),
     }
 }
 
@@ -23,7 +23,7 @@ async fn popular() -> Result<HttpResponse, CustomError> {
 
     match movies {
         Ok(_) => Ok(HttpResponse::Ok().json(movies.unwrap())),
-        Err(_) => Err(CustomError::new(500, "Internal error".to_string())),
+        Err(err) => Err(err),
     }
 }
 
@@ -33,6 +33,6 @@ async fn find(movie_id: web::Path<i32>) -> Result<HttpResponse, CustomError> {
 
     match movie {
         Ok(_) => Ok(HttpResponse::Ok().json(movie.unwrap())),
-        Err(_) => Err(CustomError::new(404, "Movie not found".to_string())),
+        Err(err) => Err(err),
     }
 }
