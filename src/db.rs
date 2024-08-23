@@ -17,3 +17,5 @@ pub fn run_db_migrations(conn: &mut impl MigrationHarness<pg::Pg>) {
     conn.run_pending_migrations(MIGRATIONS)
         .expect("Could not run migrations");
 }
+
+pub const DEFAULT_PAGE_SIZE: i64 = 10;

@@ -1,4 +1,5 @@
 use crate::error_handler::CustomError;
+use crate::review::ReviewFindParameters;
 use crate::review::UpdatedReview;
 use crate::review_company::ReviewCompanyDetails;
 use crate::review_company::ReviewCompanySummary;
@@ -84,9 +85,9 @@ async fn find_by_media(media_id: web::Path<i32>) -> Result<HttpResponse, CustomE
 }
 
 #[get("/reviews")]
-async fn find_all() -> Result<HttpResponse, CustomError> {
+async fn find_all(params: web::Query<ReviewFindParameters>) -> Result<HttpResponse, CustomError> {
     let user_id = placeholder_user();
-    let reviews = Review::find_by_user(user_id)?;
+    let reviews = Review::find_by_user(user_id, params.into_inner())?;
     Ok(HttpResponse::Ok().json(reviews))
 }
 

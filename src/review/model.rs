@@ -1,6 +1,6 @@
-use crate::db::establish_connection;
+use crate::db::{establish_connection, DEFAULT_PAGE_SIZE};
 use crate::error_handler::CustomError;
-use crate::schema::reviews;
+use crate::schema::{review_company, reviews};
 use crate::user;
 use chrono::NaiveDate;
 use diesel::prelude::*;
@@ -41,6 +41,7 @@ pub struct ReviewSummary {
     pub date: Option<NaiveDate>,
     pub rating: i16,
     pub review_description: Option<String>,
+    pub venue: Option<String>,
     pub media_release_date: Option<NaiveDate>,
 }
 
@@ -80,6 +81,19 @@ pub struct UpdatedReview {
     pub venue: Option<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewFindParameters {
+    pub order_by: Option<String>,
+    pub sort: Option<String>,
+    pub page: Option<i64>,
+    pub page_size: Option<i64>,
+    pub rating_min: Option<i16>,
+    pub rating_max: Option<i16>,
+    pub at_venue: Option<String>,
+    pub with_company: Option<Uuid>,
+}
+
 impl Review {
     pub fn find(review_id: Uuid) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
@@ -91,11 +105,64 @@ impl Review {
         Ok(reviews)
     }
 
-    pub fn find_by_user(user_id: Uuid) -> Result<Vec<ReviewSummary>, CustomError> {
+    pub fn find_by_user(
+        user_id: Uuid,
+        params: ReviewFindParameters,
+    ) -> Result<Vec<ReviewSummary>, CustomError> {
         let connection = &mut establish_connection();
-        let reviews = reviews::table
+
+        let mut query = reviews::table
             .filter(reviews::user_id.eq(user_id))
-            .order(reviews::date.desc().nulls_last())
+            .into_boxed();
+
+        if let Some(order_by) = params.order_by {
+            let order = params.sort.unwrap_or_else(|| "asc".to_string());
+            query = match order.as_str() {
+                "asc" => match order_by.as_str() {
+                    "date" => query.order(reviews::date.asc().nulls_last()),
+                    "rating" => query.order(reviews::rating.asc()),
+                    "title" => query.order(reviews::media_title.asc()),
+                    _ => query,
+                },
+                "desc" => match order_by.as_str() {
+                    "date" => query.order(reviews::date.desc().nulls_last()),
+                    "rating" => query.order(reviews::rating.desc()),
+                    "title" => query.order(reviews::media_title.desc()),
+                    _ => query,
+                },
+                _ => query,
+            };
+        }
+
+        if let Some(venue) = params.at_venue {
+            println!("Venue: {}", venue);
+            query = query.filter(reviews::venue.eq(venue));
+        }
+
+        if let Some(rating_min) = params.rating_min {
+            query = query.filter(reviews::rating.ge(rating_min));
+        }
+
+        if let Some(rating_max) = params.rating_max {
+            query = query.filter(reviews::rating.le(rating_max));
+        }
+
+        if let Some(with_company) = params.with_company {
+            query = query.filter(
+                reviews::review_id.eq_any(
+                    review_company::table
+                        .select(review_company::review_id)
+                        .filter(review_company::user_id.eq(with_company)),
+                ),
+            );
+        }
+
+        if let Some(page) = params.page {
+            let page_size = params.page_size.unwrap_or(DEFAULT_PAGE_SIZE);
+            query = query.limit(page_size).offset((page - 1) * page_size);
+        }
+
+        let reviews = query
             .select((
                 reviews::review_id,
                 reviews::user_id,
@@ -106,6 +173,7 @@ impl Review {
                 reviews::date,
                 reviews::rating,
                 reviews::review_description,
+                reviews::venue,
                 reviews::media_release_date,
             ))
             .load(connection)
