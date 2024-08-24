@@ -48,7 +48,7 @@ impl Watchlist {
         .to_string();
 
         let new_watchlist = Watchlist::create(NewWatchlist { name, media_type })?;
-        return Ok(new_watchlist);
+        Ok(new_watchlist)
     }
 
     pub fn find_by_user(user_id: Uuid) -> Result<Vec<Self>, CustomError> {

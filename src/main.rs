@@ -39,13 +39,12 @@ async fn main() -> std::io::Result<()> {
             .configure(routes::init_routes)
     });
 
-    server = match listenfd.take_tcp_listener(0)? {
-        Some(listener) => server.listen(listener)?,
-        None => {
-            let host = env::var("HOST").expect("Please set host in .env");
-            let port = env::var("PORT").expect("Please set port in .env");
-            server.bind(format!("{}:{}", host, port))?
-        }
+    server = if let Some(listener) = listenfd.take_tcp_listener(0)? {
+        server.listen(listener)?
+    } else {
+        let host = env::var("HOST").expect("Please set host in .env");
+        let port = env::var("PORT").expect("Please set port in .env");
+        server.bind(format!("{host}:{port}"))?
     };
 
     // log ip to console

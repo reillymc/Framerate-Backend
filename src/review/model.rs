@@ -135,7 +135,6 @@ impl Review {
         }
 
         if let Some(venue) = params.at_venue {
-            println!("Venue: {}", venue);
             query = query.filter(reviews::venue.eq(venue));
         }
 

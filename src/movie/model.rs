@@ -28,7 +28,7 @@ where
     T: serde::Deserialize<'de>,
 {
     let opt = Option::<String>::deserialize(de)?;
-    let opt = opt.as_ref().map(String::as_str);
+    let opt = opt.as_deref();
     match opt {
         None | Some("") => Ok(None),
         Some(s) => T::deserialize(s.into_deserializer()).map(Some),
@@ -43,14 +43,11 @@ pub struct MovieSearchResults {
 
 impl Movie {
     pub async fn find(id: i32) -> Result<Movie, CustomError> {
-        let tbdb_api_key = match env::var("TMDB_API_KEY") {
-            Ok(val) => val,
-            Err(_) => {
-                return Err(CustomError::new(
-                    500,
-                    "TMDB API key must be set".to_string(),
-                ))
-            }
+        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
+            return Err(CustomError::new(
+                500,
+                "TMDB API key must be set".to_string(),
+            ));
         };
 
         let request_url = format!("https://api.themoviedb.org/3/movie/{id}?language=en-AU");
@@ -75,15 +72,13 @@ impl Movie {
     }
 
     pub async fn search(query: &str) -> Result<Vec<Movie>, CustomError> {
-        let tbdb_api_key = match env::var("TMDB_API_KEY") {
-            Ok(val) => val,
-            Err(_) => {
-                return Err(CustomError::new(
-                    500,
-                    "TMDB API key must be set".to_string(),
-                ))
-            }
+        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
+            return Err(CustomError::new(
+                500,
+                "TMDB API key must be set".to_string(),
+            ));
         };
+
         let request_url = format!(
             "https://api.themoviedb.org/3/search/movie?query={query}&include_adult=false&language=en-US&page=1"
         );
@@ -108,15 +103,13 @@ impl Movie {
     }
 
     pub async fn popular() -> Result<Vec<Movie>, CustomError> {
-        let tbdb_api_key = match env::var("TMDB_API_KEY") {
-            Ok(val) => val,
-            Err(_) => {
-                return Err(CustomError::new(
-                    500,
-                    "TMDB API key must be set".to_string(),
-                ))
-            }
+        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
+            return Err(CustomError::new(
+                500,
+                "TMDB API key must be set".to_string(),
+            ));
         };
+
         let min_date = (chrono::Utc::now().date_naive() - chrono::Duration::days(30)).to_string();
         let max_date = (chrono::Utc::now().date_naive() + chrono::Duration::days(7)).to_string();
 

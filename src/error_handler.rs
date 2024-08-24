@@ -33,14 +33,14 @@ impl From<DieselError> for CustomError {
             DieselError::NotFound => {
                 CustomError::new(404, "The employee record not found".to_string())
             }
-            err => CustomError::new(500, format!("Unknown Diesel error: {}", err)),
+            err => CustomError::new(500, format!("Unknown Diesel error: {err}")),
         }
     }
 }
 
 impl From<reqwest::Error> for CustomError {
     fn from(error: reqwest::Error) -> CustomError {
-        CustomError::new(500, format!("Reqwest error: {}", error))
+        CustomError::new(500, format!("Reqwest error: {error}"))
     }
 }
 

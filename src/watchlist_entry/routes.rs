@@ -36,14 +36,11 @@ async fn create(
 ) -> Result<HttpResponse, CustomError> {
     let movie = Movie::find(entry.media_id).await;
 
-    let movie_details = match movie {
-        Ok(movie) => movie,
-        Err(_) => {
-            return Err(CustomError::new(
-                404,
-                "The requested movie was not found".to_string(),
-            ))
-        }
+    let Ok(movie_details) = movie else {
+        return Err(CustomError::new(
+            404,
+            "The requested movie was not found".to_string(),
+        ));
     };
 
     let watchlist_entry_to_save = NewWatchlistEntry {
