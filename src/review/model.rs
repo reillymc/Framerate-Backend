@@ -81,11 +81,27 @@ pub struct UpdatedReview {
     pub venue: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Order {
+    Rating,
+    Date,
+    MediaTitle,
+    MediaReleaseDate,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Sort {
+    Asc,
+    Desc,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewFindParameters {
-    pub order_by: Option<String>,
-    pub sort: Option<String>,
+    pub order_by: Option<Order>,
+    pub sort: Option<Sort>,
     pub page: Option<i64>,
     pub page_size: Option<i64>,
     pub rating_min: Option<i16>,
@@ -115,24 +131,26 @@ impl Review {
             .filter(reviews::user_id.eq(user_id))
             .into_boxed();
 
-        if let Some(order_by) = params.order_by {
-            let order = params.sort.unwrap_or_else(|| "asc".to_string());
-            query = match order.as_str() {
-                "asc" => match order_by.as_str() {
-                    "date" => query.order(reviews::date.asc().nulls_last()),
-                    "rating" => query.order(reviews::rating.asc()),
-                    "title" => query.order(reviews::media_title.asc()),
-                    _ => query,
-                },
-                "desc" => match order_by.as_str() {
-                    "date" => query.order(reviews::date.desc().nulls_last()),
-                    "rating" => query.order(reviews::rating.desc()),
-                    "title" => query.order(reviews::media_title.desc()),
-                    _ => query,
-                },
-                _ => query,
-            };
-        }
+        let order_by = params.order_by.unwrap_or_else(|| Order::Date);
+        let sort = params.sort.unwrap_or_else(|| Sort::Desc);
+        query = match sort {
+            Sort::Asc => match order_by {
+                Order::Date => query.order(reviews::date.asc()),
+                Order::MediaReleaseDate => query.order(reviews::media_release_date.asc()),
+                Order::Rating => query.order(reviews::rating.asc()),
+                Order::MediaTitle => query.order(reviews::media_title.asc()),
+            },
+            Sort::Desc => match order_by {
+                Order::Date => query.order(reviews::date.desc().nulls_last()),
+                Order::MediaReleaseDate => {
+                    query.order(reviews::media_release_date.desc().nulls_last())
+                }
+                Order::Rating => query.order(reviews::rating.desc()),
+                Order::MediaTitle => query.order(reviews::media_title.desc()),
+            },
+        };
+
+        query = query.then_order_by(reviews::review_id.asc());
 
         if let Some(venue) = params.at_venue {
             query = query.filter(reviews::venue.eq(venue));
