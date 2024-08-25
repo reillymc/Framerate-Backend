@@ -16,6 +16,7 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(review::find_by_media);
     config.service(review::create);
     config.service(review::update);
+    config.service(review::find_statistics);
     config.service(watchlist_entry::create);
     config.service(watchlist_entry::find_entry);
     config.service(watchlist_entry::find_all);

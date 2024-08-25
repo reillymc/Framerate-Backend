@@ -2,7 +2,7 @@ use crate::db::{establish_connection, DEFAULT_PAGE_SIZE};
 use crate::error_handler::CustomError;
 use crate::schema::{review_company, reviews};
 use crate::user;
-use chrono::NaiveDate;
+use chrono::{Datelike, Days, NaiveDate, Weekday};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -108,6 +108,14 @@ pub struct ReviewFindParameters {
     pub rating_max: Option<i16>,
     pub at_venue: Option<String>,
     pub with_company: Option<Uuid>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewStatistics {
+    pub reviews_this_week: i64,
+    pub reviews_this_month: i64,
+    pub reviews_this_year: i64,
 }
 
 impl Review {
@@ -278,5 +286,54 @@ impl Review {
             .execute(connection)
             .expect("Error deleting review");
         Ok(res)
+    }
+
+    pub fn find_statistics(user_id: Uuid) -> Result<ReviewStatistics, CustomError> {
+        let connection = &mut establish_connection();
+
+        let current_year = chrono::offset::Local::now().year();
+        let current_year_start = NaiveDate::from_ymd_opt(current_year, 1, 1).unwrap();
+        let current_year_end = NaiveDate::from_ymd_opt(current_year + 1, 1, 1)
+            .unwrap()
+            .checked_sub_days(Days::new(1));
+
+        let reviews_this_year: i64 = reviews::table
+            .filter(reviews::user_id.eq(user_id))
+            .filter(reviews::date.between(current_year_start, current_year_end))
+            .count()
+            .get_result(connection)
+            .expect("Error counting reviews");
+
+        let current_month = chrono::Utc::now().month();
+        let current_month_start = NaiveDate::from_ymd_opt(current_year, current_month, 1).unwrap();
+        let current_month_end = NaiveDate::from_ymd_opt(current_year, current_month + 1, 1)
+            .unwrap()
+            .checked_sub_days(Days::new(1));
+
+        let reviews_this_month: i64 = reviews::table
+            .filter(reviews::user_id.eq(user_id))
+            .filter(reviews::date.between(current_month_start, current_month_end))
+            .count()
+            .get_result(connection)
+            .expect("Error counting reviews");
+
+        let current_week = chrono::Utc::now().iso_week().week();
+        let current_week_start =
+            NaiveDate::from_isoywd_opt(current_year, current_week, Weekday::Mon).unwrap();
+        let current_week_end =
+            NaiveDate::from_isoywd_opt(current_year, current_week, Weekday::Sun).unwrap();
+
+        let reviews_this_week: i64 = reviews::table
+            .filter(reviews::user_id.eq(user_id))
+            .filter(reviews::date.between(current_week_start, current_week_end))
+            .count()
+            .get_result(connection)
+            .expect("Error counting reviews");
+
+        Ok(ReviewStatistics {
+            reviews_this_week,
+            reviews_this_month,
+            reviews_this_year,
+        })
     }
 }

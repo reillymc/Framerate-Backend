@@ -67,7 +67,7 @@ pub struct SaveReviewRequest {
     pub company: Option<Vec<ReviewCompanySummary>>,
 }
 
-#[get("/reviews/{review_id}")]
+#[get("/reviews/review/{review_id}")]
 async fn find(review_id: web::Path<Uuid>) -> Result<HttpResponse, CustomError> {
     let review = Review::find(review_id.into_inner())?;
     let company = crate::review_company::ReviewCompany::find_by_review(review.review_id)?;
@@ -178,4 +178,11 @@ async fn update(
         review.company = Some(company);
         review
     }))
+}
+
+#[get("/reviews/statistics")]
+async fn find_statistics() -> Result<HttpResponse, CustomError> {
+    let user_id = placeholder_user();
+    let review_statistics = Review::find_statistics(user_id)?;
+    Ok(HttpResponse::Ok().json(review_statistics))
 }
