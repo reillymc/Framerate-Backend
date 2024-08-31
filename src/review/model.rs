@@ -143,10 +143,12 @@ impl Review {
         let sort = params.sort.unwrap_or_else(|| Sort::Desc);
         query = match sort {
             Sort::Asc => match order_by {
-                Order::Date => query.order(reviews::date.asc()),
-                Order::MediaReleaseDate => query.order(reviews::media_release_date.asc()),
+                Order::Date => query.order(reviews::date.asc().nulls_first()),
+                Order::MediaReleaseDate => {
+                    query.order(reviews::media_release_date.asc().nulls_first())
+                }
                 Order::Rating => query.order(reviews::rating.asc()),
-                Order::MediaTitle => query.order(reviews::media_title.asc()),
+                Order::MediaTitle => query.order(reviews::media_title.asc().nulls_first()),
             },
             Sort::Desc => match order_by {
                 Order::Date => query.order(reviews::date.desc().nulls_last()),
@@ -154,7 +156,7 @@ impl Review {
                     query.order(reviews::media_release_date.desc().nulls_last())
                 }
                 Order::Rating => query.order(reviews::rating.desc()),
-                Order::MediaTitle => query.order(reviews::media_title.desc()),
+                Order::MediaTitle => query.order(reviews::media_title.desc().nulls_last()),
             },
         };
 
