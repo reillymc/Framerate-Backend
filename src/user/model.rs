@@ -1,4 +1,9 @@
-use crate::{db::establish_connection, error_handler::CustomError, schema::users};
+use crate::{
+    db::establish_connection,
+    error_handler::{AuthError, CustomError},
+    schema::users,
+};
+use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -102,7 +107,7 @@ impl User {
         let user_to_save = User {
             user_id: user.user_id.unwrap_or(Uuid::new_v4()),
             email: user.email,
-            password: user.password,
+            password: Self::hash_password(user.password)?,
             first_name: user.first_name,
             last_name: user.last_name,
             date_created: chrono::Local::now().naive_local(),
@@ -139,5 +144,36 @@ impl User {
             .execute(connection)
             .expect("Error deleting user");
         Ok(res)
+    }
+
+    pub fn hash_password(plain: String) -> Result<String, CustomError> {
+        Ok(hash(plain, DEFAULT_COST)?)
+    }
+}
+
+#[derive(Deserialize)]
+pub struct AuthUser {
+    pub email: String,
+    pub password: String,
+}
+
+impl AuthUser {
+    pub fn login(&self) -> Result<User, AuthError> {
+        let connection = &mut establish_connection();
+        let user: User = users::table
+            .filter(users::email.eq(&self.email))
+            .first(connection)?;
+
+        let verify_password = verify(&self.password, &user.password).map_err(|_error| {
+            AuthError::WrongPassword("Wrong password, check again please".to_string())
+        })?;
+
+        if verify_password {
+            Ok(user)
+        } else {
+            Err(AuthError::WrongPassword(
+                "Wrong password, check again please".to_string(),
+            ))
+        }
     }
 }

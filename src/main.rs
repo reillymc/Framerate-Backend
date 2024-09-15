@@ -4,12 +4,12 @@ extern crate diesel_migrations;
 
 use actix_web::{middleware::Logger, App, HttpServer};
 use db::establish_connection;
-// use db::establish_connection;
 use dotenvy::dotenv;
 use env_logger::Env;
 use listenfd::ListenFd;
 use std::env;
 
+mod authentication;
 mod db;
 mod error_handler;
 mod movie;
@@ -18,6 +18,7 @@ mod review_company;
 mod routes;
 mod schema;
 mod user;
+mod utils;
 mod watchlist;
 mod watchlist_entry;
 
@@ -34,7 +35,6 @@ async fn main() -> std::io::Result<()> {
     let mut server = HttpServer::new(|| {
         App::new()
             .wrap(Logger::default())
-            .wrap(Logger::new("%a %{User-Agent}i"))
             .wrap(actix_cors::Cors::permissive())
             .configure(routes::init_routes)
     });
@@ -47,7 +47,6 @@ async fn main() -> std::io::Result<()> {
         server.bind(format!("{host}:{port}"))?
     };
 
-    // log ip to console
     println!(
         "Server running at http://{}:{}",
         env::var("HOST").unwrap(),
