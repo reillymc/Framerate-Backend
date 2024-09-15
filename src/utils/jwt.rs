@@ -29,7 +29,8 @@ impl UserSession {
         UserSession {
             id,
             email: email.into(),
-            exp: (Local::now() + Duration::hours(24)).timestamp() as usize,
+            // TODO: investigate refresh tokens
+            exp: (Local::now() + Duration::weeks(52)).timestamp() as usize,
         }
     }
 }
