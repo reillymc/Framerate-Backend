@@ -48,7 +48,6 @@ pub struct ReviewSummary {
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewReview {
-    pub review_id: Option<Uuid>,
     pub media_id: i32,
     pub imdb_id: Option<String>,
     pub user_id: Uuid,
@@ -119,13 +118,13 @@ pub struct ReviewStatistics {
 }
 
 impl Review {
-    pub fn find(review_id: Uuid) -> Result<Self, CustomError> {
+    pub fn find(user_id: Uuid, review_id: Uuid) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
         let reviews = reviews::table
             .select(Review::as_select())
             .filter(reviews::review_id.eq(review_id))
-            .first(connection)
-            .expect("Error loading reviews");
+            .filter(reviews::user_id.eq(user_id))
+            .first(connection)?;
         Ok(reviews)
     }
 
@@ -139,8 +138,8 @@ impl Review {
             .filter(reviews::user_id.eq(user_id))
             .into_boxed();
 
-        let order_by = params.order_by.unwrap_or_else(|| Order::Date);
-        let sort = params.sort.unwrap_or_else(|| Sort::Desc);
+        let order_by = params.order_by.unwrap_or(Order::Date);
+        let sort = params.sort.unwrap_or(Sort::Desc);
         query = match sort {
             Sort::Asc => match order_by {
                 Order::Date => query.order(reviews::date.asc().nulls_first()),
@@ -203,19 +202,18 @@ impl Review {
                 reviews::venue,
                 reviews::media_release_date,
             ))
-            .load(connection)
-            .expect("Error loading reviews");
+            .load(connection)?;
         Ok(reviews)
     }
 
-    pub fn find_by_media(media_id: i32) -> Result<Vec<Self>, CustomError> {
+    pub fn find_by_media(user_id: Uuid, media_id: i32) -> Result<Vec<Self>, CustomError> {
         let connection = &mut establish_connection();
         let reviews = reviews::table
             .filter(reviews::media_id.eq(media_id))
+            .filter(reviews::user_id.eq(user_id))
             .order(reviews::date.desc().nulls_last())
             .select(Review::as_select())
-            .load(connection)
-            .expect("Error loading reviews");
+            .load(connection)?;
         Ok(reviews)
     }
 
@@ -226,8 +224,7 @@ impl Review {
             .filter(reviews::media_id.eq(media_id))
             .order(reviews::date.desc().nulls_last())
             .select(Review::as_select())
-            .load(connection)
-            .expect("Error loading reviews");
+            .load(connection)?;
         Ok(reviews)
     }
 
@@ -251,8 +248,7 @@ impl Review {
         let connection = &mut establish_connection();
         let new_review = diesel::insert_into(reviews::table)
             .values(review_to_save)
-            .get_result(connection)
-            .expect("Error creating review");
+            .get_result(connection)?;
         Ok(new_review)
     }
 
@@ -277,16 +273,14 @@ impl Review {
         let updated_review = diesel::update(reviews::table)
             .filter(reviews::review_id.eq(id))
             .set(review_to_save)
-            .get_result(connection)
-            .expect("Error updating review");
+            .get_result(connection)?;
         Ok(updated_review)
     }
 
     pub fn delete(review_id: Uuid) -> Result<usize, CustomError> {
         let connection = &mut establish_connection();
         let res = diesel::delete(reviews::table.filter(reviews::review_id.eq(review_id)))
-            .execute(connection)
-            .expect("Error deleting review");
+            .execute(connection)?;
         Ok(res)
     }
 
@@ -303,8 +297,7 @@ impl Review {
             .filter(reviews::user_id.eq(user_id))
             .filter(reviews::date.between(current_year_start, current_year_end))
             .count()
-            .get_result(connection)
-            .expect("Error counting reviews");
+            .get_result(connection)?;
 
         let current_month = chrono::Utc::now().month();
         let current_month_start = NaiveDate::from_ymd_opt(current_year, current_month, 1).unwrap();
@@ -316,21 +309,19 @@ impl Review {
             .filter(reviews::user_id.eq(user_id))
             .filter(reviews::date.between(current_month_start, current_month_end))
             .count()
-            .get_result(connection)
-            .expect("Error counting reviews");
+            .get_result(connection)?;
 
         let current_week = chrono::Utc::now().iso_week().week();
         let current_week_start =
             NaiveDate::from_isoywd_opt(current_year, current_week, Weekday::Mon).unwrap();
         let current_week_end =
-            NaiveDate::from_isoywd_opt(current_year, current_week, Weekday::Sun).unwrap();
+            NaiveDate::from_isoywd_opt(current_year, current_week + 1, Weekday::Mon).unwrap();
 
         let reviews_this_week: i64 = reviews::table
             .filter(reviews::user_id.eq(user_id))
             .filter(reviews::date.between(current_week_start, current_week_end))
             .count()
-            .get_result(connection)
-            .expect("Error counting reviews");
+            .get_result(connection)?;
 
         Ok(ReviewStatistics {
             reviews_this_week,

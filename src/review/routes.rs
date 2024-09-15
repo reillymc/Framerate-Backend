@@ -1,9 +1,9 @@
-use crate::error_handler::CustomError;
 use crate::review::ReviewFindParameters;
 use crate::review::UpdatedReview;
-use crate::review_company::ReviewCompanyDetails;
-use crate::review_company::ReviewCompanySummary;
-use crate::user::placeholder_user;
+use crate::review_company::{ReviewCompanyDetails, ReviewCompanySummary};
+use crate::utils::jwt::Auth;
+use crate::utils::response_body::{Error, Success, SuccessWithMessage};
+use actix_web::Responder;
 use actix_web::{get, post, put, web, HttpResponse};
 use chrono::NaiveDate;
 use serde::Deserialize;
@@ -56,7 +56,6 @@ impl From<Review> for ReviewReadResponse {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveReviewRequest {
-    pub review_id: Option<Uuid>,
     pub media_id: i32,
     pub media_type: String,
     pub date: Option<NaiveDate>,
@@ -67,50 +66,76 @@ pub struct SaveReviewRequest {
     pub company: Option<Vec<ReviewCompanySummary>>,
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateReviewRequest {
+    pub date: Option<NaiveDate>,
+    pub rating: i16,
+    pub review_title: Option<String>,
+    pub review_description: Option<String>,
+    pub venue: Option<String>,
+    pub company: Option<Vec<ReviewCompanySummary>>,
+}
+
 #[get("/reviews/review/{review_id}")]
-async fn find(review_id: web::Path<Uuid>) -> Result<HttpResponse, CustomError> {
-    let review = Review::find(review_id.into_inner())?;
-    let company = crate::review_company::ReviewCompany::find_by_review(review.review_id)?;
-    Ok(HttpResponse::Ok().json({
-        let mut review = ReviewReadResponse::from(review);
-        review.company = Some(company);
-        review
-    }))
+async fn find(auth: Auth, review_id: web::Path<Uuid>) -> impl Responder {
+    let Ok(review) = Review::find(auth.user_id, review_id.into_inner()) else {
+        return HttpResponse::NotFound().json(Error {
+            message: "Review not found".to_string(),
+        });
+    };
+
+    let company = crate::review_company::ReviewCompany::find_by_review(review.review_id);
+
+    let Ok(company) = company else {
+        return HttpResponse::Ok().json(SuccessWithMessage {
+            data: ReviewReadResponse::from(review),
+            message: "Company could not be retrieved".to_string(),
+        });
+    };
+
+    let mut review = ReviewReadResponse::from(review);
+    review.company = Some(company);
+
+    HttpResponse::Ok().json(Success { data: review })
 }
 
 #[get("/reviews/media/{media_id}")]
-async fn find_by_media(media_id: web::Path<i32>) -> Result<HttpResponse, CustomError> {
-    let review = Review::find_by_media(media_id.into_inner())?;
-    Ok(HttpResponse::Ok().json(review))
+async fn find_by_media(auth: Auth, media_id: web::Path<i32>) -> impl Responder {
+    match Review::find_by_media(auth.user_id, media_id.into_inner()) {
+        Err(err) => HttpResponse::InternalServerError().json(Error {
+            message: err.message,
+        }),
+        Ok(review) => HttpResponse::Ok().json(Success { data: review }),
+    }
 }
 
 #[get("/reviews")]
-async fn find_all(params: web::Query<ReviewFindParameters>) -> Result<HttpResponse, CustomError> {
-    let user_id = placeholder_user();
-    let reviews = Review::find_by_user(user_id, params.into_inner())?;
-    Ok(HttpResponse::Ok().json(reviews))
+async fn find_all(auth: Auth, params: web::Query<ReviewFindParameters>) -> impl Responder {
+    match Review::find_by_user(auth.user_id, params.into_inner()) {
+        Err(err) => HttpResponse::InternalServerError().json(Error {
+            message: err.message,
+        }),
+        Ok(reviews) => HttpResponse::Ok().json(Success { data: reviews }),
+    }
 }
 
 #[post("/reviews")]
-async fn create(review: web::Json<SaveReviewRequest>) -> Result<HttpResponse, CustomError> {
-    let movie = crate::movie::Movie::find(review.media_id).await;
-
-    let Ok(movie_details) = movie else {
-        return Err(CustomError::new(
-            404,
-            "The requested movie was not found".to_string(),
-        ));
+async fn create(auth: Auth, review: web::Json<SaveReviewRequest>) -> impl Responder {
+    let Ok(movie) = crate::movie::Movie::find(review.media_id).await else {
+        return HttpResponse::NotFound().json(Error {
+            message: "Movie not found".to_string(),
+        });
     };
 
     let review_to_save = NewReview {
-        review_id: review.review_id,
-        user_id: placeholder_user(),
+        user_id: auth.user_id,
         media_id: review.media_id,
-        imdb_id: movie_details.imdb_id,
+        imdb_id: movie.imdb_id,
         media_type: review.media_type.clone(),
-        media_title: movie_details.title,
-        media_poster_uri: movie_details.poster_path,
-        media_release_date: movie_details.release_date,
+        media_title: movie.title,
+        media_poster_uri: movie.poster_path,
+        media_release_date: movie.release_date,
         date: review.date,
         rating: review.rating,
         review_title: review.review_title.clone(),
@@ -118,45 +143,61 @@ async fn create(review: web::Json<SaveReviewRequest>) -> Result<HttpResponse, Cu
         venue: review.venue.clone(),
     };
 
-    let created_review = Review::create(review_to_save)?;
+    let Ok(created_review) = Review::create(review_to_save) else {
+        return HttpResponse::InternalServerError().json(Error {
+            message: "Review could not be created".to_string(),
+        });
+    };
 
     let Some(review_company) = review.company.clone() else {
-        return Ok(HttpResponse::Ok().json(created_review));
+        return HttpResponse::Ok().json(Success {
+            data: created_review,
+        });
     };
 
     let company =
-        crate::review_company::ReviewCompany::replace(created_review.review_id, review_company)?;
+        crate::review_company::ReviewCompany::replace(created_review.review_id, review_company);
 
-    Ok(HttpResponse::Ok().json({
-        let mut review = ReviewReadResponse::from(created_review);
-        review.company = Some(company);
-        review
-    }))
+    let Ok(company) = company else {
+        return HttpResponse::Ok().json(SuccessWithMessage {
+            data: ReviewReadResponse::from(created_review),
+            message: "Company could not be created".to_string(),
+        });
+    };
+
+    let mut review = ReviewReadResponse::from(created_review);
+    review.company = Some(company);
+
+    HttpResponse::Ok().json(Success { data: review })
 }
 
-#[put("/reviews/{review_id}")]
+#[put("/reviews/review/{review_id}")]
 async fn update(
-    review: web::Json<SaveReviewRequest>,
+    auth: Auth,
+    review: web::Json<UpdateReviewRequest>,
     review_id: web::Path<Uuid>,
-) -> Result<HttpResponse, CustomError> {
-    let movie = crate::movie::Movie::find(review.media_id).await;
+) -> impl Responder {
+    let Ok(existing_review) = Review::find(auth.user_id, review_id.clone()) else {
+        return HttpResponse::NotFound().json(Error {
+            message: "Review not found".to_string(),
+        });
+    };
 
-    let Ok(movie_details) = movie else {
-        return Err(CustomError::new(
-            404,
-            "The requested movie was not found".to_string(),
-        ));
+    let Ok(movie) = crate::movie::Movie::find(existing_review.media_id).await else {
+        return HttpResponse::NotFound().json(Error {
+            message: "Movie not found".to_string(),
+        });
     };
 
     let review_to_save = UpdatedReview {
-        review_id: review_id.into_inner(),
-        user_id: placeholder_user(),
-        media_id: review.media_id,
-        imdb_id: movie_details.imdb_id,
-        media_type: review.media_type.clone(),
-        media_title: movie_details.title,
-        media_poster_uri: movie_details.poster_path,
-        media_release_date: movie_details.release_date,
+        review_id: existing_review.review_id,
+        user_id: existing_review.user_id,
+        media_id: existing_review.media_id,
+        imdb_id: movie.imdb_id,
+        media_type: existing_review.media_type,
+        media_title: movie.title,
+        media_poster_uri: movie.poster_path,
+        media_release_date: movie.release_date,
         date: review.date,
         rating: review.rating,
         review_title: review.review_title.clone(),
@@ -164,25 +205,40 @@ async fn update(
         venue: review.venue.clone(),
     };
 
-    let updated_review = Review::update(review_to_save.review_id, review_to_save)?;
+    let Ok(updated_review) = Review::update(review_to_save.review_id, review_to_save) else {
+        return HttpResponse::InternalServerError().json(Error {
+            message: "Review could not be updated".to_string(),
+        });
+    };
 
     let Some(review_company) = review.company.clone() else {
-        return Ok(HttpResponse::Ok().json(updated_review));
+        return HttpResponse::Ok().json(Success {
+            data: updated_review,
+        });
     };
 
     let company =
-        crate::review_company::ReviewCompany::replace(updated_review.review_id, review_company)?;
+        crate::review_company::ReviewCompany::replace(updated_review.review_id, review_company);
 
-    Ok(HttpResponse::Ok().json({
-        let mut review = ReviewReadResponse::from(updated_review);
-        review.company = Some(company);
-        review
-    }))
+    let Ok(company) = company else {
+        return HttpResponse::Ok().json(SuccessWithMessage {
+            data: ReviewReadResponse::from(updated_review),
+            message: "Company could not be updated".to_string(),
+        });
+    };
+
+    let mut review = ReviewReadResponse::from(updated_review);
+    review.company = Some(company);
+
+    HttpResponse::Ok().json(Success { data: review })
 }
 
 #[get("/reviews/statistics")]
-async fn find_statistics() -> Result<HttpResponse, CustomError> {
-    let user_id = placeholder_user();
-    let review_statistics = Review::find_statistics(user_id)?;
-    Ok(HttpResponse::Ok().json(review_statistics))
+async fn find_statistics(auth: Auth) -> impl Responder {
+    match Review::find_statistics(auth.user_id) {
+        Err(err) => HttpResponse::InternalServerError().json(Error {
+            message: err.message,
+        }),
+        Ok(stats) => HttpResponse::Ok().json(Success { data: stats }),
+    }
 }

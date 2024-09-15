@@ -56,5 +56,5 @@ pub fn decode_token(token: &str) -> Result<Auth, HttpResponse> {
 }
 
 fn get_secret() -> String {
-    return env::var("JWT_SECRET").unwrap();
+    env::var("JWT_SECRET").unwrap()
 }

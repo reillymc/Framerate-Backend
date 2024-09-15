@@ -32,22 +32,22 @@ impl fmt::Display for AuthError {
 
 #[derive(Debug, Deserialize)]
 pub struct CustomError {
-    pub error_status_code: u16,
-    pub error_message: String,
+    pub status_code: u16,
+    pub message: String,
 }
 
 impl CustomError {
     pub fn new(error_status_code: u16, error_message: String) -> CustomError {
         CustomError {
-            error_status_code,
-            error_message,
+            status_code: error_status_code,
+            message: error_message,
         }
     }
 }
 
 impl fmt::Display for CustomError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(self.error_message.as_str())
+        f.write_str(self.message.as_str())
     }
 }
 
@@ -76,11 +76,11 @@ impl From<BcryptError> for CustomError {
 
 impl ResponseError for CustomError {
     fn error_response(&self) -> HttpResponse {
-        let status_code = match StatusCode::from_u16(self.error_status_code) {
+        let status_code = match StatusCode::from_u16(self.status_code) {
             Ok(status_code) => status_code,
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        HttpResponse::build(status_code).json(json!({ "message": self.error_message }))
+        HttpResponse::build(status_code).json(json!({ "message": self.message }))
     }
 }
