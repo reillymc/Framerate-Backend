@@ -15,6 +15,7 @@ use uuid::Uuid;
 pub struct User {
     pub user_id: Uuid,
     pub email: String,
+    #[serde(skip)]
     pub password: String,
     pub first_name: String,
     pub last_name: String,
@@ -41,7 +42,6 @@ pub struct NewUser {
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatedUser {
-    pub user_id: Uuid,
     pub configuration: serde_json::Value,
 }
 
@@ -67,10 +67,6 @@ pub struct UserFindResponse {
     pub configuration: serde_json::Value,
 }
 
-pub fn placeholder_user() -> Uuid {
-    Uuid::parse_str("82986e28-47e7-4fb4-9c48-986f6e8715b4").unwrap_or_else(|_| Uuid::nil())
-}
-
 impl User {
     pub fn find(user_id: Uuid) -> Result<UserFindResponse, CustomError> {
         let connection = &mut establish_connection();
@@ -82,6 +78,21 @@ impl User {
                 users::last_name,
                 users::avatar_uri,
                 users::configuration,
+            ))
+            .filter(users::user_id.eq(user_id))
+            .first(connection)
+            .expect("Error loading posts");
+        Ok(users)
+    }
+
+    pub fn find_summary(user_id: Uuid) -> Result<UserResponse, CustomError> {
+        let connection = &mut establish_connection();
+        let users = users::table
+            .select((
+                users::user_id,
+                users::first_name,
+                users::last_name,
+                users::avatar_uri,
             ))
             .filter(users::user_id.eq(user_id))
             .first(connection)

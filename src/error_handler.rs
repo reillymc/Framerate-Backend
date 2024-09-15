@@ -1,9 +1,6 @@
-use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, ResponseError};
 use bcrypt::BcryptError;
 use diesel::result::{self, Error as DieselError};
 use serde::Deserialize;
-use serde_json::json;
 use std::fmt;
 
 pub enum AuthError {
@@ -55,9 +52,7 @@ impl From<DieselError> for CustomError {
     fn from(error: DieselError) -> CustomError {
         match error {
             DieselError::DatabaseError(_, err) => CustomError::new(409, err.message().to_string()),
-            DieselError::NotFound => {
-                CustomError::new(404, "The employee record not found".to_string())
-            }
+            DieselError::NotFound => CustomError::new(404, "Not found".to_string()),
             err => CustomError::new(500, format!("Unknown Diesel error: {err}")),
         }
     }
@@ -68,19 +63,27 @@ impl From<reqwest::Error> for CustomError {
         CustomError::new(500, format!("Reqwest error: {error}"))
     }
 }
+
 impl From<BcryptError> for CustomError {
     fn from(error: BcryptError) -> CustomError {
         CustomError::new(500, format!("Reqwest error: {error}"))
     }
 }
 
-impl ResponseError for CustomError {
-    fn error_response(&self) -> HttpResponse {
-        let status_code = match StatusCode::from_u16(self.status_code) {
-            Ok(status_code) => status_code,
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-
-        HttpResponse::build(status_code).json(json!({ "message": self.message }))
+impl From<jsonwebtoken::errors::Error> for CustomError {
+    fn from(error: jsonwebtoken::errors::Error) -> CustomError {
+        CustomError::new(500, format!("Reqwest error: {error}"))
     }
 }
+
+// TODO: revisit error handling - and merge with other error type above
+// impl ResponseError for CustomError {
+//     fn error_response(&self) -> HttpResponse {
+//         let status_code = match StatusCode::from_u16(self.status_code) {
+//             Ok(status_code) => status_code,
+//             Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+//         };
+
+//         HttpResponse::build(status_code).json(json!({ "message": self.message }))
+//     }
+// }

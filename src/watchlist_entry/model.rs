@@ -1,6 +1,4 @@
 use crate::error_handler::CustomError;
-use crate::user::placeholder_user;
-use crate::watchlist::Watchlist;
 use crate::{db::establish_connection, schema::watchlist_entries};
 use crate::{user, watchlist};
 use chrono::NaiveDate;
@@ -24,17 +22,6 @@ pub struct WatchlistEntry {
     pub media_release_date: Option<NaiveDate>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NewWatchlistEntry {
-    pub media_id: i32,
-    pub user_id: Uuid,
-    pub imdb_id: Option<String>,
-    pub media_title: String,
-    pub media_poster_uri: Option<String>,
-    pub media_release_date: Option<NaiveDate>,
-}
-
 impl WatchlistEntry {
     pub fn find_by_user_and_list(
         user_id: Uuid,
@@ -49,8 +36,7 @@ impl WatchlistEntry {
             )
             .order(watchlist_entries::media_release_date.desc())
             .select(WatchlistEntry::as_select())
-            .load(connection)
-            .expect("Error loading watchlists");
+            .load(connection)?;
         Ok(watchlist_entries)
     }
 
@@ -69,50 +55,28 @@ impl WatchlistEntry {
             )
             .order(watchlist_entries::media_release_date.desc())
             .select(WatchlistEntry::as_select())
-            .first(connection)
-            .expect("Error loading watchlists");
+            .first(connection)?;
         Ok(watchlist_entries)
     }
 
-    pub fn create(
-        media_type: String,
-        watchlist_entry: NewWatchlistEntry,
-    ) -> Result<Self, CustomError> {
-        let watchlist = Watchlist::find_by_media_type(media_type.clone())?;
-
-        let watchlist_entry_to_save = WatchlistEntry {
-            watchlist_id: watchlist.watchlist_id,
-            user_id: placeholder_user(),
-            media_id: watchlist_entry.media_id,
-            imdb_id: watchlist_entry.imdb_id,
-            media_type,
-            media_title: watchlist_entry.media_title,
-            media_poster_uri: watchlist_entry.media_poster_uri,
-            media_release_date: watchlist_entry.media_release_date,
-        };
-
+    pub fn create(watchlist_entry: WatchlistEntry) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
         let new_watchlist = diesel::insert_into(watchlist_entries::table)
-            .values(watchlist_entry_to_save)
-            .get_result(connection)
-            .expect("Error creating watchlist");
+            .values(watchlist_entry)
+            .get_result(connection)?;
         Ok(new_watchlist)
     }
 
-    pub fn delete(media_type: String, media_id: i32) -> Result<usize, CustomError> {
-        let watchlist = Watchlist::find_by_media_type(media_type.clone())?;
-
+    pub fn delete(watchlist_id: Uuid, media_id: i32) -> Result<usize, CustomError> {
         let connection = &mut establish_connection();
         let res = diesel::delete(
             watchlist_entries::table.filter(
-                watchlist_entries::media_type
-                    .eq(media_type)
-                    .and(watchlist_entries::watchlist_id.eq(watchlist.watchlist_id))
+                watchlist_entries::watchlist_id
+                    .eq(watchlist_id)
                     .and(watchlist_entries::media_id.eq(media_id)),
             ),
         )
-        .execute(connection)
-        .expect("Error deleting watchlist");
+        .execute(connection)?;
         Ok(res)
     }
 }

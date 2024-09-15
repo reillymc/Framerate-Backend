@@ -1,7 +1,7 @@
+use crate::db::establish_connection;
 use crate::error_handler::CustomError;
 use crate::schema::watchlists;
 use crate::user;
-use crate::{db::establish_connection, user::placeholder_user};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -25,13 +25,13 @@ pub struct NewWatchlist {
 }
 
 impl Watchlist {
-    pub fn find_by_media_type(media_type: String) -> Result<Self, CustomError> {
+    pub fn find_by_media_type(user_id: Uuid, media_type: String) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
         let watchlist = watchlists::table
             .select(Watchlist::as_select())
             .filter(
                 watchlists::user_id
-                    .eq(placeholder_user())
+                    .eq(user_id)
                     .and(watchlists::media_type.eq(media_type.clone())),
             )
             .first(connection);
@@ -47,7 +47,12 @@ impl Watchlist {
         }
         .to_string();
 
-        let new_watchlist = Watchlist::create(NewWatchlist { name, media_type })?;
+        let new_watchlist = Self::create(Watchlist {
+            watchlist_id: Uuid::new_v4(),
+            media_type,
+            user_id,
+            name,
+        })?;
         Ok(new_watchlist)
     }
 
@@ -57,41 +62,24 @@ impl Watchlist {
             .filter(watchlists::user_id.eq(user_id))
             .order(watchlists::name.desc())
             .select(Watchlist::as_select())
-            .load(connection)
-            .expect("Error loading watchlists");
+            .load(connection)?;
         Ok(watchlists)
     }
 
-    pub fn create(watchlist: NewWatchlist) -> Result<Self, CustomError> {
-        let watchlist_to_save = Watchlist {
-            watchlist_id: Uuid::new_v4(),
-            user_id: placeholder_user(),
-            name: watchlist.name,
-            media_type: watchlist.media_type,
-        };
-
+    pub fn create(watchlist: Watchlist) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
         let new_watchlist = diesel::insert_into(watchlists::table)
-            .values(watchlist_to_save)
-            .get_result(connection)
-            .expect("Error creating watchlist");
+            .values(watchlist)
+            .get_result(connection)?;
         Ok(new_watchlist)
     }
 
-    pub fn update(id: Uuid, watchlist: NewWatchlist) -> Result<Self, CustomError> {
-        let watchlist_to_save = Watchlist {
-            watchlist_id: id,
-            user_id: placeholder_user(),
-            name: watchlist.name,
-            media_type: watchlist.media_type,
-        };
-
+    pub fn update(watchlist: Watchlist) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
         let updated_watchlist = diesel::update(watchlists::table)
-            .filter(watchlists::watchlist_id.eq(id))
-            .set(watchlist_to_save)
-            .get_result(connection)
-            .expect("Error updating watchlist");
+            .filter(watchlists::watchlist_id.eq(watchlist.watchlist_id))
+            .set(watchlist)
+            .get_result(connection)?;
         Ok(updated_watchlist)
     }
 
@@ -99,8 +87,7 @@ impl Watchlist {
         let connection = &mut establish_connection();
         let res =
             diesel::delete(watchlists::table.filter(watchlists::watchlist_id.eq(watchlist_id)))
-                .execute(connection)
-                .expect("Error deleting watchlist");
+                .execute(connection)?;
         Ok(res)
     }
 }

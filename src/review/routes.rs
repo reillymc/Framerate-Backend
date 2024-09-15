@@ -1,5 +1,4 @@
 use crate::review::ReviewFindParameters;
-use crate::review::UpdatedReview;
 use crate::review_company::{ReviewCompanyDetails, ReviewCompanySummary};
 use crate::utils::jwt::Auth;
 use crate::utils::response_body::{Error, Success, SuccessWithMessage};
@@ -10,7 +9,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
 
-use super::NewReview;
 use super::Review;
 
 #[derive(Serialize, Deserialize)]
@@ -128,7 +126,8 @@ async fn create(auth: Auth, review: web::Json<SaveReviewRequest>) -> impl Respon
         });
     };
 
-    let review_to_save = NewReview {
+    let review_to_save = Review {
+        review_id: Uuid::new_v4(),
         user_id: auth.user_id,
         media_id: review.media_id,
         imdb_id: movie.imdb_id,
@@ -189,7 +188,7 @@ async fn update(
         });
     };
 
-    let review_to_save = UpdatedReview {
+    let review_to_save = Review {
         review_id: existing_review.review_id,
         user_id: existing_review.user_id,
         media_id: existing_review.media_id,
@@ -205,7 +204,7 @@ async fn update(
         venue: review.venue.clone(),
     };
 
-    let Ok(updated_review) = Review::update(review_to_save.review_id, review_to_save) else {
+    let Ok(updated_review) = Review::update(review_to_save) else {
         return HttpResponse::InternalServerError().json(Error {
             message: "Review could not be updated".to_string(),
         });

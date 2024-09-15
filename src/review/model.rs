@@ -45,41 +45,6 @@ pub struct ReviewSummary {
     pub media_release_date: Option<NaiveDate>,
 }
 
-#[derive(Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NewReview {
-    pub media_id: i32,
-    pub imdb_id: Option<String>,
-    pub user_id: Uuid,
-    pub media_type: String,
-    pub media_title: String,
-    pub media_poster_uri: Option<String>,
-    pub date: Option<NaiveDate>,
-    pub rating: i16,
-    pub review_title: Option<String>,
-    pub review_description: Option<String>,
-    pub venue: Option<String>,
-    pub media_release_date: Option<NaiveDate>,
-}
-
-#[derive(Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdatedReview {
-    pub review_id: Uuid,
-    pub media_id: i32,
-    pub imdb_id: Option<String>,
-    pub user_id: Uuid,
-    pub media_type: String,
-    pub media_title: String,
-    pub media_poster_uri: Option<String>,
-    pub media_release_date: Option<NaiveDate>,
-    pub date: Option<NaiveDate>,
-    pub rating: i16,
-    pub review_title: Option<String>,
-    pub review_description: Option<String>,
-    pub venue: Option<String>,
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Order {
@@ -228,51 +193,19 @@ impl Review {
         Ok(reviews)
     }
 
-    pub fn create(review: NewReview) -> Result<Self, CustomError> {
-        let review_to_save = Review {
-            review_id: Uuid::new_v4(),
-            user_id: review.user_id,
-            media_id: review.media_id,
-            imdb_id: review.imdb_id,
-            media_type: review.media_type,
-            media_title: review.media_title,
-            media_poster_uri: review.media_poster_uri,
-            media_release_date: review.media_release_date,
-            date: review.date,
-            rating: review.rating,
-            review_title: review.review_title,
-            review_description: review.review_description,
-            venue: review.venue,
-        };
-
+    pub fn create(review: Review) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
         let new_review = diesel::insert_into(reviews::table)
-            .values(review_to_save)
+            .values(review)
             .get_result(connection)?;
         Ok(new_review)
     }
 
-    pub fn update(id: Uuid, review: UpdatedReview) -> Result<Self, CustomError> {
-        let review_to_save = Review {
-            review_id: id,
-            user_id: review.user_id,
-            media_id: review.media_id,
-            imdb_id: review.imdb_id,
-            media_type: review.media_type,
-            media_title: review.media_title,
-            media_poster_uri: review.media_poster_uri,
-            media_release_date: review.media_release_date,
-            date: review.date,
-            rating: review.rating,
-            review_title: review.review_title,
-            review_description: review.review_description,
-            venue: review.venue,
-        };
-
+    pub fn update(review: Review) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
         let updated_review = diesel::update(reviews::table)
-            .filter(reviews::review_id.eq(id))
-            .set(review_to_save)
+            .filter(reviews::review_id.eq(review.review_id))
+            .set(review)
             .get_result(connection)?;
         Ok(updated_review)
     }
