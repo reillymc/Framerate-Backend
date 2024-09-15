@@ -1,0 +1,21 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{host}}/{{endpoint}}/{{userId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "configuration": "{'updated': 'config'}"
+  }
+}
+
+vars:pre-request {
+  userId: 442e7d6c-3c12-4f3c-b3ca-902938e70e56
+}

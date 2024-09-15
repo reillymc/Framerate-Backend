@@ -1,0 +1,22 @@
+meta {
+  name: Search
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{host}}/{{endpoint}}/search?query=hot%20fuzz
+  body: none
+  auth: none
+}
+
+params:query {
+  query: hot fuzz
+}
+
+body:json {
+  {
+    "mediaType": "book",
+    "name": "My Custom List"
+  }
+}

@@ -1,11 +1,11 @@
 meta {
-  name: User
+  name: Read
   type: http
   seq: 1
 }
 
-post {
-  url: {{host}}/users
+get {
+  url: {{host}}/{{endpoint}}/{{userId}}
   body: json
   auth: none
 }
@@ -18,4 +18,8 @@ body:json {
     "lastName": "test1",
     "configuration": "{}"
   }
+}
+
+vars:pre-request {
+  userId: 85026e53-64c6-4130-a087-bba9bf1e7e2c
 }

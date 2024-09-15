@@ -1,0 +1,16 @@
+meta {
+  name: Delete
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{host}}/{{endpoint}}/{{mediaType}}/{{subPath}}/{{mediaId}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  mediaType: movie
+  mediaId: 4638
+}

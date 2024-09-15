@@ -1,11 +1,11 @@
 meta {
   name: Update
   type: http
-  seq: 5
+  seq: 6
 }
 
 put {
-  url: {{host}}/reviews/review/{{reviewId}}
+  url: {{host}}/{{endpoint}}/review/{{reviewId}}
   body: json
   auth: none
 }

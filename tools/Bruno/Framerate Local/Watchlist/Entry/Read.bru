@@ -1,0 +1,16 @@
+meta {
+  name: Read
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/{{endpoint}}/{{mediaType}}/{{subPath}}/{{mediaId}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  mediaType: movie
+  mediaId: 4638
+}
