@@ -1,0 +1,20 @@
+meta {
+  name: Create
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/reviews
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "mediaId": 4638,
+    "mediaType": "movie",
+    "rating": 99,
+    "date": "2024-09-15"
+  }
+}

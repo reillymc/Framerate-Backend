@@ -1,0 +1,15 @@
+meta {
+  name: By ReviewId
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/reviews/review/{{reviewId}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  reviewId: fb1a1e80-c068-4ff2-bb1f-8482123858dd
+}

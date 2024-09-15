@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Framerate Local",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
