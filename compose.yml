@@ -13,18 +13,18 @@ services:
             - framerate-network
 
     framerate-database:
-        image: postgres:14.1
+        image: postgres:16.4
         restart: unless-stopped
         env_file: .env
         volumes:
-            - db:/var/lib/postgresql/data
+            - framerate-db-volume:/var/lib/postgresql/data
         networks:
             - framerate-network
         ports:
             - "5432:5432"
 
 volumes:
-    db:
+    framerate-db-volume:
 
 networks:
     framerate-network: {}
