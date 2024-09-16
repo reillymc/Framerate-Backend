@@ -14,9 +14,9 @@ use uuid::Uuid;
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub user_id: Uuid,
-    pub email: String,
+    pub email: Option<String>,
     #[serde(skip)]
-    pub password: String,
+    pub password: Option<String>,
     pub first_name: String,
     pub last_name: String,
     pub avatar_uri: Option<String>,
@@ -30,12 +30,12 @@ pub struct User {
 #[serde(rename_all = "camelCase")]
 pub struct NewUser {
     pub user_id: Option<Uuid>,
-    pub email: String,
-    pub password: String,
+    pub email: Option<String>,
+    pub password: Option<String>,
     pub first_name: String,
     pub last_name: String,
     pub avatar_uri: Option<String>,
-    pub configuration: serde_json::Value,
+    pub configuration: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Deserialize, AsChangeset)]
@@ -60,7 +60,7 @@ pub struct UserResponse {
 #[serde(rename_all = "camelCase")]
 pub struct UserFindResponse {
     pub user_id: Uuid,
-    pub email: String,
+    pub email: Option<String>,
     pub first_name: String,
     pub last_name: String,
     pub avatar_uri: Option<String>,
@@ -112,10 +112,16 @@ impl User {
     }
 
     pub fn create(user: NewUser) -> Result<Self, CustomError> {
+        let password = if let Some(pwd) = user.password {
+            Some(Self::hash_password(pwd)?)
+        } else {
+            None
+        };
+
         let user_to_save = User {
             user_id: user.user_id.unwrap_or(Uuid::new_v4()),
             email: user.email,
-            password: Self::hash_password(user.password)?,
+            password,
             first_name: user.first_name,
             last_name: user.last_name,
             date_created: chrono::Local::now().naive_local(),
@@ -176,7 +182,11 @@ impl AuthUser {
             .filter(users::email.eq(&self.email))
             .first(connection)?;
 
-        let verify_password = verify(&self.password, &user.password).map_err(|_error| {
+        let Some(password) = &user.password else {
+            return Err(AuthError::WrongPassword("Invalid account".to_string()));
+        };
+
+        let verify_password = verify(&self.password, password).map_err(|_error| {
             AuthError::WrongPassword("Wrong password, check again please".to_string())
         })?;
 

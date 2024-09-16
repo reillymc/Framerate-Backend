@@ -28,8 +28,8 @@ diesel::table! {
 diesel::table! {
     users (user_id) {
         user_id -> Uuid,
-        email -> Text,
-        password -> Text,
+        email -> Nullable<Text>,
+        password -> Nullable<Text>,
         first_name -> Text,
         last_name -> Text,
         avatar_uri -> Nullable<Text>,

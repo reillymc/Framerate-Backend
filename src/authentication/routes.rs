@@ -18,6 +18,12 @@ struct Secret {
 
 #[post("/auth/login")]
 pub async fn login(auth_user: web::Json<AuthUser>) -> impl Responder {
+    if auth_user.email.is_empty() || auth_user.password.is_empty() {
+        return HttpResponse::BadRequest().json(Error {
+            message: "Email and password are required".to_string(),
+        });
+    }
+
     let user = auth_user.login();
 
     let Ok(user_details) = user else {
@@ -26,7 +32,13 @@ pub async fn login(auth_user: web::Json<AuthUser>) -> impl Responder {
         });
     };
 
-    let token = create_token(user_details.user_id, &user_details.email);
+    let Some(email) = &user_details.email else {
+        return HttpResponse::BadRequest().json(Error {
+            message: "Invalid user account".to_string(),
+        });
+    };
+
+    let token = create_token(user_details.user_id, email);
 
     let Ok(token_string) = token else {
         return HttpResponse::InternalServerError().json(Error {

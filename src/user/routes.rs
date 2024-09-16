@@ -42,7 +42,34 @@ async fn find(auth: Auth, user_id: web::Path<Uuid>) -> impl Responder {
 
 #[post("/users")]
 async fn create(_: Auth, user: web::Json<NewUser>) -> impl Responder {
-    let Ok(user) = User::create(user.into_inner()) else {
+    if let Some(email) = &user.email {
+        if email.is_empty() {
+            return HttpResponse::BadRequest().json(Error {
+                message: "Invalid email".to_string(),
+            });
+        }
+
+        if let Some(password) = &user.password {
+            if password.is_empty() {
+                return HttpResponse::BadRequest().json(Error {
+                    message: "Invalid password".to_string(),
+                });
+            }
+        } else {
+            return HttpResponse::BadRequest().json(Error {
+                message: "Invalid password".to_string(),
+            });
+        }
+    } else {
+        if let Some(_) = &user.password {
+            return HttpResponse::BadRequest().json(Error {
+                message: "Invalid email or password".to_string(),
+            });
+        }
+    }
+
+    let res = User::create(user.into_inner());
+    let Ok(user) = res else {
         return HttpResponse::BadRequest().json(Error {
             message: "Invalid data".to_string(),
         });
