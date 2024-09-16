@@ -5,7 +5,7 @@ use crate::{
 };
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::NaiveDateTime;
-use diesel::prelude::*;
+use diesel::{dsl, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -80,8 +80,7 @@ impl User {
                 users::configuration,
             ))
             .filter(users::user_id.eq(user_id))
-            .first(connection)
-            .expect("Error loading posts");
+            .first(connection)?;
         Ok(users)
     }
 
@@ -95,8 +94,7 @@ impl User {
                 users::avatar_uri,
             ))
             .filter(users::user_id.eq(user_id))
-            .first(connection)
-            .expect("Error loading posts");
+            .first(connection)?;
         Ok(users)
     }
 
@@ -109,8 +107,7 @@ impl User {
                 users::last_name,
                 users::avatar_uri,
             ))
-            .load(connection)
-            .expect("Error loading posts");
+            .load(connection)?;
         Ok(users)
     }
 
@@ -134,8 +131,7 @@ impl User {
         let connection = &mut establish_connection();
         let new_user = diesel::insert_into(users::table)
             .values(user_to_save)
-            .get_result(connection)
-            .expect("Error creating user");
+            .get_result(connection)?;
         Ok(new_user)
     }
 
@@ -144,21 +140,26 @@ impl User {
         let updated_user = diesel::update(users::table)
             .filter(users::user_id.eq(id))
             .set(user)
-            .get_result(connection)
-            .expect("Error updating user");
+            .get_result(connection)?;
         Ok(updated_user)
     }
 
     pub fn delete(user_id: Uuid) -> Result<usize, CustomError> {
         let connection = &mut establish_connection();
-        let res = diesel::delete(users::table.filter(users::user_id.eq(user_id)))
-            .execute(connection)
-            .expect("Error deleting user");
+        let res =
+            diesel::delete(users::table.filter(users::user_id.eq(user_id))).execute(connection)?;
         Ok(res)
     }
 
     pub fn hash_password(plain: String) -> Result<String, CustomError> {
         Ok(hash(plain, DEFAULT_COST)?)
+    }
+
+    pub fn find_any() -> Result<bool, CustomError> {
+        let connection = &mut establish_connection();
+        let res = dsl::select(dsl::exists(users::table.select(users::user_id).limit(1)))
+            .get_result(connection)?;
+        Ok(res)
     }
 }
 

@@ -1,0 +1,17 @@
+meta {
+  name: Setup
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/{{endpoint}}/setup
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "secret": "secret"
+  }
+}

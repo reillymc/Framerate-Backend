@@ -9,6 +9,7 @@ use crate::watchlist_entry;
 
 pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(authentication::login);
+    config.service(authentication::setup);
 
     config.service(user::find);
     config.service(user::find_all);
