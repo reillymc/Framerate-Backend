@@ -8,12 +8,20 @@ use crate::{
     },
 };
 use actix_web::{post, web, HttpResponse, Responder};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Deserialize)]
 struct Secret {
     secret: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+
+struct LoginResponse {
+    token: String,
+    user_id: Uuid,
 }
 
 #[post("/auth/login")]
@@ -45,7 +53,12 @@ pub async fn login(auth_user: web::Json<AuthUser>) -> impl Responder {
             message: "Unable to create token".to_string(),
         });
     };
-    HttpResponse::Ok().json(Success { data: token_string })
+    HttpResponse::Ok().json(Success {
+        data: LoginResponse {
+            token: token_string,
+            user_id: user_details.user_id,
+        },
+    })
 }
 
 #[post("/auth/setup")]

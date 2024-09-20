@@ -5,12 +5,18 @@ use crate::utils::response_body::{Error, Success};
 use crate::watchlist::Watchlist;
 use actix_web::{delete, Responder};
 use actix_web::{get, post, web, HttpResponse};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveWatchlistEntryRequest {
     pub media_id: i32,
+}
+
+#[derive(Serialize)]
+
+pub struct DeleteResponse {
+    pub count: usize,
 }
 
 #[get("/watchlists/{media_type}/entries/{media_id}")]
@@ -97,5 +103,7 @@ async fn delete(auth: Auth, path: web::Path<(String, i32)>) -> impl Responder {
         });
     }
 
-    HttpResponse::Ok().json(Success { data: count })
+    HttpResponse::Ok().json(Success {
+        data: DeleteResponse { count },
+    })
 }
