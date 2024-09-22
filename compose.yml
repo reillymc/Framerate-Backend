@@ -4,9 +4,10 @@ services:
         container_name: framerate-backend
         depends_on:
             - framerate-database
-        build: .
         restart: unless-stopped
         env_file: .env
+        volumes:
+            - ./framerate-data/logs:/home/app/logs
         ports:
             - $PORT:$PORT
         networks:
@@ -17,11 +18,11 @@ services:
         restart: unless-stopped
         env_file: .env
         volumes:
-            - ./data:/var/lib/postgresql/data
+            - ./framerate-data/db:/var/lib/postgresql/data
         networks:
             - framerate-network
-        ports:
-            - "5432:5432"
+        expose:
+            - $PGPORT
 
 networks:
     framerate-network: {}
