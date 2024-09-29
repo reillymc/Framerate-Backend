@@ -3,6 +3,7 @@ use actix_web::web;
 use crate::authentication;
 use crate::movie;
 use crate::review;
+use crate::show;
 use crate::user;
 use crate::watchlist;
 use crate::watchlist_entry;
@@ -35,4 +36,8 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(movie::find);
     config.service(movie::popular);
     config.service(movie::search);
+
+    config.service(show::find);
+    config.service(show::popular);
+    config.service(show::search);
 }

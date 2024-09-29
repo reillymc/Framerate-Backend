@@ -1,0 +1,22 @@
+meta {
+  name: Search
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{host}}/{{endpoint}}/search?query=doctor%20who
+  body: none
+  auth: none
+}
+
+params:query {
+  query: doctor who
+}
+
+body:json {
+  {
+    "mediaType": "book",
+    "name": "My Custom List"
+  }
+}

@@ -15,6 +15,7 @@ services:
 
     framerate-database:
         image: postgres:16.4
+        container_name: framerate-database
         restart: unless-stopped
         env_file: .env
         volumes:

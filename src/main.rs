@@ -17,6 +17,7 @@ mod review;
 mod review_company;
 mod routes;
 mod schema;
+mod show;
 mod user;
 mod utils;
 mod watchlist;

@@ -1,0 +1,15 @@
+meta {
+  name: Find
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/{{endpoint}}/details/{{mediaId}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  mediaId: 57243
+}

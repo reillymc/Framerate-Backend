@@ -11,5 +11,6 @@
             "database": "postgres",
             "username": "postgres"
         }
-    ]
+    ],
+    "cSpell.words": ["imdb", "tagline", "tbdb"]
 }
