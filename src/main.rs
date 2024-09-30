@@ -11,6 +11,7 @@ use std::env;
 mod authentication;
 mod db;
 mod error_handler;
+mod media;
 mod movie;
 mod review;
 mod review_company;

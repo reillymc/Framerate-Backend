@@ -55,9 +55,11 @@ async fn create(
         });
     };
 
-    let Ok(movie) = crate::movie::Movie::find(watchlist_entry.media_id).await else {
+    let Ok(media_details) =
+        crate::media::helpers::get_details(&media_type, watchlist_entry.media_id).await
+    else {
         return HttpResponse::NotFound().json(Error {
-            message: "Movie not found".to_string(),
+            message: "Media not found".to_string(),
         });
     };
 
@@ -66,10 +68,10 @@ async fn create(
         media_type: media_type.into_inner(),
         user_id: auth.user_id,
         media_id: watchlist_entry.media_id,
-        imdb_id: movie.imdb_id,
-        media_title: movie.title,
-        media_poster_uri: movie.poster_path,
-        media_release_date: movie.release_date,
+        imdb_id: media_details.imdb_id,
+        media_title: media_details.media_title,
+        media_poster_uri: media_details.media_poster_uri,
+        media_release_date: media_details.media_release_date,
     };
 
     let Ok(watchlist) = WatchlistEntry::create(watchlist_entry_to_save) else {

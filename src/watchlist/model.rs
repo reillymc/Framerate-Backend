@@ -42,7 +42,7 @@ impl Watchlist {
 
         let name = match media_type.as_str() {
             "movie" => "Movie Watchlist",
-            "show" => "Shows Watchlist",
+            "show" => "Show Watchlist",
             _ => "Watchlist",
         }
         .to_string();

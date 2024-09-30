@@ -120,9 +120,11 @@ async fn find_all(auth: Auth, params: web::Query<ReviewFindParameters>) -> impl 
 
 #[post("/reviews")]
 async fn create(auth: Auth, review: web::Json<SaveReviewRequest>) -> impl Responder {
-    let Ok(movie) = crate::movie::Movie::find(review.media_id).await else {
+    let Ok(media_details) =
+        crate::media::helpers::get_details(&review.media_type, review.media_id).await
+    else {
         return HttpResponse::NotFound().json(Error {
-            message: "Movie not found".to_string(),
+            message: "Media not found".to_string(),
         });
     };
 
@@ -130,11 +132,11 @@ async fn create(auth: Auth, review: web::Json<SaveReviewRequest>) -> impl Respon
         review_id: Uuid::new_v4(),
         user_id: auth.user_id,
         media_id: review.media_id,
-        imdb_id: movie.imdb_id,
+        imdb_id: media_details.imdb_id,
         media_type: review.media_type.clone(),
-        media_title: movie.title,
-        media_poster_uri: movie.poster_path,
-        media_release_date: movie.release_date,
+        media_title: media_details.media_title,
+        media_poster_uri: media_details.media_poster_uri,
+        media_release_date: media_details.media_release_date,
         date: review.date,
         rating: review.rating,
         review_title: review.review_title.clone(),
@@ -182,9 +184,12 @@ async fn update(
         });
     };
 
-    let Ok(movie) = crate::movie::Movie::find(existing_review.media_id).await else {
+    let Ok(media_details) =
+        crate::media::helpers::get_details(&existing_review.media_type, existing_review.media_id)
+            .await
+    else {
         return HttpResponse::NotFound().json(Error {
-            message: "Movie not found".to_string(),
+            message: "Media not found".to_string(),
         });
     };
 
@@ -192,11 +197,11 @@ async fn update(
         review_id: existing_review.review_id,
         user_id: existing_review.user_id,
         media_id: existing_review.media_id,
-        imdb_id: movie.imdb_id,
+        imdb_id: media_details.imdb_id,
         media_type: existing_review.media_type,
-        media_title: movie.title,
-        media_poster_uri: movie.poster_path,
-        media_release_date: movie.release_date,
+        media_title: media_details.media_title,
+        media_poster_uri: media_details.media_poster_uri,
+        media_release_date: media_details.media_release_date,
         date: review.date,
         rating: review.rating,
         review_title: review.review_title.clone(),
