@@ -1,13 +1,10 @@
 use diesel::pg;
 use diesel::prelude::*;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use dotenvy::dotenv;
 use std::env;
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 pub fn establish_connection() -> PgConnection {
-    dotenv().ok();
-
     let db_user = env::var("POSTGRES_USER").expect("POSTGRES_USER must be set");
     let db_password = env::var("POSTGRES_PASSWORD").expect("POSTGRES_PASSWORD must be set");
     let db_name = env::var("POSTGRES_DB").expect("POSTGRES_DB must be set");

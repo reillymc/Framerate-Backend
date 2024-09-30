@@ -4,7 +4,6 @@ extern crate diesel_migrations;
 
 use actix_web::{middleware::Logger, App, HttpServer};
 use db::establish_connection;
-use dotenvy::dotenv;
 use env_logger::Env;
 use listenfd::ListenFd;
 use std::env;
@@ -25,8 +24,6 @@ mod watchlist_entry;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
-
     let connection = &mut establish_connection();
     db::run_db_migrations(connection);
 

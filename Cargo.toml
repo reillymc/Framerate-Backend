@@ -17,7 +17,6 @@ diesel = { version = "2.1", features = [
     "serde_json",
     "uuid",
 ] }
-dotenvy = "0.15"
 diesel_migrations = "2.1"
 env_logger = "0.11"
 listenfd = "1.0"
