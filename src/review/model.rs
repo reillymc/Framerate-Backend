@@ -64,6 +64,7 @@ pub enum Sort {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewFindParameters {
+    pub media_type: String,
     pub order_by: Option<Order>,
     pub sort: Option<Sort>,
     pub page: Option<i64>,
@@ -101,6 +102,7 @@ impl Review {
 
         let mut query = reviews::table
             .filter(reviews::user_id.eq(user_id))
+            .filter(reviews::media_type.eq(params.media_type))
             .into_boxed();
 
         let order_by = params.order_by.unwrap_or(Order::Date);
