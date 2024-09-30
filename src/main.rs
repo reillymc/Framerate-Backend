@@ -2,6 +2,7 @@ extern crate diesel;
 // #[macro_use]
 extern crate diesel_migrations;
 
+use actix_cors::Cors;
 use actix_web::{middleware::Logger, App, HttpServer};
 use db::establish_connection;
 use env_logger::Env;
@@ -32,6 +33,7 @@ async fn main() -> std::io::Result<()> {
     let mut listenfd = ListenFd::from_env();
     let mut server = HttpServer::new(|| {
         App::new()
+            .wrap(Cors::default())
             .wrap(Logger::default())
             .wrap(actix_cors::Cors::permissive())
             .configure(routes::init_routes)
