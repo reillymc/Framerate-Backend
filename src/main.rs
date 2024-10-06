@@ -18,6 +18,7 @@ mod review_company;
 mod routes;
 mod schema;
 mod show;
+mod show_season;
 mod user;
 mod utils;
 mod watchlist;

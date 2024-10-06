@@ -1,13 +1,14 @@
 use std::env;
 
-use crate::utils::serialization::empty_string_as_none;
+use crate::{show_season::Season, utils::serialization::empty_string_as_none};
 use chrono::NaiveDate;
 use reqwest::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
 
 use crate::error_handler::CustomError;
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "camelCase"))]
 pub struct ExternalIds {
     pub imdb_id: Option<String>,
     pub tvdb_id: Option<i64>,
@@ -26,6 +27,7 @@ pub struct Show {
     pub tagline: Option<String>,
     pub popularity: f32,
     pub external_ids: Option<ExternalIds>,
+    pub seasons: Option<Vec<Season>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

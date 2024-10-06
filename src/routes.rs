@@ -4,6 +4,7 @@ use crate::authentication;
 use crate::movie;
 use crate::review;
 use crate::show;
+use crate::show_season;
 use crate::user;
 use crate::watchlist;
 use crate::watchlist_entry;
@@ -40,4 +41,6 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(show::find);
     config.service(show::popular);
     config.service(show::search);
+
+    config.service(show_season::find);
 }

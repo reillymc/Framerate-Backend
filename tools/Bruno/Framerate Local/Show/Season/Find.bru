@@ -5,11 +5,12 @@ meta {
 }
 
 get {
-  url: {{host}}/{{endpoint}}/{{mediaId}}/details
+  url: {{host}}/{{endpoint}}/{{showId}}/{{subPath}}/{{seasonNumber}}
   body: none
   auth: inherit
 }
 
 vars:pre-request {
-  mediaId: 57243
+  showId: 57243
+  seasonNumber: 1
 }
