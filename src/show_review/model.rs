@@ -171,6 +171,7 @@ impl ShowReview {
             .filter(show_reviews::show_id.eq(show_id))
             .filter(show_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
+            .order(reviews::date.desc().nulls_last())
             .select((ShowReview::as_select(), Review::as_select()))
             .load::<(ShowReview, Review)>(connection)?;
 

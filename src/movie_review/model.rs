@@ -171,6 +171,7 @@ impl MovieReview {
             .filter(movie_reviews::movie_id.eq(movie_id))
             .filter(movie_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
+            .order(reviews::date.desc().nulls_last())
             .select((MovieReview::as_select(), Review::as_select()))
             .load::<(MovieReview, Review)>(connection)?;
 

@@ -90,6 +90,7 @@ impl SeasonReview {
             .filter(season_reviews::season_number.eq(season_number))
             .filter(season_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
+            .order(reviews::date.desc().nulls_last())
             .select((SeasonReview::as_select(), Review::as_select()))
             .load::<(SeasonReview, Review)>(connection)?;
 
