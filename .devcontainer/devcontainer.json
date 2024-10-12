@@ -7,7 +7,7 @@
     "postCreateCommand": "cargo install cargo-watch && cargo install diesel_cli --no-default-features --features postgres && rustc --version",
     "customizations": {
         "vscode": {
-            "extensions": ["mtxr.sqltools", "mtxr.sqltools-driver-pg"]
+            "extensions": ["mtxr.sqltools", "mtxr.sqltools-driver-pg", "bradymholt.pgformatter"]
         }
     },
     "forwardPorts": [3000, 5432]

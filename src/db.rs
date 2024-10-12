@@ -18,7 +18,7 @@ pub fn establish_connection() -> PgConnection {
 
 pub fn run_db_migrations(conn: &mut impl MigrationHarness<pg::Pg>) {
     conn.run_pending_migrations(MIGRATIONS)
-        .expect("Could not run migrations");
+        .unwrap_or_else(|error| panic!("Could not run migrations {error}"));
 }
 
 pub const DEFAULT_PAGE_SIZE: i64 = 10;

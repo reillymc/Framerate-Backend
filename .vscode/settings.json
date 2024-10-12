@@ -12,5 +12,12 @@
             "username": "postgres"
         }
     ],
-    "cSpell.words": ["imdb", "tagline", "tbdb"]
+    "cSpell.words": ["imdb", "tagline", "tbdb"],
+    "pgFormatter.commaBreak": false,
+    "pgFormatter.commaStart": false,
+    "pgFormatter.commaEnd": true,
+    "pgFormatter.functionCase": "unchanged",
+    "pgFormatter.keywordCase": "uppercase",
+    "pgFormatter.noGrouping": false,
+    "pgFormatter.wrapLimit": 0
 }
