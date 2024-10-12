@@ -1,11 +1,11 @@
 meta {
   name: Update
   type: http
-  seq: 6
+  seq: 4
 }
 
 put {
-  url: {{host}}/{{endpoint}}/review/{{reviewId}}
+  url: {{host}}/{{endpoint}}/{{subPath}}/review/{{reviewId}}
   body: json
   auth: inherit
 }
@@ -17,5 +17,5 @@ body:json {
 }
 
 vars:pre-request {
-  reviewId: fb1a1e80-c068-4ff2-bb1f-8482123858dd
+  reviewId: 078fa5a0-b607-4390-bc15-783fbf12ad9a
 }

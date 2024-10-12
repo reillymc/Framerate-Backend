@@ -1,0 +1,15 @@
+meta {
+  name: By MovieId
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{host}}/{{endpoint}}/{{subPath}}/movie/{{movieId}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  movieId: 4638
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Create
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/{{endpoint}}/{{subPath}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "showId": 57243,
+    "rating": 99,
+    "date": "2024-09-15"
+  }
+}

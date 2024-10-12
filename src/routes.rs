@@ -2,8 +2,9 @@ use actix_web::web;
 
 use crate::authentication;
 use crate::movie;
-use crate::review;
+use crate::movie_review;
 use crate::show;
+use crate::show_review;
 use crate::show_season;
 use crate::user;
 use crate::watchlist;
@@ -18,13 +19,6 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(user::create);
     config.service(user::update);
 
-    config.service(review::find);
-    config.service(review::find_all);
-    config.service(review::find_by_media);
-    config.service(review::find_statistics);
-    config.service(review::create);
-    config.service(review::update);
-
     config.service(watchlist::find);
     config.service(watchlist::find_all);
     config.service(watchlist::create);
@@ -38,9 +32,21 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(movie::popular);
     config.service(movie::search);
 
+    config.service(movie_review::find_by_review_id);
+    config.service(movie_review::find_all);
+    config.service(movie_review::find_by_movie_id);
+    config.service(movie_review::create);
+    config.service(movie_review::update);
+
     config.service(show::find);
     config.service(show::popular);
     config.service(show::search);
+
+    config.service(show_review::find_by_review_id);
+    config.service(show_review::find_all);
+    config.service(show_review::find_by_show_id);
+    config.service(show_review::create);
+    config.service(show_review::update);
 
     config.service(show_season::find);
 }

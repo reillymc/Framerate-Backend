@@ -25,7 +25,7 @@ pub struct Show {
     pub first_air_date: Option<NaiveDate>,
     pub overview: Option<String>,
     pub tagline: Option<String>,
-    pub popularity: f32,
+    pub popularity: Option<f32>,
     pub external_ids: Option<ExternalIds>,
     pub seasons: Option<Vec<Season>>,
 }
@@ -37,7 +37,7 @@ pub struct ShowSearchResults {
 }
 
 impl Show {
-    pub async fn find(id: i32) -> Result<Show, CustomError> {
+    pub async fn find(id: &i32) -> Result<Show, CustomError> {
         let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
             return Err(CustomError::new(
                 500,

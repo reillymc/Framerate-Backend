@@ -1,6 +1,6 @@
-use crate::db::{establish_connection, DEFAULT_PAGE_SIZE};
+use crate::db::establish_connection;
 use crate::error_handler::CustomError;
-use crate::schema::{review_company, reviews};
+use crate::schema::reviews;
 use crate::user;
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 use diesel::prelude::*;
@@ -14,19 +14,12 @@ use uuid::Uuid;
 pub struct Review {
     pub review_id: Uuid,
     pub user_id: Uuid,
-    pub media_id: i32,
-    pub imdb_id: Option<String>,
-    pub media_type: String,
-    pub media_title: String,
-    pub media_poster_uri: Option<String>,
     #[diesel(treat_none_as_null = true)]
     pub date: Option<NaiveDate>,
     pub rating: i16,
-    pub review_title: Option<String>,
-    pub review_description: Option<String>,
+    pub title: Option<String>,
+    pub description: Option<String>,
     pub venue: Option<String>,
-    #[diesel(treat_none_as_null = true)]
-    pub media_release_date: Option<NaiveDate>,
 }
 
 #[derive(Queryable, Serialize)]
@@ -64,7 +57,6 @@ pub enum Sort {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewFindParameters {
-    pub media_type: String,
     pub order_by: Option<Order>,
     pub sort: Option<Sort>,
     pub page: Option<i64>,
@@ -91,107 +83,6 @@ impl Review {
             .filter(reviews::review_id.eq(review_id))
             .filter(reviews::user_id.eq(user_id))
             .first(connection)?;
-        Ok(reviews)
-    }
-
-    pub fn find_by_user(
-        user_id: Uuid,
-        params: ReviewFindParameters,
-    ) -> Result<Vec<ReviewSummary>, CustomError> {
-        let connection = &mut establish_connection();
-
-        let mut query = reviews::table
-            .filter(reviews::user_id.eq(user_id))
-            .filter(reviews::media_type.eq(params.media_type))
-            .into_boxed();
-
-        let order_by = params.order_by.unwrap_or(Order::Date);
-        let sort = params.sort.unwrap_or(Sort::Desc);
-        query = match sort {
-            Sort::Asc => match order_by {
-                Order::Date => query.order(reviews::date.asc().nulls_first()),
-                Order::MediaReleaseDate => {
-                    query.order(reviews::media_release_date.asc().nulls_first())
-                }
-                Order::Rating => query.order(reviews::rating.asc()),
-                Order::MediaTitle => query.order(reviews::media_title.asc().nulls_first()),
-            },
-            Sort::Desc => match order_by {
-                Order::Date => query.order(reviews::date.desc().nulls_last()),
-                Order::MediaReleaseDate => {
-                    query.order(reviews::media_release_date.desc().nulls_last())
-                }
-                Order::Rating => query.order(reviews::rating.desc()),
-                Order::MediaTitle => query.order(reviews::media_title.desc().nulls_last()),
-            },
-        };
-
-        query = query.then_order_by(reviews::review_id.asc());
-
-        if let Some(venue) = params.at_venue {
-            query = query.filter(reviews::venue.eq(venue));
-        }
-
-        if let Some(rating_min) = params.rating_min {
-            query = query.filter(reviews::rating.ge(rating_min));
-        }
-
-        if let Some(rating_max) = params.rating_max {
-            query = query.filter(reviews::rating.le(rating_max));
-        }
-
-        if let Some(with_company) = params.with_company {
-            query = query.filter(
-                reviews::review_id.eq_any(
-                    review_company::table
-                        .select(review_company::review_id)
-                        .filter(review_company::user_id.eq(with_company)),
-                ),
-            );
-        }
-
-        if let Some(page) = params.page {
-            let page_size = params.page_size.unwrap_or(DEFAULT_PAGE_SIZE);
-            query = query.limit(page_size).offset((page - 1) * page_size);
-        }
-
-        let reviews = query
-            .select((
-                reviews::review_id,
-                reviews::user_id,
-                reviews::media_id,
-                reviews::media_title,
-                reviews::media_type,
-                reviews::media_poster_uri,
-                reviews::date,
-                reviews::rating,
-                reviews::review_description,
-                reviews::venue,
-                reviews::media_release_date,
-            ))
-            .load(connection)?;
-        Ok(reviews)
-    }
-
-    pub fn find_by_media(user_id: Uuid, media_id: i32) -> Result<Vec<Self>, CustomError> {
-        let connection = &mut establish_connection();
-        let reviews = reviews::table
-            .filter(reviews::media_id.eq(media_id))
-            .filter(reviews::user_id.eq(user_id))
-            .order(reviews::date.desc().nulls_last())
-            .select(Review::as_select())
-            .load(connection)?;
-        Ok(reviews)
-    }
-
-    pub fn find_by_user_media(user_id: Uuid, media_id: i32) -> Result<Vec<Self>, CustomError> {
-        let connection = &mut establish_connection();
-        let reviews = reviews::table
-            .filter(reviews::user_id.eq(user_id))
-            .filter(reviews::media_id.eq(media_id))
-            .order(reviews::date.desc().nulls_last())
-            .select(Review::as_select())
-            .load(connection)?;
         Ok(reviews)
     }
 

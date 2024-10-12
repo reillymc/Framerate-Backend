@@ -19,7 +19,7 @@ pub struct Movie {
     pub release_date: Option<NaiveDate>,
     pub overview: Option<String>,
     pub tagline: Option<String>,
-    pub popularity: f32,
+    pub popularity: Option<f32>,
     pub runtime: Option<i32>,
 }
 
@@ -30,7 +30,7 @@ pub struct MovieSearchResults {
 }
 
 impl Movie {
-    pub async fn find(id: i32) -> Result<Movie, CustomError> {
+    pub async fn find(id: &i32) -> Result<Movie, CustomError> {
         let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
             return Err(CustomError::new(
                 500,

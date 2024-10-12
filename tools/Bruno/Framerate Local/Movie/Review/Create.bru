@@ -1,19 +1,18 @@
 meta {
   name: Create
   type: http
-  seq: 5
+  seq: 3
 }
 
 post {
-  url: {{host}}/{{endpoint}}
+  url: {{host}}/{{endpoint}}/{{subPath}}
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "mediaId": 4638,
-    "mediaType": "movie",
+    "movieId": 4638,
     "rating": 99,
     "date": "2024-09-15"
   }

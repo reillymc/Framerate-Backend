@@ -1,0 +1,21 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{host}}/{{endpoint}}/{{subPath}}/review/{{reviewId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "rating": 64
+  }
+}
+
+vars:pre-request {
+  reviewId: 060d7a9d-a7b2-4b7f-ae17-55c2f22ebe47
+}

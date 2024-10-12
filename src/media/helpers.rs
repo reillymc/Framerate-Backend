@@ -12,7 +12,7 @@ pub struct MediaDetails {
 pub async fn get_details(media_type: &str, media_id: i32) -> Result<MediaDetails, Error> {
     match media_type {
         "movie" => {
-            let Ok(movie) = crate::movie::Movie::find(media_id).await else {
+            let Ok(movie) = crate::movie::Movie::find(&media_id).await else {
                 return Err(Error {
                     message: "Movie not found".to_string(),
                 });
@@ -26,7 +26,7 @@ pub async fn get_details(media_type: &str, media_id: i32) -> Result<MediaDetails
             })
         }
         "show" => {
-            let Ok(show) = crate::show::Show::find(media_id).await else {
+            let Ok(show) = crate::show::Show::find(&media_id).await else {
                 return Err(Error {
                     message: "Show not found".to_string(),
                 });
