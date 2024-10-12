@@ -32,6 +32,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    season_reviews (review_id) {
+        review_id -> Uuid,
+        user_id -> Uuid,
+        show_id -> Int4,
+        season_number -> Int4,
+        name -> Nullable<Text>,
+        poster_path -> Nullable<Text>,
+        air_date -> Nullable<Date>,
+    }
+}
+
+diesel::table! {
     show_reviews (review_id) {
         review_id -> Uuid,
         user_id -> Uuid,
@@ -85,6 +97,8 @@ diesel::joinable!(movie_reviews -> users (user_id));
 diesel::joinable!(review_company -> reviews (review_id));
 diesel::joinable!(review_company -> users (user_id));
 diesel::joinable!(reviews -> users (user_id));
+diesel::joinable!(season_reviews -> reviews (review_id));
+diesel::joinable!(season_reviews -> users (user_id));
 diesel::joinable!(show_reviews -> reviews (review_id));
 diesel::joinable!(show_reviews -> users (user_id));
 diesel::joinable!(watchlist_entries -> users (user_id));
@@ -95,6 +109,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     movie_reviews,
     review_company,
     reviews,
+    season_reviews,
     show_reviews,
     users,
     watchlist_entries,

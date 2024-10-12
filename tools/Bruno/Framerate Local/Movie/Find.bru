@@ -5,11 +5,11 @@ meta {
 }
 
 get {
-  url: {{host}}/{{endpoint}}/details/{{mediaId}}
+  url: {{host}}/{{endpoint}}/{{movieId}}/details
   body: none
   auth: inherit
 }
 
 vars:pre-request {
-  mediaId: 4638
+  movieId: 4638
 }

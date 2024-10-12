@@ -1,9 +1,9 @@
-use super::ShowReviewReadResponse;
+use super::SeasonReviewReadResponse;
 
-use crate::review::{Review, ReviewFindParameters};
+use crate::review::Review;
 use crate::review_company::{ReviewCompanyDetails, ReviewCompanySummary};
-use crate::show::Show;
-use crate::show_review::ShowReview;
+use crate::season::Season;
+use crate::season_review::SeasonReview;
 use crate::utils::jwt::Auth;
 use crate::utils::response_body::{Error, Success, SuccessWithMessage};
 use actix_web::{get, post, web, HttpResponse};
@@ -14,9 +14,9 @@ use uuid::Uuid;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SaveShowReviewRequest {
-    pub rating: i16,
+pub struct SaveSeasonReviewRequest {
     pub date: Option<NaiveDate>,
+    pub rating: i16,
     pub title: Option<String>,
     pub description: Option<String>,
     pub venue: Option<String>,
@@ -25,7 +25,7 @@ pub struct SaveShowReviewRequest {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ShowReviewResponse {
+pub struct SeasonReviewResponse {
     pub review_id: Uuid,
     pub user_id: Uuid,
     pub date: Option<NaiveDate>,
@@ -34,12 +34,12 @@ pub struct ShowReviewResponse {
     pub description: Option<String>,
     pub venue: Option<String>,
     pub company: Option<Vec<ReviewCompanyDetails>>,
-    pub show: Show,
+    pub season: Season,
 }
 
-impl From<ShowReviewReadResponse> for ShowReviewResponse {
-    fn from(review: ShowReviewReadResponse) -> Self {
-        ShowReviewResponse {
+impl From<SeasonReviewReadResponse> for SeasonReviewResponse {
+    fn from(review: SeasonReviewReadResponse) -> Self {
+        SeasonReviewResponse {
             review_id: review.review_id,
             user_id: review.user_id,
             date: review.date,
@@ -48,29 +48,30 @@ impl From<ShowReviewReadResponse> for ShowReviewResponse {
             description: review.description,
             venue: review.venue,
             company: None,
-            show: review.show,
+            season: review.season,
         }
     }
 }
 
-#[get("/shows/reviews")]
-async fn find_all(auth: Auth, params: web::Query<ReviewFindParameters>) -> impl Responder {
-    match ShowReview::find_all(auth.user_id, params.into_inner()) {
+#[get("/shows/{show_id}/seasons/{season_number}/reviews")]
+async fn find_by_show_season(auth: Auth, path: web::Path<(i32, i32)>) -> impl Responder {
+    let (show_id, season_number) = path.into_inner();
+    match SeasonReview::find_by_show_season(auth.user_id, show_id, season_number) {
         Err(err) => HttpResponse::InternalServerError().json(Error {
             message: err.message,
         }),
         Ok(reviews) => HttpResponse::Ok().json(Success {
             data: reviews
                 .into_iter()
-                .map(ShowReviewResponse::from)
-                .collect::<Vec<ShowReviewResponse>>(),
+                .map(SeasonReviewResponse::from)
+                .collect::<Vec<SeasonReviewResponse>>(),
         }),
     }
 }
 
-#[get("/shows/reviews/{review_id}")]
+#[get("/shows/seasons/reviews/{review_id}")]
 async fn find_by_review_id(auth: Auth, review_id: web::Path<Uuid>) -> impl Responder {
-    let Ok(review) = ShowReview::find_by_review_id(auth.user_id, review_id.into_inner()) else {
+    let Ok(review) = SeasonReview::find_by_review_id(auth.user_id, review_id.into_inner()) else {
         return HttpResponse::NotFound().json(Error {
             message: "Review not found".to_string(),
         });
@@ -80,44 +81,29 @@ async fn find_by_review_id(auth: Auth, review_id: web::Path<Uuid>) -> impl Respo
 
     let Ok(company) = company else {
         return HttpResponse::Ok().json(SuccessWithMessage {
-            data: ShowReviewResponse::from(review),
+            data: SeasonReviewResponse::from(review),
             message: "Company could not be retrieved".to_string(),
         });
     };
 
-    let mut review = ShowReviewResponse::from(review);
+    let mut review = SeasonReviewResponse::from(review);
     review.company = Some(company);
 
     HttpResponse::Ok().json(Success { data: review })
 }
 
-#[get("/shows/{show_id}/reviews")]
-async fn find_by_show_id(auth: Auth, show_id: web::Path<i32>) -> impl Responder {
-    match ShowReview::find_by_show_id(auth.user_id, show_id.into_inner()) {
-        Err(err) => HttpResponse::InternalServerError().json(Error {
-            message: err.message,
-        }),
-        Ok(reviews) => HttpResponse::Ok().json(Success {
-            data: reviews
-                .into_iter()
-                .map(ShowReviewResponse::from)
-                .collect::<Vec<ShowReviewResponse>>(),
-        }),
-    }
-}
-
-#[post("/shows/{show_id}/reviews")]
+#[post("/shows/{show_id}/seasons/{season_number}/reviews")]
 async fn create(
     auth: Auth,
-    review: web::Json<SaveShowReviewRequest>,
-    show_id: web::Path<i32>,
+    review: web::Json<SaveSeasonReviewRequest>,
+    path: web::Path<(i32, i32)>,
 ) -> impl Responder {
     let review = review.into_inner();
-    let show_id = show_id.into_inner();
+    let (show_id, season_number) = path.into_inner();
 
-    let Ok(show) = crate::show::Show::find(&show_id).await else {
+    let Ok(season) = crate::season::Season::find(&show_id, &season_number).await else {
         return HttpResponse::NotFound().json(Error {
-            message: "Show not found".to_string(),
+            message: "Season not found".to_string(),
         });
     };
 
@@ -139,29 +125,23 @@ async fn create(
         });
     };
 
-    let imdb_id = if let Some(external_ids) = show.external_ids {
-        external_ids.imdb_id
-    } else {
-        None
-    };
-
-    let show_review_to_save = ShowReview {
+    let season_review_to_save = SeasonReview {
         review_id,
-        show_id,
-        imdb_id,
         user_id: auth.user_id,
-        name: show.name,
-        poster_path: show.poster_path,
-        first_air_date: show.first_air_date,
+        show_id,
+        season_number,
+        name: season.name,
+        poster_path: season.poster_path,
+        air_date: season.air_date,
     };
 
-    let Ok(created_show_review) = ShowReview::create(show_review_to_save) else {
+    let Ok(created_season_review) = SeasonReview::create(season_review_to_save) else {
         return HttpResponse::InternalServerError().json(Error {
-            message: "Show review could not be created".to_string(),
+            message: "Season review could not be created".to_string(),
         });
     };
 
-    let mut review_response = ShowReviewResponse {
+    let mut review_response = SeasonReviewResponse {
         review_id: created_review.review_id,
         user_id: created_review.user_id,
         date: created_review.date,
@@ -169,7 +149,7 @@ async fn create(
         title: created_review.title,
         description: created_review.description,
         venue: created_review.venue,
-        show: Show::from(created_show_review),
+        season: Season::from(created_season_review),
         company: None,
     };
 
@@ -196,23 +176,28 @@ async fn create(
     })
 }
 
-#[put("/shows/{show_id}/reviews/{review_id}")]
+#[put("shows/{show_id}/seasons/{season_number}/reviews/{review_id}")]
 async fn update(
     auth: Auth,
-    review: web::Json<SaveShowReviewRequest>,
-    path: web::Path<(i32, Uuid)>,
+    review: web::Json<SaveSeasonReviewRequest>,
+    path: web::Path<(i32, i32, Uuid)>,
 ) -> impl Responder {
-    let (_, review_id) = path.into_inner();
+    let (_, _, review_id) = path.into_inner();
 
-    let Ok(existing_review) = ShowReview::find_by_review_id(auth.user_id, review_id) else {
+    let Ok(existing_review) = SeasonReview::find_by_review_id(auth.user_id, review_id) else {
         return HttpResponse::NotFound().json(Error {
             message: "Review not found".to_string(),
         });
     };
 
-    let Ok(show) = crate::show::Show::find(&existing_review.show.id).await else {
+    let Ok(season) = crate::season::Season::find(
+        &existing_review.season.show_id,
+        &existing_review.season.season_number,
+    )
+    .await
+    else {
         return HttpResponse::NotFound().json(Error {
-            message: "Show not found".to_string(),
+            message: "Season not found".to_string(),
         });
     };
 
@@ -232,29 +217,23 @@ async fn update(
         });
     };
 
-    let imdb_id = if let Some(external_ids) = show.external_ids {
-        external_ids.imdb_id
-    } else {
-        None
-    };
-
-    let show_review_to_save = ShowReview {
+    let season_review_to_save = SeasonReview {
         review_id: existing_review.review_id,
-        show_id: existing_review.show.id,
         user_id: auth.user_id,
-        imdb_id,
-        name: show.name,
-        poster_path: show.poster_path,
-        first_air_date: show.first_air_date,
+        show_id: existing_review.season.show_id,
+        season_number: existing_review.season.season_number,
+        name: season.name,
+        poster_path: season.poster_path,
+        air_date: season.air_date,
     };
 
-    let Ok(updated_show_review) = ShowReview::update(show_review_to_save) else {
+    let Ok(updated_season_review) = SeasonReview::update(season_review_to_save) else {
         return HttpResponse::InternalServerError().json(Error {
-            message: "Show review could not be updated".to_string(),
+            message: "Season review could not be updated".to_string(),
         });
     };
 
-    let mut review_response = ShowReviewResponse {
+    let mut review_response = SeasonReviewResponse {
         review_id: updated_review.review_id,
         user_id: updated_review.user_id,
         date: updated_review.date,
@@ -262,7 +241,7 @@ async fn update(
         title: updated_review.title,
         description: updated_review.description,
         venue: updated_review.venue,
-        show: Show::from(updated_show_review),
+        season: Season::from(updated_season_review),
         company: None,
     };
 

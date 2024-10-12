@@ -1,11 +1,11 @@
 meta {
-  name: Find
+  name: Reviews
   type: http
   seq: 1
 }
 
 get {
-  url: {{host}}/{{endpoint}}/{{showId}}/{{subPath}}/{{seasonNumber}}/details
+  url: {{host}}/{{endpoint}}/{{showId}}/{{subPath}}/{{seasonNumber}}/{{subSubPath}}
   body: none
   auth: inherit
 }

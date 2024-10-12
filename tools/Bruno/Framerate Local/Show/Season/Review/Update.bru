@@ -1,0 +1,23 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{host}}/{{endpoint}}/{{showId}}/{{subPath}}/{{seasonNumber}}/{{subSubPath}}/{{reviewId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "rating": 64
+  }
+}
+
+vars:pre-request {
+  reviewId: 0fcb65e7-2374-48ac-88a7-f210805723c4
+  showId: 57243
+  seasonNumber: 1
+}

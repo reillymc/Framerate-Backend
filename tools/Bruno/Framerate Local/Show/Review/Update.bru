@@ -5,7 +5,7 @@ meta {
 }
 
 put {
-  url: {{host}}/{{endpoint}}/{{subPath}}/review/{{reviewId}}
+  url: {{host}}/{{endpoint}}/{{showId}}/{{subPath}}/{{reviewId}}
   body: json
   auth: inherit
 }
@@ -17,5 +17,6 @@ body:json {
 }
 
 vars:pre-request {
-  reviewId: 078fa5a0-b607-4390-bc15-783fbf12ad9a
+  reviewId: b6ffdeb7-d9d9-4c54-8024-46bc43600c35
+  showId: 57243
 }

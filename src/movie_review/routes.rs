@@ -12,21 +12,9 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveMovieReviewRequest {
-    pub movie_id: i32,
-    pub date: Option<NaiveDate>,
-    pub rating: i16,
-    pub title: Option<String>,
-    pub description: Option<String>,
-    pub venue: Option<String>,
-    pub company: Option<Vec<ReviewCompanySummary>>,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateMovieReviewRequest {
     pub date: Option<NaiveDate>,
     pub rating: i16,
     pub title: Option<String>,
@@ -80,22 +68,7 @@ async fn find_all(auth: Auth, params: web::Query<ReviewFindParameters>) -> impl 
     }
 }
 
-#[get("/movies/reviews/movie/{movie_id}")]
-async fn find_by_movie_id(auth: Auth, movie_id: web::Path<i32>) -> impl Responder {
-    match MovieReview::find_by_movie_id(auth.user_id, movie_id.into_inner()) {
-        Err(err) => HttpResponse::InternalServerError().json(Error {
-            message: err.message,
-        }),
-        Ok(reviews) => HttpResponse::Ok().json(Success {
-            data: reviews
-                .into_iter()
-                .map(MovieReviewResponse::from)
-                .collect::<Vec<MovieReviewResponse>>(),
-        }),
-    }
-}
-
-#[get("/movies/reviews/review/{review_id}")]
+#[get("/movies/reviews/{review_id}")]
 async fn find_by_review_id(auth: Auth, review_id: web::Path<Uuid>) -> impl Responder {
     let Ok(review) = MovieReview::find_by_review_id(auth.user_id, review_id.into_inner()) else {
         return HttpResponse::NotFound().json(Error {
@@ -118,11 +91,31 @@ async fn find_by_review_id(auth: Auth, review_id: web::Path<Uuid>) -> impl Respo
     HttpResponse::Ok().json(Success { data: review })
 }
 
-#[post("/movies/reviews")]
-async fn create(auth: Auth, review: web::Json<SaveMovieReviewRequest>) -> impl Responder {
-    let review = review.into_inner();
+#[get("/movies/{movie_id}/reviews")]
+async fn find_by_movie_id(auth: Auth, movie_id: web::Path<i32>) -> impl Responder {
+    match MovieReview::find_by_movie_id(auth.user_id, movie_id.into_inner()) {
+        Err(err) => HttpResponse::InternalServerError().json(Error {
+            message: err.message,
+        }),
+        Ok(reviews) => HttpResponse::Ok().json(Success {
+            data: reviews
+                .into_iter()
+                .map(MovieReviewResponse::from)
+                .collect::<Vec<MovieReviewResponse>>(),
+        }),
+    }
+}
 
-    let Ok(movie) = crate::movie::Movie::find(&review.movie_id).await else {
+#[post("/movies/{movie_id}/reviews")]
+async fn create(
+    auth: Auth,
+    review: web::Json<SaveMovieReviewRequest>,
+    movie_id: web::Path<i32>,
+) -> impl Responder {
+    let review = review.into_inner();
+    let movie_id = movie_id.into_inner();
+
+    let Ok(movie) = crate::movie::Movie::find(&movie_id).await else {
         return HttpResponse::NotFound().json(Error {
             message: "Movie not found".to_string(),
         });
@@ -148,8 +141,8 @@ async fn create(auth: Auth, review: web::Json<SaveMovieReviewRequest>) -> impl R
 
     let movie_review_to_save = MovieReview {
         review_id,
+        movie_id,
         user_id: auth.user_id,
-        movie_id: review.movie_id,
         imdb_id: movie.imdb_id,
         title: movie.title,
         poster_path: movie.poster_path,
@@ -197,14 +190,14 @@ async fn create(auth: Auth, review: web::Json<SaveMovieReviewRequest>) -> impl R
     })
 }
 
-#[put("/movies/reviews/review/{review_id}")]
+#[put("/movies/{movie_id}/reviews/{review_id}")]
 async fn update(
     auth: Auth,
-    review: web::Json<UpdateMovieReviewRequest>,
-    review_id: web::Path<Uuid>,
+    review: web::Json<SaveMovieReviewRequest>,
+    path: web::Path<(i32, Uuid)>,
 ) -> impl Responder {
-    let Ok(existing_review) = MovieReview::find_by_review_id(auth.user_id, review_id.into_inner())
-    else {
+    let (_, review_id) = path.into_inner();
+    let Ok(existing_review) = MovieReview::find_by_review_id(auth.user_id, review_id) else {
         return HttpResponse::NotFound().json(Error {
             message: "Review not found".to_string(),
         });

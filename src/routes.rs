@@ -3,9 +3,10 @@ use actix_web::web;
 use crate::authentication;
 use crate::movie;
 use crate::movie_review;
+use crate::season;
+use crate::season_review;
 use crate::show;
 use crate::show_review;
-use crate::show_season;
 use crate::user;
 use crate::watchlist;
 use crate::watchlist_entry;
@@ -48,5 +49,10 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(show_review::create);
     config.service(show_review::update);
 
-    config.service(show_season::find);
+    config.service(season::find);
+
+    config.service(season_review::find_by_show_season);
+    config.service(season_review::find_by_review_id);
+    config.service(season_review::create);
+    config.service(season_review::update);
 }

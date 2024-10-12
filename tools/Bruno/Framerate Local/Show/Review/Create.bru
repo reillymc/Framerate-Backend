@@ -5,15 +5,18 @@ meta {
 }
 
 post {
-  url: {{host}}/{{endpoint}}/{{subPath}}
+  url: {{host}}/{{endpoint}}/{{showId}}/{{subPath}}
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "showId": 57243,
     "rating": 99,
     "date": "2024-09-15"
   }
+}
+
+vars:pre-request {
+  showId: 57243
 }

@@ -1,6 +1,9 @@
 use std::env;
 
-use crate::{show_season::Season, utils::serialization::empty_string_as_none};
+use crate::{
+    season::{Season, SeasonResponse},
+    utils::serialization::empty_string_as_none,
+};
 use chrono::NaiveDate;
 use reqwest::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
@@ -12,6 +15,22 @@ use crate::error_handler::CustomError;
 pub struct ExternalIds {
     pub imdb_id: Option<String>,
     pub tvdb_id: Option<i64>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all(serialize = "camelCase"))]
+pub struct ShowResponse {
+    pub id: i32,
+    pub name: String,
+    pub poster_path: Option<String>,
+    pub backdrop_path: Option<String>,
+    #[serde(deserialize_with = "empty_string_as_none")]
+    pub first_air_date: Option<NaiveDate>,
+    pub overview: Option<String>,
+    pub tagline: Option<String>,
+    pub popularity: Option<f32>,
+    pub external_ids: Option<ExternalIds>,
+    pub seasons: Option<Vec<SeasonResponse>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -64,7 +83,40 @@ impl Show {
             ));
         }
 
-        let show = response.json::<Show>().await?;
+        let show = response.json::<ShowResponse>().await?;
+
+        let seasons = if let Some(seasons) = &show.seasons {
+            Some(
+                seasons
+                    .into_iter()
+                    .map(|season| Season {
+                        show_id: show.id,
+                        season_number: season.season_number,
+                        name: season.name.clone(),
+                        overview: season.overview.clone(),
+                        poster_path: season.poster_path.clone(),
+                        air_date: season.air_date,
+                        episode_count: season.episode_count,
+                        episodes: None,
+                    })
+                    .collect::<Vec<Season>>(),
+            )
+        } else {
+            None
+        };
+
+        let show = Show {
+            id: show.id,
+            name: show.name,
+            overview: show.overview,
+            tagline: show.tagline,
+            popularity: show.popularity,
+            external_ids: show.external_ids,
+            backdrop_path: show.backdrop_path,
+            first_air_date: show.first_air_date,
+            poster_path: show.poster_path,
+            seasons,
+        };
         Ok(show)
     }
 

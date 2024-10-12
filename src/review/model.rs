@@ -7,10 +7,9 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, AsChangeset, Insertable, Associations, Selectable, Queryable)]
+#[derive(AsChangeset, Insertable, Associations, Selectable, Queryable)]
 #[diesel(belongs_to(user::User))]
 #[diesel(table_name = reviews)]
-#[serde(rename_all = "camelCase")]
 pub struct Review {
     pub review_id: Uuid,
     pub user_id: Uuid,
@@ -20,22 +19,6 @@ pub struct Review {
     pub title: Option<String>,
     pub description: Option<String>,
     pub venue: Option<String>,
-}
-
-#[derive(Queryable, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ReviewSummary {
-    pub review_id: Uuid,
-    pub user_id: Uuid,
-    pub media_id: i32,
-    pub media_title: String,
-    pub media_type: String,
-    pub media_poster_uri: Option<String>,
-    pub date: Option<NaiveDate>,
-    pub rating: i16,
-    pub review_description: Option<String>,
-    pub venue: Option<String>,
-    pub media_release_date: Option<NaiveDate>,
 }
 
 #[derive(Debug, Deserialize)]

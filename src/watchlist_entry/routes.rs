@@ -14,7 +14,7 @@ pub struct SaveWatchlistEntryRequest {
 }
 
 #[derive(Serialize)]
-
+#[serde(rename_all = "camelCase")]
 pub struct DeleteResponse {
     pub count: usize,
 }
