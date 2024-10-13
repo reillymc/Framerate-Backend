@@ -30,7 +30,7 @@ pub struct MovieReviewReadResponse {
     pub review_id: Uuid,
     pub user_id: Uuid,
     pub date: Option<NaiveDate>,
-    pub rating: i16,
+    pub rating: Option<i16>,
     pub title: Option<String>,
     pub description: Option<String>,
     pub venue: Option<String>,
@@ -81,7 +81,7 @@ impl MovieReview {
         Ok(review)
     }
 
-    pub fn find_all(
+    pub fn find_all_reviews(
         user_id: Uuid,
         params: ReviewFindParameters,
     ) -> Result<Vec<MovieReviewReadResponse>, CustomError> {
@@ -90,6 +90,7 @@ impl MovieReview {
         let mut query = movie_reviews::table
             .filter(movie_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
+            .filter(reviews::rating.is_not_null())
             .into_boxed();
 
         let order_by = params.order_by.unwrap_or(Order::Date);

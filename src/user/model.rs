@@ -14,11 +14,13 @@ use uuid::Uuid;
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub user_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
     #[serde(skip)]
     pub password: Option<String>,
     pub first_name: String,
     pub last_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
     pub date_created: NaiveDateTime,
     pub permission_level: i16,
@@ -52,6 +54,7 @@ pub struct UserResponse {
     pub user_id: Uuid,
     pub first_name: String,
     pub last_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
 }
 
@@ -60,9 +63,11 @@ pub struct UserResponse {
 #[serde(rename_all = "camelCase")]
 pub struct UserFindResponse {
     pub user_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
     pub first_name: String,
     pub last_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
     pub configuration: serde_json::Value,
 }

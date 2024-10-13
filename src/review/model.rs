@@ -15,7 +15,7 @@ pub struct Review {
     pub user_id: Uuid,
     #[diesel(treat_none_as_null = true)]
     pub date: Option<NaiveDate>,
-    pub rating: i16,
+    pub rating: Option<i16>,
     pub title: Option<String>,
     pub description: Option<String>,
     pub venue: Option<String>,

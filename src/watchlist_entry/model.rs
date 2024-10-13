@@ -14,11 +14,14 @@ use uuid::Uuid;
 pub struct WatchlistEntry {
     pub watchlist_id: Uuid,
     pub media_id: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub imdb_id: Option<String>,
     pub user_id: Uuid,
     pub media_type: String,
     pub media_title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub media_poster_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub media_release_date: Option<NaiveDate>,
 }
 

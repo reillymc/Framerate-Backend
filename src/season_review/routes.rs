@@ -16,7 +16,7 @@ use uuid::Uuid;
 #[serde(rename_all = "camelCase")]
 pub struct SaveSeasonReviewRequest {
     pub date: Option<NaiveDate>,
-    pub rating: i16,
+    pub rating: Option<i16>,
     pub title: Option<String>,
     pub description: Option<String>,
     pub venue: Option<String>,
@@ -28,11 +28,17 @@ pub struct SaveSeasonReviewRequest {
 pub struct SeasonReviewResponse {
     pub review_id: Uuid,
     pub user_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub date: Option<NaiveDate>,
-    pub rating: i16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rating: Option<i16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub venue: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub company: Option<Vec<ReviewCompanyDetails>>,
     pub season: Season,
 }

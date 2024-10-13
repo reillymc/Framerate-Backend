@@ -11,21 +11,28 @@ use crate::utils::serialization::empty_string_as_none;
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct Movie {
     pub id: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub imdb_id: Option<String>,
     pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub poster_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub backdrop_path: Option<String>,
     #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub release_date: Option<NaiveDate>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tagline: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub popularity: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub runtime: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct MovieSearchResults {
-    pub page: i32,
     pub results: Vec<Movie>,
 }
 

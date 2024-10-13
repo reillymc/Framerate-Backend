@@ -24,7 +24,7 @@ diesel::table! {
         review_id -> Uuid,
         user_id -> Uuid,
         date -> Nullable<Date>,
-        rating -> Int2,
+        rating -> Nullable<Int2>,
         title -> Nullable<Text>,
         description -> Nullable<Text>,
         venue -> Nullable<Text>,

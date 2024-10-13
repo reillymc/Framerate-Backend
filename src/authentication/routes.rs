@@ -18,7 +18,6 @@ struct Secret {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-
 struct LoginResponse {
     token: String,
     user_id: Uuid,

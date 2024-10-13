@@ -15,7 +15,7 @@ use uuid::Uuid;
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveShowReviewRequest {
-    pub rating: i16,
+    pub rating: Option<i16>,
     pub date: Option<NaiveDate>,
     pub title: Option<String>,
     pub description: Option<String>,
@@ -28,11 +28,17 @@ pub struct SaveShowReviewRequest {
 pub struct ShowReviewResponse {
     pub review_id: Uuid,
     pub user_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub date: Option<NaiveDate>,
-    pub rating: i16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rating: Option<i16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub venue: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub company: Option<Vec<ReviewCompanyDetails>>,
     pub show: Show,
 }
@@ -55,7 +61,7 @@ impl From<ShowReviewReadResponse> for ShowReviewResponse {
 
 #[get("/shows/reviews")]
 async fn find_all(auth: Auth, params: web::Query<ReviewFindParameters>) -> impl Responder {
-    match ShowReview::find_all(auth.user_id, params.into_inner()) {
+    match ShowReview::find_all_reviews(auth.user_id, params.into_inner()) {
         Err(err) => HttpResponse::InternalServerError().json(Error {
             message: err.message,
         }),

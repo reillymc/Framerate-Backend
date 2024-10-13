@@ -9,9 +9,13 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct Episode {
     pub episode_number: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub still_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "empty_string_as_none")]
     pub air_date: Option<NaiveDate>,
 }
@@ -34,19 +38,19 @@ pub struct SeasonResponse {
 pub struct Season {
     pub show_id: i32,
     pub season_number: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub poster_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "empty_string_as_none")]
     pub air_date: Option<NaiveDate>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub episode_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub episodes: Option<Vec<Episode>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SeasonSearchResults {
-    pub page: i32,
-    pub results: Vec<Season>,
 }
 
 impl Season {

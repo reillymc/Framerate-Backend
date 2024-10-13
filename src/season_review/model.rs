@@ -30,7 +30,7 @@ pub struct SeasonReviewReadResponse {
     pub review_id: Uuid,
     pub user_id: Uuid,
     pub date: Option<NaiveDate>,
-    pub rating: i16,
+    pub rating: Option<i16>,
     pub title: Option<String>,
     pub description: Option<String>,
     pub venue: Option<String>,

@@ -13,7 +13,9 @@ use crate::error_handler::CustomError;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct ExternalIds {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub imdb_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tvdb_id: Option<i64>,
 }
 
@@ -38,20 +40,27 @@ pub struct ShowResponse {
 pub struct Show {
     pub id: i32,
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub poster_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub backdrop_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "empty_string_as_none")]
     pub first_air_date: Option<NaiveDate>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tagline: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub popularity: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub external_ids: Option<ExternalIds>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub seasons: Option<Vec<Season>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct ShowSearchResults {
-    pub page: i32,
     pub results: Vec<Show>,
 }
 
