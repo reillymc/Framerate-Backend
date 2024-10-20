@@ -2,14 +2,15 @@ use actix_web::web;
 
 use crate::authentication;
 use crate::movie;
+use crate::movie_entry;
 use crate::movie_review;
 use crate::season;
 use crate::season_review;
 use crate::show;
+use crate::show_entry;
 use crate::show_review;
 use crate::user;
 use crate::watchlist;
-use crate::watchlist_entry;
 
 pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(authentication::login);
@@ -24,18 +25,18 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(watchlist::find_all);
     config.service(watchlist::create);
 
-    config.service(watchlist_entry::find_entry);
-    config.service(watchlist_entry::find_all);
-    config.service(watchlist_entry::create);
-    config.service(watchlist_entry::delete);
-
     config.service(movie::find);
     config.service(movie::popular);
     config.service(movie::search);
 
+    config.service(movie_entry::find);
+    config.service(movie_entry::find_all);
+    config.service(movie_entry::create);
+    config.service(movie_entry::delete);
+
     config.service(movie_review::find_by_review_id);
-    config.service(movie_review::find_all);
     config.service(movie_review::find_by_movie_id);
+    config.service(movie_review::find_all);
     config.service(movie_review::create);
     config.service(movie_review::update);
 
@@ -43,9 +44,14 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(show::popular);
     config.service(show::search);
 
+    config.service(show_entry::find);
+    config.service(show_entry::find_all);
+    config.service(show_entry::create);
+    config.service(show_entry::delete);
+
     config.service(show_review::find_by_review_id);
-    config.service(show_review::find_all);
     config.service(show_review::find_by_show_id);
+    config.service(show_review::find_all);
     config.service(show_review::create);
     config.service(show_review::update);
 

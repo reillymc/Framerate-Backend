@@ -11,8 +11,8 @@ use std::env;
 mod authentication;
 mod db;
 mod error_handler;
-mod media;
 mod movie;
+mod movie_entry;
 mod movie_review;
 mod review;
 mod review_company;
@@ -21,11 +21,11 @@ mod schema;
 mod season;
 mod season_review;
 mod show;
+mod show_entry;
 mod show_review;
 mod user;
 mod utils;
 mod watchlist;
-mod watchlist_entry;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

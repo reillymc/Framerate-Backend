@@ -5,12 +5,12 @@ meta {
 }
 
 delete {
-  url: {{host}}/{{endpoint}}/{{mediaType}}/{{subPath}}/{{mediaId}}
+  url: {{host}}/{{endpoint}}/{{subPath}}/{{watchlistId}}/{{movieId}}
   body: none
   auth: inherit
 }
 
 vars:pre-request {
-  mediaType: movie
-  mediaId: 4638
+  movieId: 4638
+  watchlistId: default
 }

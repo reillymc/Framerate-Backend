@@ -25,14 +25,14 @@ pub struct NewWatchlist {
 }
 
 impl Watchlist {
-    pub fn find_by_media_type(user_id: Uuid, media_type: String) -> Result<Self, CustomError> {
+    pub fn find_default(user_id: Uuid, media_type: &str) -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
         let watchlist = watchlists::table
             .select(Watchlist::as_select())
             .filter(
                 watchlists::user_id
                     .eq(user_id)
-                    .and(watchlists::media_type.eq(media_type.clone())),
+                    .and(watchlists::media_type.eq(media_type)),
             )
             .first(connection);
 
@@ -40,7 +40,7 @@ impl Watchlist {
             return Ok(existing_watchlist);
         }
 
-        let name = match media_type.as_str() {
+        let name = match media_type {
             "movie" => "Movie Watchlist",
             "show" => "Show Watchlist",
             _ => "Watchlist",
@@ -49,7 +49,7 @@ impl Watchlist {
 
         let new_watchlist = Self::create(Watchlist {
             watchlist_id: Uuid::new_v4(),
-            media_type,
+            media_type: media_type.to_string(),
             user_id,
             name,
         })?;

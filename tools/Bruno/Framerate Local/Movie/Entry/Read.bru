@@ -1,0 +1,16 @@
+meta {
+  name: Read
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/{{endpoint}}/{{subPath}}/{{watchlistId}}/{{movieId}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  movieId: 4638
+  watchlistId: default
+}

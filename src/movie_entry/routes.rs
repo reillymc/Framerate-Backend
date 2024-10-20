@@ -1,4 +1,4 @@
-use super::WatchlistEntry;
+use super::MovieEntry;
 
 use crate::utils::jwt::Auth;
 use crate::utils::response_body::{Error, Success};
@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SaveWatchlistEntryRequest {
-    pub media_id: i32,
+pub struct SaveMovieEntryRequest {
+    pub movie_id: i32,
 }
 
 #[derive(Serialize)]
@@ -19,11 +19,17 @@ pub struct DeleteResponse {
     pub count: usize,
 }
 
-#[get("/watchlists/{media_type}/entries/{media_id}")]
-async fn find_entry(auth: Auth, path: web::Path<(String, i32)>) -> impl Responder {
-    let (media_type, media_id) = path.into_inner();
+#[get("/movies/entries/{watchlist_id}/{movie_id}")]
+async fn find(auth: Auth, path: web::Path<(String, i32)>) -> impl Responder {
+    let (_, movie_id) = path.into_inner();
 
-    match WatchlistEntry::find_entry(auth.user_id, media_type, media_id) {
+    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "movie") else {
+        return HttpResponse::NotFound().json(Error {
+            message: "Watchlist not found".to_string(),
+        });
+    };
+
+    match MovieEntry::find(auth.user_id, watchlist.watchlist_id, movie_id) {
         Err(err) => HttpResponse::NotFound().json(Error {
             message: err.message,
         }),
@@ -33,9 +39,15 @@ async fn find_entry(auth: Auth, path: web::Path<(String, i32)>) -> impl Responde
     }
 }
 
-#[get("/watchlists/{media_type}/entries")]
-async fn find_all(auth: Auth, media_type: web::Path<String>) -> impl Responder {
-    match WatchlistEntry::find_by_user_and_list(auth.user_id, media_type.into_inner()) {
+#[get("/movies/entries/{watchlist_id}")]
+async fn find_all(auth: Auth, _: web::Path<String>) -> impl Responder {
+    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "movie") else {
+        return HttpResponse::NotFound().json(Error {
+            message: "Watchlist not found".to_string(),
+        });
+    };
+
+    match MovieEntry::find_all(auth.user_id, watchlist.watchlist_id) {
         Err(err) => HttpResponse::InternalServerError().json(Error {
             message: err.message,
         }),
@@ -43,38 +55,35 @@ async fn find_all(auth: Auth, media_type: web::Path<String>) -> impl Responder {
     }
 }
 
-#[post("/watchlists/{media_type}/entries")]
+#[post("/movies/entries/{watchlist_id}")]
 async fn create(
     auth: Auth,
-    media_type: web::Path<String>,
-    watchlist_entry: web::Json<SaveWatchlistEntryRequest>,
+    _: web::Path<String>,
+    watchlist_entry: web::Json<SaveMovieEntryRequest>,
 ) -> impl Responder {
-    let Ok(watchlist) = Watchlist::find_by_media_type(auth.user_id, media_type.clone()) else {
+    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "movie") else {
         return HttpResponse::NotFound().json(Error {
             message: "Watchlist not found".to_string(),
         });
     };
 
-    let Ok(media_details) =
-        crate::media::helpers::get_details(&media_type, watchlist_entry.media_id).await
-    else {
+    let Ok(movie) = crate::movie::Movie::find(&watchlist_entry.movie_id).await else {
         return HttpResponse::NotFound().json(Error {
-            message: "Media not found".to_string(),
+            message: "Movie not found".to_string(),
         });
     };
 
-    let watchlist_entry_to_save = WatchlistEntry {
+    let watchlist_entry_to_save = MovieEntry {
         watchlist_id: watchlist.watchlist_id,
-        media_type: media_type.into_inner(),
         user_id: auth.user_id,
-        media_id: watchlist_entry.media_id,
-        imdb_id: media_details.imdb_id,
-        media_title: media_details.media_title,
-        media_poster_uri: media_details.media_poster_uri,
-        media_release_date: media_details.media_release_date,
+        movie_id: watchlist_entry.movie_id,
+        imdb_id: movie.imdb_id,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        release_date: movie.release_date,
     };
 
-    let Ok(watchlist) = WatchlistEntry::create(watchlist_entry_to_save) else {
+    let Ok(watchlist) = MovieEntry::create(watchlist_entry_to_save) else {
         return HttpResponse::InternalServerError().json(Error {
             message: "Watchlist entry could not be created".to_string(),
         });
@@ -83,17 +92,17 @@ async fn create(
     HttpResponse::Ok().json(Success { data: watchlist })
 }
 
-#[delete("/watchlists/{media_type}/entries/{media_id}")]
+#[delete("/movies/entries/{watchlist_id}/{movie_id}")]
 async fn delete(auth: Auth, path: web::Path<(String, i32)>) -> impl Responder {
-    let (media_type, media_id) = path.into_inner();
+    let (_, movie_id) = path.into_inner();
 
-    let Ok(watchlist) = Watchlist::find_by_media_type(auth.user_id, media_type) else {
+    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "movie") else {
         return HttpResponse::NotFound().json(Error {
             message: "Watchlist not found".to_string(),
         });
     };
 
-    let Ok(count) = WatchlistEntry::delete(watchlist.watchlist_id, media_id) else {
+    let Ok(count) = MovieEntry::delete(watchlist.watchlist_id, movie_id) else {
         return HttpResponse::NotFound().json(Error {
             message: "Watchlist entry not found".to_string(),
         });

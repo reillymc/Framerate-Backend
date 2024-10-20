@@ -1,6 +1,18 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    movie_entries (watchlist_id, movie_id) {
+        watchlist_id -> Uuid,
+        movie_id -> Int4,
+        user_id -> Uuid,
+        title -> Text,
+        imdb_id -> Nullable<Text>,
+        poster_path -> Nullable<Text>,
+        release_date -> Nullable<Date>,
+    }
+}
+
+diesel::table! {
     movie_reviews (review_id) {
         review_id -> Uuid,
         user_id -> Uuid,
@@ -44,6 +56,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    show_entries (watchlist_id, show_id) {
+        watchlist_id -> Uuid,
+        show_id -> Int4,
+        user_id -> Uuid,
+        name -> Text,
+        updated_at -> Date,
+        imdb_id -> Nullable<Text>,
+        status -> Nullable<Text>,
+        poster_path -> Nullable<Text>,
+        first_air_date -> Nullable<Date>,
+        last_air_date -> Nullable<Date>,
+        next_air_date -> Nullable<Date>,
+    }
+}
+
+diesel::table! {
     show_reviews (review_id) {
         review_id -> Uuid,
         user_id -> Uuid,
@@ -71,19 +99,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    watchlist_entries (watchlist_id, media_id) {
-        watchlist_id -> Uuid,
-        media_id -> Int4,
-        imdb_id -> Nullable<Text>,
-        user_id -> Uuid,
-        media_type -> Text,
-        media_title -> Text,
-        media_poster_uri -> Nullable<Text>,
-        media_release_date -> Nullable<Date>,
-    }
-}
-
-diesel::table! {
     watchlists (watchlist_id) {
         watchlist_id -> Uuid,
         user_id -> Uuid,
@@ -92,6 +107,8 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(movie_entries -> users (user_id));
+diesel::joinable!(movie_entries -> watchlists (watchlist_id));
 diesel::joinable!(movie_reviews -> reviews (review_id));
 diesel::joinable!(movie_reviews -> users (user_id));
 diesel::joinable!(review_company -> reviews (review_id));
@@ -99,19 +116,20 @@ diesel::joinable!(review_company -> users (user_id));
 diesel::joinable!(reviews -> users (user_id));
 diesel::joinable!(season_reviews -> reviews (review_id));
 diesel::joinable!(season_reviews -> users (user_id));
+diesel::joinable!(show_entries -> users (user_id));
+diesel::joinable!(show_entries -> watchlists (watchlist_id));
 diesel::joinable!(show_reviews -> reviews (review_id));
 diesel::joinable!(show_reviews -> users (user_id));
-diesel::joinable!(watchlist_entries -> users (user_id));
-diesel::joinable!(watchlist_entries -> watchlists (watchlist_id));
 diesel::joinable!(watchlists -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    movie_entries,
     movie_reviews,
     review_company,
     reviews,
     season_reviews,
+    show_entries,
     show_reviews,
     users,
-    watchlist_entries,
     watchlists,
 );

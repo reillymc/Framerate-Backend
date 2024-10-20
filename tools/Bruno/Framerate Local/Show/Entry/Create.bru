@@ -1,21 +1,21 @@
 meta {
   name: Create
   type: http
-  seq: 5
+  seq: 4
 }
 
 post {
-  url: {{host}}/{{endpoint}}/{{mediaType}}/{{subPath}}
+  url: {{host}}/{{endpoint}}/{{subPath}}/{{watchlistId}}
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "mediaId": 4638
+    "showId": 194764
   }
 }
 
 vars:pre-request {
-  mediaType: movie
+  watchlistId: default
 }

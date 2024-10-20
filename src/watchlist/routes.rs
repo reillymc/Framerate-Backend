@@ -15,7 +15,7 @@ async fn find(auth: Auth, media_type: web::Path<String>) -> impl Responder {
         });
     }
 
-    match Watchlist::find_by_media_type(auth.user_id, media_type.into_inner()) {
+    match Watchlist::find_default(auth.user_id, &media_type) {
         Err(err) => HttpResponse::InternalServerError().json(Error {
             message: err.message,
         }),
