@@ -86,6 +86,9 @@ pub struct Show {
     pub seasons: Option<Vec<Season>>,
 }
 
+pub const SHOW_ACTIVE_STATUSES: [&str; 4] =
+    ["Returning Series", "Planned", "In Production", "Pilot"];
+
 impl From<ShowSearchResponse> for Show {
     fn from(show: ShowSearchResponse) -> Self {
         Show {

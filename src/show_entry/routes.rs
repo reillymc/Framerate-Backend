@@ -48,12 +48,13 @@ async fn find_all(auth: Auth, _: web::Path<String>) -> impl Responder {
         });
     };
 
-    match ShowEntry::find_all(auth.user_id, watchlist.watchlist_id) {
-        Err(err) => HttpResponse::InternalServerError().json(Error {
-            message: err.message,
-        }),
-        Ok(entries) => HttpResponse::Ok().json(Success { data: entries }),
-    }
+    let Ok(entries) = ShowEntry::find_all(auth.user_id, watchlist.watchlist_id) else {
+        return HttpResponse::InternalServerError().json(Error {
+            message: "Entries could not be retrieved".to_string(),
+        });
+    };
+
+    HttpResponse::Ok().json(Success { data: entries })
 }
 
 #[post("/shows/entries/{watchlist_id}")]
