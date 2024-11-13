@@ -26,7 +26,7 @@ pub struct ShowResponse {
     pub name: String,
     pub poster_path: Option<String>,
     pub backdrop_path: Option<String>,
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub first_air_date: Option<NaiveDate>,
     pub last_air_date: Option<NaiveDate>,
     pub last_episode_to_air: Option<Episode>,
@@ -46,7 +46,7 @@ pub struct ShowSearchResponse {
     pub name: String,
     pub poster_path: Option<String>,
     pub backdrop_path: Option<String>,
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub first_air_date: Option<NaiveDate>,
     pub status: Option<String>,
     pub overview: Option<String>,
@@ -64,13 +64,13 @@ pub struct Show {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub backdrop_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub first_air_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub last_air_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub next_air_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,

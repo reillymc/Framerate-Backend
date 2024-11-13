@@ -16,7 +16,7 @@ pub struct Episode {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub air_date: Option<NaiveDate>,
 }
 
@@ -27,7 +27,7 @@ pub struct SeasonResponse {
     pub name: Option<String>,
     pub poster_path: Option<String>,
     pub overview: Option<String>,
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub air_date: Option<NaiveDate>,
     pub episode_count: Option<i32>,
     pub episodes: Option<Vec<Episode>>,
@@ -45,7 +45,7 @@ pub struct Season {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub air_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub episode_count: Option<i32>,
