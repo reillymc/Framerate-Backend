@@ -42,10 +42,15 @@ async fn main() -> std::io::Result<()> {
 
     let host = env::var("HOST").unwrap_or("localhost".to_string());
     let port = env::var("PORT").unwrap_or("3000".to_string());
-    info!("Server starting at http://{host}:{port}");
+
+    let job_interval = env::var("JOB_INTERVAL")
+        .ok()
+        .and_then(|port| port.parse::<u64>().ok())
+        .unwrap_or(3600);
 
     spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(10));
+        info!(target: "Entry Updater", "Creating entry updater job with interval of {job_interval:?} seconds");
+        let mut interval = time::interval(Duration::from_secs(job_interval));
         let mut previous_show_id = 0;
         loop {
             interval.tick().await;
@@ -58,22 +63,24 @@ async fn main() -> std::io::Result<()> {
                 }
                 match entry.internal_update_status().await {
                     Ok(updated) => {
-                        info!(
+                        info!(target: "Entry Updater",
                             "Updated status for entry {} ({})",
                             updated.show_id, updated.name
                         );
                     }
                     Err(e) => {
                         // TODO: handle potential infinite loop if update fails
-                        info!("Error updating status: {}", e);
+                        info!(target: "Entry Updater", "Error updating status: {}", e);
                     }
                 }
             } else {
-                info!("No outdated entries found");
+                info!(target: "Entry Updater", "No outdated entries found");
                 interval.reset_after(Duration::from_secs(86400));
             }
         }
     });
+
+    info!("Server starting at http://{host}:{port}");
 
     HttpServer::new(|| {
         App::new()

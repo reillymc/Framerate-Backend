@@ -82,17 +82,20 @@ impl ShowEntry {
     pub fn internal_find_outdated() -> Result<Self, CustomError> {
         let connection = &mut establish_connection();
 
-        let show_entries =
-            show_entries::table
-                .filter(show_entries::status.eq_any(SHOW_ACTIVE_STATUSES))
-                .filter(
-                    show_entries::updated_at
-                        .lt(Utc::now().date_naive() - Duration::weeks(6))
-                        .or(show_entries::next_air_date
-                            .lt(Utc::now().date_naive() + Duration::days(1))),
-                )
-                .select(ShowEntry::as_select())
-                .first(connection)?;
+        let show_entries = show_entries::table
+            .filter(show_entries::status.eq_any(SHOW_ACTIVE_STATUSES))
+            .filter(
+                show_entries::updated_at
+                    .lt(Utc::now().date_naive() - Duration::weeks(6))
+                    .or(show_entries::next_air_date
+                        .lt(Utc::now().date_naive() + Duration::days(1))
+                        .and(
+                            show_entries::updated_at
+                                .lt(Utc::now().date_naive() - Duration::days(1)),
+                        )),
+            )
+            .select(ShowEntry::as_select())
+            .first(connection)?;
 
         Ok(show_entries)
     }
