@@ -82,7 +82,6 @@ impl From<MovieResponse> for Movie {
                     .find(|release_date| release_date.iso_3166_1 == "AU".to_string())
                 {
                     Some(rel) => {
-                        println!("FOUND {release_dates:?} {rel:?}");
                         match rel
                             .release_dates
                             .iter()

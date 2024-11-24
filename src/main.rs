@@ -9,13 +9,15 @@ use actix_web::{
     App, HttpServer,
 };
 use db::establish_connection;
-use env_logger::Env;
+use log::setup_logger;
 use show_entry::ShowEntry;
 use std::{env, time::Duration};
+use tracing::info;
 
 mod authentication;
 mod db;
 mod error_handler;
+mod log;
 mod movie;
 mod movie_entry;
 mod movie_review;
@@ -34,14 +36,13 @@ mod watchlist;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    setup_logger();
     let connection = &mut establish_connection();
     db::run_db_migrations(connection);
 
-    env_logger::init_from_env(Env::default().default_filter_or("info"));
-
     let host = env::var("HOST").unwrap_or("localhost".to_string());
     let port = env::var("PORT").unwrap_or("3000".to_string());
-    println!("Server starting at http://{host}:{port}");
+    info!("Server starting at http://{host}:{port}");
 
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(10));
@@ -53,26 +54,22 @@ async fn main() -> std::io::Result<()> {
                 if previous_show_id != entry.show_id {
                     previous_show_id = entry.show_id;
                 } else {
-                    println!(
-                        "Skipping update of show entry {} ({})",
-                        entry.show_id, entry.name
-                    );
                     continue;
                 }
                 match entry.internal_update_status().await {
                     Ok(updated) => {
-                        println!(
+                        info!(
                             "Updated status for entry {} ({})",
                             updated.show_id, updated.name
                         );
                     }
                     Err(e) => {
                         // TODO: handle potential infinite loop if update fails
-                        println!("Error updating status: {}", e);
+                        info!("Error updating status: {}", e);
                     }
                 }
             } else {
-                println!("No outdated entries found");
+                info!("No outdated entries found");
                 interval.reset_after(Duration::from_secs(86400));
             }
         }

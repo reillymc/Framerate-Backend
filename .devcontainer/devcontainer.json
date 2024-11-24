@@ -10,5 +10,6 @@
             "extensions": ["mtxr.sqltools", "mtxr.sqltools-driver-pg", "bradymholt.pgformatter"]
         }
     },
-    "forwardPorts": [3000, 5432]
+    "forwardPorts": [3000, 5432],
+    "remoteUser": "vscode"
 }

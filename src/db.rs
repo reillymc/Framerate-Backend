@@ -2,6 +2,7 @@ use diesel::pg;
 use diesel::prelude::*;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::env;
+use tracing::info;
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 pub fn establish_connection() -> PgConnection {
@@ -17,8 +18,11 @@ pub fn establish_connection() -> PgConnection {
 }
 
 pub fn run_db_migrations(conn: &mut impl MigrationHarness<pg::Pg>) {
-    conn.run_pending_migrations(MIGRATIONS)
+    info!("Running migrations...");
+    let res = conn
+        .run_pending_migrations(MIGRATIONS)
         .unwrap_or_else(|error| panic!("Could not run migrations {error}"));
+    info!("Migrations completed: {res:?}");
 }
 
 pub const DEFAULT_PAGE_SIZE: i64 = 10;
