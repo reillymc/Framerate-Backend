@@ -56,10 +56,7 @@ pub struct Season {
 impl Season {
     pub async fn find(show_id: &i32, season_number: &i32) -> Result<Season, CustomError> {
         let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(
-                500,
-                "TMDB API key must be set".to_string(),
-            ));
+            return Err(CustomError::new(500, "TMDB API key must be set"));
         };
 
         let request_url = format!(
@@ -77,7 +74,7 @@ impl Season {
         if !response.status().is_success() {
             return Err(CustomError::new(
                 response.status().as_u16(),
-                response.text().await?,
+                response.text().await?.as_str(),
             ));
         }
 

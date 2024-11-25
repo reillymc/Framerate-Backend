@@ -1,40 +1,50 @@
 use super::NewWatchlist;
 use super::Watchlist;
 
+use crate::db::DbPool;
+use crate::error_handler::CustomError;
 use crate::utils::jwt::Auth;
-use crate::utils::response_body::{Error, Success};
+use crate::utils::response_body::Success;
 use actix_web::Responder;
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, post, web};
 use uuid::Uuid;
 
 #[get("/watchlists/{media_type}")]
-async fn find(auth: Auth, media_type: web::Path<String>) -> impl Responder {
+async fn find(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    media_type: web::Path<String>,
+) -> actix_web::Result<impl Responder> {
     if media_type.as_str() != "movie" && media_type.as_str() != "show" {
-        return HttpResponse::BadRequest().json(Error {
-            message: "Invalid media type".to_string(),
-        });
+        Err(CustomError::new(400, "Invalid media type"))?
     }
 
-    match Watchlist::find_default(auth.user_id, &media_type) {
-        Err(err) => HttpResponse::InternalServerError().json(Error {
-            message: err.message,
-        }),
-        Ok(watchlist) => HttpResponse::Ok().json(Success { data: watchlist }),
-    }
+    let watchlist = web::block(move || {
+        let mut conn = pool.get()?;
+        Watchlist::find_default(&mut conn, auth.user_id, &media_type)
+    })
+    .await??;
+
+    Ok(Success { data: watchlist })
 }
 
 #[get("/watchlists")]
-async fn find_all(auth: Auth) -> impl Responder {
-    match Watchlist::find_by_user(auth.user_id) {
-        Err(err) => HttpResponse::InternalServerError().json(Error {
-            message: err.message,
-        }),
-        Ok(watchlists) => HttpResponse::Ok().json(Success { data: watchlists }),
-    }
+async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Responder> {
+    let watchlists = web::block(move || {
+        let mut conn = pool.get()?;
+        Watchlist::find_by_user(&mut conn, auth.user_id)
+    })
+    .await??;
+
+    Ok(Success { data: watchlists })
 }
 
 #[post("/watchlists")]
-async fn create(auth: Auth, params: web::Json<NewWatchlist>) -> impl Responder {
+async fn create(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    params: web::Json<NewWatchlist>,
+) -> actix_web::Result<impl Responder> {
     let watchlist = Watchlist {
         watchlist_id: Uuid::new_v4(),
         user_id: auth.user_id,
@@ -42,12 +52,11 @@ async fn create(auth: Auth, params: web::Json<NewWatchlist>) -> impl Responder {
         media_type: params.media_type.clone(),
     };
 
-    let watchlist = Watchlist::create(watchlist);
+    let watchlist = web::block(move || {
+        let mut conn = pool.get()?;
+        Watchlist::create(&mut conn, watchlist)
+    })
+    .await??;
 
-    match watchlist {
-        Err(err) => HttpResponse::InternalServerError().json(Error {
-            message: err.message,
-        }),
-        Ok(watchlist) => HttpResponse::Ok().json(Success { data: watchlist }),
-    }
+    Ok(Success { data: watchlist })
 }

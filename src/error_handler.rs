@@ -1,6 +1,9 @@
+use actix_web::{http::StatusCode, HttpResponse, ResponseError};
 use bcrypt::BcryptError;
 use diesel::result::{self, Error as DieselError};
+use r2d2::Error as R2D2Error;
 use serde::Deserialize;
+use serde_json::json;
 use std::fmt;
 
 pub enum AuthError {
@@ -34,10 +37,10 @@ pub struct CustomError {
 }
 
 impl CustomError {
-    pub fn new(error_status_code: u16, error_message: String) -> CustomError {
+    pub fn new(error_status_code: u16, error_message: &str) -> CustomError {
         CustomError {
             status_code: error_status_code,
-            message: error_message,
+            message: error_message.to_string(),
         }
     }
 }
@@ -51,39 +54,44 @@ impl fmt::Display for CustomError {
 impl From<DieselError> for CustomError {
     fn from(error: DieselError) -> CustomError {
         match error {
-            DieselError::DatabaseError(_, err) => CustomError::new(409, err.message().to_string()),
-            DieselError::NotFound => CustomError::new(404, "Not found".to_string()),
-            err => CustomError::new(500, format!("Unknown Diesel error: {err}")),
+            DieselError::DatabaseError(_, err) => CustomError::new(409, err.message()),
+            DieselError::NotFound => CustomError::new(404, "Not found"),
+            _err => CustomError::new(500, "Unknown Internal Error"),
         }
     }
 }
 
 impl From<reqwest::Error> for CustomError {
-    fn from(error: reqwest::Error) -> CustomError {
-        CustomError::new(500, format!("Reqwest error: {error}"))
+    fn from(_error: reqwest::Error) -> CustomError {
+        CustomError::new(500, "Unable to complete external request")
     }
 }
 
 impl From<BcryptError> for CustomError {
-    fn from(error: BcryptError) -> CustomError {
-        CustomError::new(500, format!("Reqwest error: {error}"))
+    fn from(_error: BcryptError) -> CustomError {
+        CustomError::new(500, "Internal error")
     }
 }
 
 impl From<jsonwebtoken::errors::Error> for CustomError {
-    fn from(error: jsonwebtoken::errors::Error) -> CustomError {
-        CustomError::new(500, format!("Reqwest error: {error}"))
+    fn from(_error: jsonwebtoken::errors::Error) -> CustomError {
+        CustomError::new(500, "Auth error")
     }
 }
 
-// TODO: revisit error handling - and merge with other error type above
-// impl ResponseError for CustomError {
-//     fn error_response(&self) -> HttpResponse {
-//         let status_code = match StatusCode::from_u16(self.status_code) {
-//             Ok(status_code) => status_code,
-//             Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
-//         };
+impl From<R2D2Error> for CustomError {
+    fn from(_error: R2D2Error) -> CustomError {
+        CustomError::new(500, "Internal service error")
+    }
+}
 
-//         HttpResponse::build(status_code).json(json!({ "message": self.message }))
-//     }
-// }
+impl ResponseError for CustomError {
+    fn error_response(&self) -> HttpResponse {
+        let status_code = match StatusCode::from_u16(self.status_code) {
+            Ok(status_code) => status_code,
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        HttpResponse::build(status_code).json(json!({ "message": self.message }))
+    }
+}

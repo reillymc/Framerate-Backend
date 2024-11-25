@@ -117,10 +117,7 @@ struct ShowSearchResults {
 impl Show {
     pub async fn find(id: &i32) -> Result<Show, CustomError> {
         let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(
-                500,
-                "TMDB API key must be set".to_string(),
-            ));
+            return Err(CustomError::new(500, "TMDB API key must be set"));
         };
 
         let request_url = format!(
@@ -138,7 +135,7 @@ impl Show {
         if !response.status().is_success() {
             return Err(CustomError::new(
                 response.status().as_u16(),
-                response.text().await?,
+                response.text().await?.as_str(),
             ));
         }
 
@@ -196,10 +193,7 @@ impl Show {
 
     pub async fn search(query: &str) -> Result<Vec<Show>, CustomError> {
         let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(
-                500,
-                "TMDB API key must be set".to_string(),
-            ));
+            return Err(CustomError::new(500, "TMDB API key must be set"));
         };
 
         let request_url = format!(
@@ -217,7 +211,7 @@ impl Show {
         if !response.status().is_success() {
             return Err(CustomError::new(
                 response.status().as_u16(),
-                response.text().await?,
+                response.text().await?.as_str(),
             ));
         }
 
@@ -231,10 +225,7 @@ impl Show {
 
     pub async fn popular() -> Result<Vec<Show>, CustomError> {
         let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(
-                500,
-                "TMDB API key must be set".to_string(),
-            ));
+            return Err(CustomError::new(500, "TMDB API key must be set"));
         };
 
         let max_date = (chrono::Utc::now().date_naive() + chrono::Duration::weeks(26)).to_string();
@@ -254,7 +245,7 @@ impl Show {
         if !response.status().is_success() {
             return Err(CustomError::new(
                 response.status().as_u16(),
-                response.text().await?,
+                response.text().await?.as_str(),
             ));
         }
 

@@ -1,10 +1,13 @@
 use super::MovieEntry;
 
+use crate::db::DbPool;
+use crate::error_handler::CustomError;
+use crate::movie::Movie;
 use crate::utils::jwt::Auth;
-use crate::utils::response_body::{Error, Success};
+use crate::utils::response_body::Success;
 use crate::watchlist::Watchlist;
 use actix_web::{delete, Responder};
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, post, web};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
@@ -20,101 +23,92 @@ pub struct DeleteResponse {
 }
 
 #[get("/movies/entries/{watchlist_id}/{movie_id}")]
-async fn find(auth: Auth, path: web::Path<(String, i32)>) -> impl Responder {
+async fn find(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    path: web::Path<(String, i32)>,
+) -> actix_web::Result<impl Responder> {
     let (_, movie_id) = path.into_inner();
 
-    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "movie") else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist not found".to_string(),
-        });
-    };
+    let data = web::block(move || {
+        let mut conn = pool.get()?;
+        let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "movie")?;
+        MovieEntry::find(&mut conn, auth.user_id, watchlist.watchlist_id, movie_id)
+    })
+    .await??;
 
-    match MovieEntry::find(auth.user_id, watchlist.watchlist_id, movie_id) {
-        Err(err) => HttpResponse::NotFound().json(Error {
-            message: err.message,
-        }),
-        Ok(watchlist_entry) => HttpResponse::Ok().json(Success {
-            data: watchlist_entry,
-        }),
-    }
+    Ok(Success { data })
 }
 
 #[get("/movies/entries/{watchlist_id}")]
-async fn find_all(auth: Auth, _: web::Path<String>) -> impl Responder {
-    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "movie") else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist not found".to_string(),
-        });
-    };
+async fn find_all(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    _: web::Path<String>,
+) -> actix_web::Result<impl Responder> {
+    let data = web::block(move || {
+        let mut conn = pool.get()?;
+        let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "movie")?;
+        MovieEntry::find_all(&mut conn, auth.user_id, watchlist.watchlist_id)
+    })
+    .await??;
 
-    match MovieEntry::find_all(auth.user_id, watchlist.watchlist_id) {
-        Err(err) => HttpResponse::InternalServerError().json(Error {
-            message: err.message,
-        }),
-        Ok(entries) => HttpResponse::Ok().json(Success { data: entries }),
-    }
+    Ok(Success { data })
 }
 
 #[post("/movies/entries/{watchlist_id}")]
 async fn create(
+    pool: web::Data<DbPool>,
     auth: Auth,
     _: web::Path<String>,
     watchlist_entry: web::Json<SaveMovieEntryRequest>,
-) -> impl Responder {
-    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "movie") else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist not found".to_string(),
-        });
-    };
+) -> actix_web::Result<impl Responder> {
+    let movie = Movie::find(&watchlist_entry.movie_id).await?;
 
-    let Ok(movie) = crate::movie::Movie::find(&watchlist_entry.movie_id).await else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Movie not found".to_string(),
-        });
-    };
+    let data = web::block(move || {
+        let mut conn = pool.get()?;
+        let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "movie")?;
 
-    let watchlist_entry_to_save = MovieEntry {
-        watchlist_id: watchlist.watchlist_id,
-        user_id: auth.user_id,
-        movie_id: watchlist_entry.movie_id,
-        imdb_id: movie.imdb_id,
-        title: movie.title,
-        poster_path: movie.poster_path,
-        release_date: movie.release_date,
-    };
+        let watchlist_entry_to_save = MovieEntry {
+            watchlist_id: watchlist.watchlist_id,
+            user_id: auth.user_id,
+            movie_id: watchlist_entry.movie_id,
+            imdb_id: movie.imdb_id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            release_date: movie.release_date,
+        };
 
-    let Ok(watchlist) = MovieEntry::create(watchlist_entry_to_save) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Watchlist entry could not be created".to_string(),
-        });
-    };
+        MovieEntry::create(&mut conn, watchlist_entry_to_save)
+    })
+    .await??;
 
-    HttpResponse::Ok().json(Success { data: watchlist })
+    Ok(Success { data })
 }
 
 #[delete("/movies/entries/{watchlist_id}/{movie_id}")]
-async fn delete(auth: Auth, path: web::Path<(String, i32)>) -> impl Responder {
+async fn delete(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    path: web::Path<(String, i32)>,
+) -> actix_web::Result<impl Responder> {
     let (_, movie_id) = path.into_inner();
 
-    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "movie") else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist not found".to_string(),
-        });
-    };
-
-    let Ok(count) = MovieEntry::delete(watchlist.watchlist_id, movie_id) else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist entry not found".to_string(),
-        });
-    };
+    let count = web::block(move || {
+        let mut conn = pool.get()?;
+        let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "movie")?;
+        MovieEntry::delete(&mut conn, watchlist.watchlist_id, movie_id)
+    })
+    .await??;
 
     if count == 0 {
-        return HttpResponse::NotFound().json(Error {
+        return Err(CustomError {
+            status_code: 404,
             message: "Watchlist entry not found".to_string(),
-        });
+        })?;
     }
 
-    HttpResponse::Ok().json(Success {
+    Ok(Success {
         data: DeleteResponse { count },
     })
 }

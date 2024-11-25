@@ -1,4 +1,4 @@
-use crate::db::establish_connection;
+use crate::db::DbConnection;
 use crate::error_handler::CustomError;
 use crate::schema::watchlists;
 use crate::user;
@@ -25,8 +25,11 @@ pub struct NewWatchlist {
 }
 
 impl Watchlist {
-    pub fn find_default(user_id: Uuid, media_type: &str) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn find_default(
+        conn: &mut DbConnection,
+        user_id: Uuid,
+        media_type: &str,
+    ) -> Result<Self, CustomError> {
         let watchlist = watchlists::table
             .select(Watchlist::as_select())
             .filter(
@@ -34,7 +37,7 @@ impl Watchlist {
                     .eq(user_id)
                     .and(watchlists::media_type.eq(media_type)),
             )
-            .first(connection);
+            .first(conn);
 
         if let Ok(existing_watchlist) = watchlist {
             return Ok(existing_watchlist);
@@ -47,47 +50,46 @@ impl Watchlist {
         }
         .to_string();
 
-        let new_watchlist = Self::create(Watchlist {
-            watchlist_id: Uuid::new_v4(),
-            media_type: media_type.to_string(),
-            user_id,
-            name,
-        })?;
+        let new_watchlist = Self::create(
+            conn,
+            Watchlist {
+                watchlist_id: Uuid::new_v4(),
+                media_type: media_type.to_string(),
+                user_id,
+                name,
+            },
+        )?;
         Ok(new_watchlist)
     }
 
-    pub fn find_by_user(user_id: Uuid) -> Result<Vec<Self>, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn find_by_user(conn: &mut DbConnection, user_id: Uuid) -> Result<Vec<Self>, CustomError> {
         let watchlists = watchlists::table
             .filter(watchlists::user_id.eq(user_id))
             .order(watchlists::name.desc())
             .select(Watchlist::as_select())
-            .load(connection)?;
+            .load(conn)?;
         Ok(watchlists)
     }
 
-    pub fn create(watchlist: Watchlist) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn create(conn: &mut DbConnection, watchlist: Watchlist) -> Result<Self, CustomError> {
         let new_watchlist = diesel::insert_into(watchlists::table)
             .values(watchlist)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(new_watchlist)
     }
 
-    pub fn update(watchlist: Watchlist) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn update(conn: &mut DbConnection, watchlist: Watchlist) -> Result<Self, CustomError> {
         let updated_watchlist = diesel::update(watchlists::table)
             .filter(watchlists::watchlist_id.eq(watchlist.watchlist_id))
             .set(watchlist)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(updated_watchlist)
     }
 
-    pub fn delete(watchlist_id: Uuid) -> Result<usize, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn delete(conn: &mut DbConnection, watchlist_id: Uuid) -> Result<usize, CustomError> {
         let res =
             diesel::delete(watchlists::table.filter(watchlists::watchlist_id.eq(watchlist_id)))
-                .execute(connection)?;
+                .execute(conn)?;
         Ok(res)
     }
 }

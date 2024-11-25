@@ -1,10 +1,13 @@
 use super::ShowEntry;
 
+use crate::db::DbPool;
+use crate::error_handler::CustomError;
+use crate::show::Show;
 use crate::utils::jwt::Auth;
-use crate::utils::response_body::{Error, Success};
+use crate::utils::response_body::Success;
 use crate::watchlist::Watchlist;
 use actix_web::{delete, Responder};
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, post, web};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
@@ -21,112 +24,102 @@ pub struct DeleteResponse {
 }
 
 #[get("/shows/entries/{watchlist_id}/{show_id}")]
-async fn find(auth: Auth, path: web::Path<(String, i32)>) -> impl Responder {
+async fn find(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    path: web::Path<(String, i32)>,
+) -> actix_web::Result<impl Responder> {
     let (_, show_id) = path.into_inner();
 
-    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "show") else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist not found".to_string(),
-        });
-    };
+    let data = web::block(move || {
+        let mut conn = pool.get()?;
+        let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "show")?;
+        ShowEntry::find(&mut conn, auth.user_id, watchlist.watchlist_id, show_id)
+    })
+    .await??;
 
-    match ShowEntry::find(auth.user_id, watchlist.watchlist_id, show_id) {
-        Err(err) => HttpResponse::NotFound().json(Error {
-            message: err.message,
-        }),
-        Ok(watchlist_entry) => HttpResponse::Ok().json(Success {
-            data: watchlist_entry,
-        }),
-    }
+    Ok(Success { data })
 }
 
 #[get("/shows/entries/{watchlist_id}")]
-async fn find_all(auth: Auth, _: web::Path<String>) -> impl Responder {
-    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "show") else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist not found".to_string(),
-        });
-    };
+async fn find_all(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    _: web::Path<String>,
+) -> actix_web::Result<impl Responder> {
+    let data = web::block(move || {
+        let mut conn = pool.get()?;
+        let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "show")?;
+        ShowEntry::find_all(&mut conn, auth.user_id, watchlist.watchlist_id)
+    })
+    .await??;
 
-    let Ok(entries) = ShowEntry::find_all(auth.user_id, watchlist.watchlist_id) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Entries could not be retrieved".to_string(),
-        });
-    };
-
-    HttpResponse::Ok().json(Success { data: entries })
+    Ok(Success { data })
 }
 
 #[post("/shows/entries/{watchlist_id}")]
 async fn create(
+    pool: web::Data<DbPool>,
     auth: Auth,
     _: web::Path<String>,
     watchlist_entry: web::Json<SaveShowEntryRequest>,
-) -> impl Responder {
-    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "show") else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist not found".to_string(),
-        });
-    };
+) -> actix_web::Result<impl Responder> {
+    let show = Show::find(&watchlist_entry.show_id).await?;
 
-    let Ok(show) = crate::show::Show::find(&watchlist_entry.show_id).await else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Show not found".to_string(),
-        });
-    };
+    let data = web::block(move || {
+        let mut conn = pool.get()?;
+        let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "show")?;
 
-    let imdb_id = if let Some(external_ids) = show.external_ids {
-        external_ids.imdb_id
-    } else {
-        None
-    };
+        let imdb_id = if let Some(external_ids) = show.external_ids {
+            external_ids.imdb_id
+        } else {
+            None
+        };
 
-    let watchlist_entry_to_save = ShowEntry {
-        watchlist_id: watchlist.watchlist_id,
-        user_id: auth.user_id,
-        show_id: watchlist_entry.show_id,
-        imdb_id,
-        name: show.name,
-        poster_path: show.poster_path,
-        first_air_date: show.first_air_date,
-        last_air_date: show.last_air_date,
-        next_air_date: show.next_air_date,
-        status: show.status,
-        updated_at: Utc::now().naive_utc().date(),
-    };
+        let watchlist_entry_to_save = ShowEntry {
+            watchlist_id: watchlist.watchlist_id,
+            user_id: auth.user_id,
+            show_id: watchlist_entry.show_id,
+            imdb_id,
+            name: show.name,
+            poster_path: show.poster_path,
+            first_air_date: show.first_air_date,
+            last_air_date: show.last_air_date,
+            next_air_date: show.next_air_date,
+            status: show.status,
+            updated_at: Utc::now().naive_utc().date(),
+        };
 
-    let Ok(watchlist) = ShowEntry::create(watchlist_entry_to_save) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Watchlist entry could not be created".to_string(),
-        });
-    };
+        ShowEntry::create(&mut conn, watchlist_entry_to_save)
+    })
+    .await??;
 
-    HttpResponse::Ok().json(Success { data: watchlist })
+    Ok(Success { data })
 }
 
 #[delete("/shows/entries/{watchlist_id}/{show_id}")]
-async fn delete(auth: Auth, path: web::Path<(String, i32)>) -> impl Responder {
+async fn delete(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    path: web::Path<(String, i32)>,
+) -> actix_web::Result<impl Responder> {
     let (_, show_id) = path.into_inner();
 
-    let Ok(watchlist) = Watchlist::find_default(auth.user_id, "show") else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist not found".to_string(),
-        });
-    };
-
-    let Ok(count) = ShowEntry::delete(watchlist.watchlist_id, show_id) else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Watchlist entry not found".to_string(),
-        });
-    };
+    let count = web::block(move || {
+        let mut conn = pool.get()?;
+        let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "show")?;
+        ShowEntry::delete(&mut conn, watchlist.watchlist_id, show_id)
+    })
+    .await??;
 
     if count == 0 {
-        return HttpResponse::NotFound().json(Error {
+        return Err(CustomError {
+            status_code: 404,
             message: "Watchlist entry not found".to_string(),
-        });
+        })?;
     }
 
-    HttpResponse::Ok().json(Success {
+    Ok(Success {
         data: DeleteResponse { count },
     })
 }
