@@ -1,100 +1,102 @@
 use crate::{
+    db::DbPool,
+    error_handler::CustomError,
     user::NewUser,
-    utils::{
-        jwt::Auth,
-        response_body::{Error, Success},
-    },
+    utils::{jwt::Auth, response_body::Success},
 };
-use actix_web::{get, post, put, web, HttpResponse, Responder};
+use actix_web::{get, post, put, web, Responder};
+use serde::Serialize;
 use uuid::Uuid;
 
-use super::{UpdatedUser, User};
+use super::{UpdatedUser, User, UserFindResponse, UserResponse};
+
+#[derive(Serialize)]
+#[serde(untagged)]
+enum UserRead {
+    Type1(UserFindResponse),
+    Type2(UserResponse),
+}
 
 #[get("/users")]
-async fn find_all(_: Auth) -> impl Responder {
-    let Ok(users) = User::find_all() else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Internal Server Error".to_string(),
-        });
-    };
+async fn find_all(pool: web::Data<DbPool>, _: Auth) -> actix_web::Result<impl Responder> {
+    let users = web::block(move || {
+        let mut conn = pool.get()?;
+        User::find_all(&mut conn)
+    })
+    .await??;
 
-    HttpResponse::Ok().json(Success { data: users })
+    Ok(Success::new(users))
 }
 
 #[get("/users/{user_id}")]
-async fn find(auth: Auth, user_id: web::Path<Uuid>) -> impl Responder {
-    if auth.user_id == user_id.clone() {
-        let Ok(user) = User::find(user_id.into_inner()) else {
-            return HttpResponse::NotFound().json(Error {
-                message: "User not found".to_string(),
-            });
+async fn find(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    user_id: web::Path<Uuid>,
+) -> actix_web::Result<impl Responder> {
+    let user = web::block(move || {
+        let mut conn = pool.get()?;
+        let user = if auth.user_id == user_id.clone() {
+            UserRead::Type1(User::find(&mut conn, user_id.into_inner())?)
+        } else {
+            UserRead::Type2(User::find_summary(&mut conn, user_id.into_inner())?)
         };
-        HttpResponse::Ok().json(Success { data: user })
-    } else {
-        let Ok(user) = User::find_summary(user_id.into_inner()) else {
-            return HttpResponse::NotFound().json(Error {
-                message: "User not found".to_string(),
-            });
-        };
-        HttpResponse::Ok().json(Success { data: user })
-    }
+        Ok::<UserRead, CustomError>(user)
+    })
+    .await??;
+
+    return Ok(Success::new(user));
 }
 
 #[post("/users")]
-async fn create(_: Auth, user: web::Json<NewUser>) -> impl Responder {
+async fn create(
+    pool: web::Data<DbPool>,
+    _: Auth,
+    user: web::Json<NewUser>,
+) -> actix_web::Result<impl Responder> {
     if let Some(email) = &user.email {
         if email.is_empty() {
-            return HttpResponse::BadRequest().json(Error {
-                message: "Invalid email".to_string(),
-            });
+            return Err(CustomError::new(400, "Invalid email"))?;
         }
 
         if let Some(password) = &user.password {
             if password.is_empty() {
-                return HttpResponse::BadRequest().json(Error {
-                    message: "Invalid password".to_string(),
-                });
+                return Err(CustomError::new(400, "Invalid password"))?;
             }
         } else {
-            return HttpResponse::BadRequest().json(Error {
-                message: "Invalid password".to_string(),
-            });
+            return Err(CustomError::new(400, "Invalid password"))?;
         }
     } else {
         if let Some(_) = &user.password {
-            return HttpResponse::BadRequest().json(Error {
-                message: "Invalid email or password".to_string(),
-            });
+            return Err(CustomError::new(400, "Invalid email or password"))?;
         }
     }
 
-    let res = User::create(user.into_inner());
-    let Ok(user) = res else {
-        return HttpResponse::BadRequest().json(Error {
-            message: "Invalid data".to_string(),
-        });
-    };
+    let user = web::block(move || {
+        let mut conn = pool.get()?;
+        User::create(&mut conn, user.into_inner())
+    })
+    .await??;
 
-    HttpResponse::Ok().json(Success { data: user })
+    Ok(Success::new(user))
 }
 
 #[put("/users/{user_id}")]
 async fn update(
+    pool: web::Data<DbPool>,
     auth: Auth,
     user_id: web::Path<Uuid>,
     user: web::Json<UpdatedUser>,
-) -> impl Responder {
+) -> actix_web::Result<impl Responder> {
     if auth.user_id != user_id.clone() {
-        return HttpResponse::Forbidden().json(Error {
-            message: "Missing permission to update this user".to_string(),
-        });
+        return Err(CustomError::new(401, "Missing permissions for this user"))?;
     }
 
-    let Ok(user) = User::update(user_id.into_inner(), user.into_inner()) else {
-        return HttpResponse::NotFound().json(Error {
-            message: "User not found".to_string(),
-        });
-    };
+    let user = web::block(move || {
+        let mut conn = pool.get()?;
+        User::update(&mut conn, user_id.into_inner(), user.into_inner())
+    })
+    .await??;
 
-    HttpResponse::Ok().json(Success { data: user })
+    Ok(Success::new(user))
 }

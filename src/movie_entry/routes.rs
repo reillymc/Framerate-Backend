@@ -30,14 +30,14 @@ async fn find(
 ) -> actix_web::Result<impl Responder> {
     let (_, movie_id) = path.into_inner();
 
-    let data = web::block(move || {
+    let movie_entry = web::block(move || {
         let mut conn = pool.get()?;
         let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "movie")?;
         MovieEntry::find(&mut conn, auth.user_id, watchlist.watchlist_id, movie_id)
     })
     .await??;
 
-    Ok(Success { data })
+    Ok(Success::new(movie_entry))
 }
 
 #[get("/movies/entries/{watchlist_id}")]
@@ -46,14 +46,14 @@ async fn find_all(
     auth: Auth,
     _: web::Path<String>,
 ) -> actix_web::Result<impl Responder> {
-    let data = web::block(move || {
+    let movie_entries = web::block(move || {
         let mut conn = pool.get()?;
         let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "movie")?;
         MovieEntry::find_all(&mut conn, auth.user_id, watchlist.watchlist_id)
     })
     .await??;
 
-    Ok(Success { data })
+    Ok(Success::new(movie_entries))
 }
 
 #[post("/movies/entries/{watchlist_id}")]
@@ -65,7 +65,7 @@ async fn create(
 ) -> actix_web::Result<impl Responder> {
     let movie = Movie::find(&watchlist_entry.movie_id).await?;
 
-    let data = web::block(move || {
+    let movie_entry = web::block(move || {
         let mut conn = pool.get()?;
         let watchlist = Watchlist::find_default(&mut conn, auth.user_id, "movie")?;
 
@@ -83,7 +83,7 @@ async fn create(
     })
     .await??;
 
-    Ok(Success { data })
+    Ok(Success::new(movie_entry))
 }
 
 #[delete("/movies/entries/{watchlist_id}/{movie_id}")]
@@ -108,7 +108,5 @@ async fn delete(
         })?;
     }
 
-    Ok(Success {
-        data: DeleteResponse { count },
-    })
+    Ok(Success::new(DeleteResponse { count }))
 }

@@ -3,7 +3,7 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::{
-    db::{establish_connection, DEFAULT_PAGE_SIZE},
+    db::{DbConnection, DEFAULT_PAGE_SIZE},
     error_handler::CustomError,
     review::{self, Order, Review, ReviewFindParameters, Sort},
     schema::{review_company, reviews, show_reviews},
@@ -59,16 +59,16 @@ impl From<ShowReview> for Show {
 
 impl ShowReview {
     pub fn find_by_review_id(
+        conn: &mut DbConnection,
         user_id: Uuid,
         review_id: Uuid,
     ) -> Result<ShowReviewReadResponse, CustomError> {
-        let connection = &mut establish_connection();
         let (show_review, review_details) = show_reviews::table
             .filter(show_reviews::review_id.eq(review_id))
             .filter(show_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
             .select((ShowReview::as_select(), Review::as_select()))
-            .first::<(ShowReview, Review)>(connection)?;
+            .first::<(ShowReview, Review)>(conn)?;
 
         let review = ShowReviewReadResponse {
             review_id: show_review.review_id,
@@ -85,11 +85,10 @@ impl ShowReview {
     }
 
     pub fn find_all_reviews(
+        conn: &mut DbConnection,
         user_id: Uuid,
         params: ReviewFindParameters,
     ) -> Result<Vec<ShowReviewReadResponse>, CustomError> {
-        let connection = &mut establish_connection();
-
         let mut query = show_reviews::table
             .filter(show_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
@@ -148,7 +147,7 @@ impl ShowReview {
 
         let reviews = query
             .select((ShowReview::as_select(), Review::as_select()))
-            .load::<(ShowReview, Review)>(connection)?;
+            .load::<(ShowReview, Review)>(conn)?;
 
         let show_reviews: Vec<ShowReviewReadResponse> = reviews
             .into_iter()
@@ -167,17 +166,17 @@ impl ShowReview {
     }
 
     pub fn find_by_show_id(
+        conn: &mut DbConnection,
         user_id: Uuid,
         show_id: i32,
     ) -> Result<Vec<ShowReviewReadResponse>, CustomError> {
-        let connection = &mut establish_connection();
         let reviews = show_reviews::table
             .filter(show_reviews::show_id.eq(show_id))
             .filter(show_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
             .order(reviews::date.desc().nulls_last())
             .select((ShowReview::as_select(), Review::as_select()))
-            .load::<(ShowReview, Review)>(connection)?;
+            .load::<(ShowReview, Review)>(conn)?;
 
         let show_reviews: Vec<ShowReviewReadResponse> = reviews
             .into_iter()
@@ -195,20 +194,18 @@ impl ShowReview {
         Ok(show_reviews)
     }
 
-    pub fn create(review: ShowReview) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn create(conn: &mut DbConnection, review: ShowReview) -> Result<Self, CustomError> {
         let new_review = diesel::insert_into(show_reviews::table)
             .values(review)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(new_review)
     }
 
-    pub fn update(review: ShowReview) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn update(conn: &mut DbConnection, review: ShowReview) -> Result<Self, CustomError> {
         let updated_review = diesel::update(show_reviews::table)
             .filter(show_reviews::review_id.eq(review.review_id))
             .set(review)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(updated_review)
     }
 }

@@ -1,7 +1,8 @@
+use crate::db::DbConnection;
 use crate::error_handler::CustomError;
+use crate::schema::review_company;
 use crate::schema::users;
 use crate::user::User;
-use crate::{db::establish_connection, schema::review_company};
 use crate::{review, user};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -43,14 +44,15 @@ pub struct ReviewCompanyDetails {
 }
 
 impl ReviewCompany {
-    pub fn find_by_review(review_id: Uuid) -> Result<Vec<ReviewCompanyDetails>, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn find_by_review(
+        conn: &mut DbConnection,
+        review_id: Uuid,
+    ) -> Result<Vec<ReviewCompanyDetails>, CustomError> {
         let review_company = review_company::table
             .filter(review_company::review_id.eq(review_id))
             .inner_join(users::table)
             .select((ReviewCompanySummary::as_select(), User::as_select()))
-            .load::<(ReviewCompanySummary, User)>(connection)
-            .expect("Error loading reviews");
+            .load::<(ReviewCompanySummary, User)>(conn)?;
 
         let review_company_details: Vec<ReviewCompanyDetails> = review_company
             .into_iter()
@@ -64,28 +66,33 @@ impl ReviewCompany {
     }
 
     pub fn replace(
+        conn: &mut DbConnection,
         review_id: Uuid,
-        review_company: Vec<ReviewCompanySummary>,
+        review_company: Option<Vec<ReviewCompanySummary>>,
     ) -> Result<Vec<ReviewCompanyDetails>, CustomError> {
-        let review_company_items: Vec<ReviewCompany> = review_company
-            .into_iter()
-            .map(|review_company_summary| ReviewCompany {
-                review_id,
-                user_id: review_company_summary.user_id,
-            })
-            .collect();
-
-        let connection = &mut establish_connection();
-        connection.transaction::<_, diesel::result::Error, _>(|conn| {
+        conn.transaction::<_, diesel::result::Error, _>(|conn| {
             diesel::delete(review_company::table.filter(review_company::review_id.eq(review_id)))
                 .execute(conn)?;
+
+            let Some(review_company) = review_company else {
+                return Ok(());
+            };
+
+            let review_company_items: Vec<ReviewCompany> = review_company
+                .into_iter()
+                .map(|review_company_summary| ReviewCompany {
+                    review_id,
+                    user_id: review_company_summary.user_id,
+                })
+                .collect();
+
             diesel::insert_into(review_company::table)
                 .values(review_company_items)
                 .execute(conn)?;
             Ok(())
         })?;
 
-        let review_company_details: Vec<ReviewCompanyDetails> = Self::find_by_review(review_id)?;
+        let review_company_details = Self::find_by_review(conn, review_id)?;
         Ok(review_company_details)
     }
 }

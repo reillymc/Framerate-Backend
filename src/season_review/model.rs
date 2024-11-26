@@ -3,7 +3,7 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::{
-    db::establish_connection,
+    db::DbConnection,
     error_handler::CustomError,
     review::{self, Review},
     schema::{reviews, season_reviews},
@@ -54,16 +54,16 @@ impl From<SeasonReview> for Season {
 
 impl SeasonReview {
     pub fn find_by_review_id(
+        conn: &mut DbConnection,
         user_id: Uuid,
         review_id: Uuid,
     ) -> Result<SeasonReviewReadResponse, CustomError> {
-        let connection = &mut establish_connection();
         let (season_review, review_details) = season_reviews::table
             .filter(season_reviews::review_id.eq(review_id))
             .filter(season_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
             .select((SeasonReview::as_select(), Review::as_select()))
-            .first::<(SeasonReview, Review)>(connection)?;
+            .first::<(SeasonReview, Review)>(conn)?;
 
         let review = SeasonReviewReadResponse {
             review_id: season_review.review_id,
@@ -80,11 +80,11 @@ impl SeasonReview {
     }
 
     pub fn find_by_show_season(
+        conn: &mut DbConnection,
         user_id: Uuid,
         show_id: i32,
         season_number: i32,
     ) -> Result<Vec<SeasonReviewReadResponse>, CustomError> {
-        let connection = &mut establish_connection();
         let reviews = season_reviews::table
             .filter(season_reviews::show_id.eq(show_id))
             .filter(season_reviews::season_number.eq(season_number))
@@ -92,7 +92,7 @@ impl SeasonReview {
             .inner_join(reviews::table)
             .order(reviews::date.desc().nulls_last())
             .select((SeasonReview::as_select(), Review::as_select()))
-            .load::<(SeasonReview, Review)>(connection)?;
+            .load::<(SeasonReview, Review)>(conn)?;
 
         let season_reviews: Vec<SeasonReviewReadResponse> = reviews
             .into_iter()
@@ -110,20 +110,18 @@ impl SeasonReview {
         Ok(season_reviews)
     }
 
-    pub fn create(review: SeasonReview) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn create(conn: &mut DbConnection, review: SeasonReview) -> Result<Self, CustomError> {
         let new_review = diesel::insert_into(season_reviews::table)
             .values(review)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(new_review)
     }
 
-    pub fn update(review: SeasonReview) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn update(conn: &mut DbConnection, review: SeasonReview) -> Result<Self, CustomError> {
         let updated_review = diesel::update(season_reviews::table)
             .filter(season_reviews::review_id.eq(review.review_id))
             .set(review)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(updated_review)
     }
 }

@@ -1,4 +1,4 @@
-use crate::db::establish_connection;
+use crate::db::DbConnection;
 use crate::error_handler::CustomError;
 use crate::schema::reviews;
 use crate::user;
@@ -59,43 +59,44 @@ pub struct ReviewStatistics {
 }
 
 impl Review {
-    pub fn find(user_id: Uuid, review_id: Uuid) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn find(
+        conn: &mut DbConnection,
+        user_id: Uuid,
+        review_id: Uuid,
+    ) -> Result<Self, CustomError> {
         let reviews = reviews::table
             .select(Review::as_select())
             .filter(reviews::review_id.eq(review_id))
             .filter(reviews::user_id.eq(user_id))
-            .first(connection)?;
+            .first(conn)?;
         Ok(reviews)
     }
 
-    pub fn create(review: Review) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn create(conn: &mut DbConnection, review: Review) -> Result<Self, CustomError> {
         let new_review = diesel::insert_into(reviews::table)
             .values(review)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(new_review)
     }
 
-    pub fn update(review: Review) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn update(conn: &mut DbConnection, review: Review) -> Result<Self, CustomError> {
         let updated_review = diesel::update(reviews::table)
             .filter(reviews::review_id.eq(review.review_id))
             .set(review)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(updated_review)
     }
 
-    pub fn delete(review_id: Uuid) -> Result<usize, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn delete(conn: &mut DbConnection, review_id: Uuid) -> Result<usize, CustomError> {
         let res = diesel::delete(reviews::table.filter(reviews::review_id.eq(review_id)))
-            .execute(connection)?;
+            .execute(conn)?;
         Ok(res)
     }
 
-    pub fn find_statistics(user_id: Uuid) -> Result<ReviewStatistics, CustomError> {
-        let connection = &mut establish_connection();
-
+    pub fn find_statistics(
+        conn: &mut DbConnection,
+        user_id: Uuid,
+    ) -> Result<ReviewStatistics, CustomError> {
         let current_year = chrono::offset::Local::now().year();
         let current_year_start = NaiveDate::from_ymd_opt(current_year, 1, 1).unwrap();
         let current_year_end = NaiveDate::from_ymd_opt(current_year + 1, 1, 1)
@@ -106,7 +107,7 @@ impl Review {
             .filter(reviews::user_id.eq(user_id))
             .filter(reviews::date.between(current_year_start, current_year_end))
             .count()
-            .get_result(connection)?;
+            .get_result(conn)?;
 
         let current_month = chrono::Utc::now().month();
         let current_month_start = NaiveDate::from_ymd_opt(current_year, current_month, 1).unwrap();
@@ -118,7 +119,7 @@ impl Review {
             .filter(reviews::user_id.eq(user_id))
             .filter(reviews::date.between(current_month_start, current_month_end))
             .count()
-            .get_result(connection)?;
+            .get_result(conn)?;
 
         let current_week = chrono::Utc::now().iso_week().week();
         let current_week_start =
@@ -130,7 +131,7 @@ impl Review {
             .filter(reviews::user_id.eq(user_id))
             .filter(reviews::date.between(current_week_start, current_week_end))
             .count()
-            .get_result(connection)?;
+            .get_result(conn)?;
 
         Ok(ReviewStatistics {
             reviews_this_week,

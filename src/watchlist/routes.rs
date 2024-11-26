@@ -25,7 +25,7 @@ async fn find(
     })
     .await??;
 
-    Ok(Success { data: watchlist })
+    Ok(Success::new(watchlist))
 }
 
 #[get("/watchlists")]
@@ -36,7 +36,7 @@ async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl
     })
     .await??;
 
-    Ok(Success { data: watchlists })
+    Ok(Success::new(watchlists))
 }
 
 #[post("/watchlists")]
@@ -58,5 +58,5 @@ async fn create(
     })
     .await??;
 
-    Ok(Success { data: watchlist })
+    Ok(Success::new(watchlist))
 }

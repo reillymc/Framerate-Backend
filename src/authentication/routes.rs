@@ -1,13 +1,12 @@
 use std::env;
 
 use crate::{
+    db::DbPool,
+    error_handler::CustomError,
     user::{AuthUser, User},
-    utils::{
-        jwt::create_token,
-        response_body::{Error, Success},
-    },
+    utils::{jwt::create_token, response_body::Success},
 };
-use actix_web::{post, web, HttpResponse, Responder};
+use actix_web::{post, web, Responder};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -24,74 +23,62 @@ struct LoginResponse {
 }
 
 #[post("/auth/login")]
-pub async fn login(auth_user: web::Json<AuthUser>) -> impl Responder {
+pub async fn login(
+    pool: web::Data<DbPool>,
+    auth_user: web::Json<AuthUser>,
+) -> actix_web::Result<impl Responder> {
     if auth_user.email.is_empty() || auth_user.password.is_empty() {
-        return HttpResponse::BadRequest().json(Error {
-            message: "Email and password are required".to_string(),
-        });
+        return Err(CustomError::new(400, "Email and password are required"))?;
     }
 
-    let user = auth_user.login();
-
-    let Ok(user_details) = user else {
-        return HttpResponse::BadRequest().json(Error {
-            message: "Invalid credentials".to_string(),
-        });
-    };
+    let user_details = web::block(move || {
+        let mut conn = pool.get()?;
+        auth_user
+            .login(&mut conn)
+            .map_err(|_| CustomError::new(401, "Invalid credentials"))
+    })
+    .await??;
 
     let Some(email) = &user_details.email else {
-        return HttpResponse::BadRequest().json(Error {
-            message: "Invalid user account".to_string(),
-        });
+        return Err(CustomError::new(401, "Invalid user account"))?;
     };
 
-    let token = create_token(user_details.user_id, email);
+    let token = create_token(user_details.user_id, email)?;
 
-    let Ok(token_string) = token else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Unable to create token".to_string(),
-        });
-    };
-    HttpResponse::Ok().json(Success {
-        data: LoginResponse {
-            token: token_string,
-            user_id: user_details.user_id,
-        },
-    })
+    Ok(Success::new(LoginResponse {
+        user_id: user_details.user_id,
+        token,
+    }))
 }
 
 #[post("/auth/setup")]
-pub async fn setup(secret: web::Json<Secret>) -> impl Responder {
+pub async fn setup(
+    pool: web::Data<DbPool>,
+    secret: web::Json<Secret>,
+) -> actix_web::Result<impl Responder> {
     let Ok(setup_secret) = env::var("SETUP_SECRET") else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Unable to run setup procedure".to_string(),
-        });
+        return Err(CustomError::new(500, "Unable to run setup procedure"))?;
     };
 
     if secret.secret != setup_secret {
-        return HttpResponse::Forbidden().json(Error {
-            message: "Unauthorized to run setup procedure".to_string(),
-        });
+        return Err(CustomError::new(401, "Unauthorized to run setup procedure"))?;
     }
 
-    let Ok(any_users) = User::find_any() else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Unknown Error".to_string(),
-        });
-    };
+    let any_users = web::block(move || {
+        let mut conn = pool.get()?;
+        User::find_any(&mut conn)
+    })
+    .await??;
 
     if any_users {
-        return HttpResponse::Forbidden().json(Error {
-            message: "Setup procedure already run".to_string(),
-        });
+        return Err(CustomError::new(401, "Setup procedure already run"))?;
     };
 
     let token = create_token(Uuid::default(), "");
 
     let Ok(token_string) = token else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Unable to create token".to_string(),
-        });
+        return Err(CustomError::new(500, "Unable to create token"))?;
     };
-    HttpResponse::Ok().json(Success { data: token_string })
+
+    Ok(Success::new(token_string))
 }

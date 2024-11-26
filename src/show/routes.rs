@@ -18,9 +18,7 @@ async fn search(_: Auth, params: web::Query<SearchParameters>) -> impl Responder
     let shows = Show::search(&params.query).await;
 
     match shows {
-        Ok(_) => HttpResponse::Ok().json(Success {
-            data: shows.unwrap(),
-        }),
+        Ok(_) => HttpResponse::Ok().json(Success::new(shows.unwrap())),
         Err(err) => HttpResponse::InternalServerError().json(Error {
             message: err.to_string(),
         }),
@@ -32,9 +30,7 @@ async fn popular(_: Auth) -> impl Responder {
     let shows = Show::popular().await;
 
     match shows {
-        Ok(_) => HttpResponse::Ok().json(Success {
-            data: shows.unwrap(),
-        }),
+        Ok(_) => HttpResponse::Ok().json(Success::new(shows.unwrap())),
         Err(err) => HttpResponse::InternalServerError().json(Error {
             message: err.to_string(),
         }),
@@ -46,9 +42,7 @@ async fn find(_: Auth, show_id: web::Path<i32>) -> impl Responder {
     let show = Show::find(&show_id.into_inner()).await;
 
     match show {
-        Ok(_) => HttpResponse::Ok().json(Success {
-            data: show.unwrap(),
-        }),
+        Ok(_) => HttpResponse::Ok().json(Success::new(show.unwrap())),
         Err(err) => HttpResponse::InternalServerError().json(Error {
             message: err.to_string(),
         }),

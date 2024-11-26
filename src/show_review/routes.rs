@@ -1,14 +1,17 @@
 use super::ShowReviewReadResponse;
 
+use crate::db::DbPool;
+use crate::error_handler::CustomError;
 use crate::review::{Review, ReviewFindParameters};
-use crate::review_company::{ReviewCompanyDetails, ReviewCompanySummary};
+use crate::review_company::{ReviewCompany, ReviewCompanyDetails, ReviewCompanySummary};
 use crate::show::Show;
 use crate::show_review::ShowReview;
 use crate::utils::jwt::Auth;
-use crate::utils::response_body::{Error, Success, SuccessWithMessage};
-use actix_web::{get, post, web, HttpResponse};
+use crate::utils::response_body::Success;
+use actix_web::{get, post, web};
 use actix_web::{put, Responder};
 use chrono::NaiveDate;
+use diesel::Connection;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -59,73 +62,83 @@ impl From<ShowReviewReadResponse> for ShowReviewResponse {
     }
 }
 
-#[get("/shows/reviews")]
-async fn find_all(auth: Auth, params: web::Query<ReviewFindParameters>) -> impl Responder {
-    match ShowReview::find_all_reviews(auth.user_id, params.into_inner()) {
-        Err(err) => HttpResponse::InternalServerError().json(Error {
-            message: err.message,
-        }),
-        Ok(reviews) => HttpResponse::Ok().json(Success {
-            data: reviews
-                .into_iter()
-                .map(ShowReviewResponse::from)
-                .collect::<Vec<ShowReviewResponse>>(),
-        }),
+impl ShowReviewResponse {
+    pub fn company(mut self, company: Vec<ReviewCompanyDetails>) -> Self {
+        self.company = Some(company);
+        self
     }
+}
+
+#[get("/shows/reviews")]
+async fn find_all(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    params: web::Query<ReviewFindParameters>,
+) -> actix_web::Result<impl Responder> {
+    let reviews = web::block(move || {
+        let mut conn = pool.get()?;
+        ShowReview::find_all_reviews(&mut conn, auth.user_id, params.into_inner())
+    })
+    .await??;
+
+    Ok(Success::new(
+        reviews
+            .into_iter()
+            .map(ShowReviewResponse::from)
+            .collect::<Vec<ShowReviewResponse>>(),
+    ))
 }
 
 #[get("/shows/reviews/{review_id}")]
-async fn find_by_review_id(auth: Auth, review_id: web::Path<Uuid>) -> impl Responder {
-    let Ok(review) = ShowReview::find_by_review_id(auth.user_id, review_id.into_inner()) else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Review not found".to_string(),
-        });
-    };
+async fn find_by_review_id(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    review_id: web::Path<Uuid>,
+) -> actix_web::Result<impl Responder> {
+    let review = web::block(move || {
+        let mut conn = pool.get()?;
+        let review =
+            ShowReview::find_by_review_id(&mut conn, auth.user_id, review_id.into_inner())?;
+        let company = ReviewCompany::find_by_review(&mut conn, review.review_id)?;
 
-    let company = crate::review_company::ReviewCompany::find_by_review(review.review_id);
+        Ok::<ShowReviewResponse, CustomError>(ShowReviewResponse::from(review).company(company))
+    })
+    .await??;
 
-    let Ok(company) = company else {
-        return HttpResponse::Ok().json(SuccessWithMessage {
-            data: ShowReviewResponse::from(review),
-            message: "Company could not be retrieved".to_string(),
-        });
-    };
-
-    let mut review = ShowReviewResponse::from(review);
-    review.company = Some(company);
-
-    HttpResponse::Ok().json(Success { data: review })
+    Ok(Success::new(review))
 }
 
 #[get("/shows/{show_id}/reviews")]
-async fn find_by_show_id(auth: Auth, show_id: web::Path<i32>) -> impl Responder {
-    match ShowReview::find_by_show_id(auth.user_id, show_id.into_inner()) {
-        Err(err) => HttpResponse::InternalServerError().json(Error {
-            message: err.message,
-        }),
-        Ok(reviews) => HttpResponse::Ok().json(Success {
-            data: reviews
-                .into_iter()
-                .map(ShowReviewResponse::from)
-                .collect::<Vec<ShowReviewResponse>>(),
-        }),
-    }
+async fn find_by_show_id(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    show_id: web::Path<i32>,
+) -> actix_web::Result<impl Responder> {
+    let reviews = web::block(move || {
+        let mut conn = pool.get()?;
+        ShowReview::find_by_show_id(&mut conn, auth.user_id, show_id.into_inner())
+    })
+    .await??;
+
+    Ok(Success::new(
+        reviews
+            .into_iter()
+            .map(ShowReviewResponse::from)
+            .collect::<Vec<ShowReviewResponse>>(),
+    ))
 }
 
 #[post("/shows/{show_id}/reviews")]
 async fn create(
+    pool: web::Data<DbPool>,
     auth: Auth,
     review: web::Json<SaveShowReviewRequest>,
     show_id: web::Path<i32>,
-) -> impl Responder {
+) -> actix_web::Result<impl Responder> {
     let review = review.into_inner();
     let show_id = show_id.into_inner();
 
-    let Ok(show) = crate::show::Show::find(&show_id).await else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Show not found".to_string(),
-        });
-    };
+    let show = Show::find(&show_id).await?;
 
     let review_id = Uuid::new_v4();
 
@@ -137,12 +150,6 @@ async fn create(
         title: review.title,
         description: review.description,
         venue: review.venue,
-    };
-
-    let Ok(created_review) = Review::create(review_to_save) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Review could not be created".to_string(),
-        });
     };
 
     let imdb_id = if let Some(external_ids) = show.external_ids {
@@ -161,136 +168,109 @@ async fn create(
         first_air_date: show.first_air_date,
     };
 
-    let Ok(created_show_review) = ShowReview::create(show_review_to_save) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Show review could not be created".to_string(),
-        });
-    };
+    let review = web::block(move || {
+        let mut conn = pool.get()?;
 
-    let mut review_response = ShowReviewResponse {
-        review_id: created_review.review_id,
-        user_id: created_review.user_id,
-        date: created_review.date,
-        rating: created_review.rating,
-        title: created_review.title,
-        description: created_review.description,
-        venue: created_review.venue,
-        show: Show::from(created_show_review),
-        company: None,
-    };
+        conn.transaction::<ShowReviewResponse, CustomError, _>(|mut conn| {
+            let created_review = Review::create(&mut conn, review_to_save)?;
+            let created_show_review = ShowReview::create(&mut conn, show_review_to_save)?;
 
-    let Some(review_company) = review.company.clone() else {
-        return HttpResponse::Ok().json(Success {
-            data: review_response,
-        });
-    };
+            let company =
+                ReviewCompany::replace(&mut conn, created_review.review_id, review.company)?;
 
-    let company =
-        crate::review_company::ReviewCompany::replace(created_review.review_id, review_company);
+            let review_response = ShowReviewResponse {
+                review_id: created_review.review_id,
+                user_id: created_review.user_id,
+                date: created_review.date,
+                rating: created_review.rating,
+                title: created_review.title,
+                description: created_review.description,
+                venue: created_review.venue,
+                show: Show::from(created_show_review),
+                company: Some(company),
+            };
 
-    let Ok(company) = company else {
-        return HttpResponse::Ok().json(SuccessWithMessage {
-            data: review_response,
-            message: "Company could not be created".to_string(),
-        });
-    };
-
-    review_response.company = Some(company);
-
-    HttpResponse::Ok().json(Success {
-        data: review_response,
+            Ok(review_response)
+        })
     })
+    .await??;
+
+    Ok(Success::new(review))
 }
 
 #[put("/shows/{show_id}/reviews/{review_id}")]
 async fn update(
+    pool: web::Data<DbPool>,
     auth: Auth,
     review: web::Json<SaveShowReviewRequest>,
     path: web::Path<(i32, Uuid)>,
-) -> impl Responder {
-    let (_, review_id) = path.into_inner();
+) -> actix_web::Result<impl Responder> {
+    let (show_id, review_id) = path.into_inner();
 
-    let Ok(existing_review) = ShowReview::find_by_review_id(auth.user_id, review_id) else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Review not found".to_string(),
-        });
-    };
+    let show = Show::find(&show_id).await?;
 
-    let Ok(show) = crate::show::Show::find(&existing_review.show.id).await else {
-        return HttpResponse::NotFound().json(Error {
-            message: "Show not found".to_string(),
-        });
-    };
+    let review = web::block(move || {
+        let mut conn = pool.get()?;
 
-    let review_to_save = Review {
-        review_id: existing_review.review_id,
-        user_id: existing_review.user_id,
-        date: review.date,
-        rating: review.rating,
-        title: review.title.clone(),
-        description: review.description.clone(),
-        venue: review.venue.clone(),
-    };
+        let existing_review = ShowReview::find_by_review_id(&mut conn, auth.user_id, review_id)?;
 
-    let Ok(updated_review) = Review::update(review_to_save) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Review could not be updated".to_string(),
-        });
-    };
+        if show_id != existing_review.show.id {
+            return Err(CustomError::new(400, "Review show cannot be changed"));
+        }
 
-    let imdb_id = if let Some(external_ids) = show.external_ids {
-        external_ids.imdb_id
-    } else {
-        None
-    };
+        let review_to_save = Review {
+            review_id: existing_review.review_id,
+            user_id: existing_review.user_id,
+            date: review.date,
+            rating: review.rating,
+            title: review.title.clone(),
+            description: review.description.clone(),
+            venue: review.venue.clone(),
+        };
 
-    let show_review_to_save = ShowReview {
-        review_id: existing_review.review_id,
-        show_id: existing_review.show.id,
-        user_id: auth.user_id,
-        imdb_id,
-        name: show.name,
-        poster_path: show.poster_path,
-        first_air_date: show.first_air_date,
-    };
+        let imdb_id = if let Some(external_ids) = show.external_ids {
+            external_ids.imdb_id
+        } else {
+            None
+        };
 
-    let Ok(updated_show_review) = ShowReview::update(show_review_to_save) else {
-        return HttpResponse::InternalServerError().json(Error {
-            message: "Show review could not be updated".to_string(),
-        });
-    };
+        let show_review_to_save = ShowReview {
+            review_id: existing_review.review_id,
+            show_id: existing_review.show.id,
+            user_id: auth.user_id,
+            imdb_id,
+            name: show.name,
+            poster_path: show.poster_path,
+            first_air_date: show.first_air_date,
+        };
 
-    let mut review_response = ShowReviewResponse {
-        review_id: updated_review.review_id,
-        user_id: updated_review.user_id,
-        date: updated_review.date,
-        rating: updated_review.rating,
-        title: updated_review.title,
-        description: updated_review.description,
-        venue: updated_review.venue,
-        show: Show::from(updated_show_review),
-        company: None,
-    };
+        conn.transaction::<ShowReviewResponse, CustomError, _>(|mut conn| {
+            let updated_review = Review::update(&mut conn, review_to_save)?;
 
-    let Some(review_company) = review.company.clone() else {
-        return HttpResponse::Ok().json(Success {
-            data: review_response,
-        });
-    };
+            let updated_show_review = ShowReview::update(&mut conn, show_review_to_save)?;
 
-    let company =
-        crate::review_company::ReviewCompany::replace(updated_review.review_id, review_company);
+            let company = ReviewCompany::replace(
+                &mut conn,
+                updated_review.review_id,
+                review.company.clone(),
+            )?;
 
-    let Ok(company) = company else {
-        return HttpResponse::Ok().json(SuccessWithMessage {
-            data: review_response,
-            message: "Company could not be updated".to_string(),
-        });
-    };
+            let review_response = ShowReviewResponse {
+                review_id: updated_review.review_id,
+                user_id: updated_review.user_id,
+                date: updated_review.date,
+                rating: updated_review.rating,
+                title: updated_review.title,
+                description: updated_review.description,
+                venue: updated_review.venue,
+                show: Show::from(updated_show_review),
+                company: Some(company),
+            };
 
-    review_response.company = Some(company);
-
-    HttpResponse::Ok().json(Success {
-        data: review_response,
+            Ok(review_response)
+        })
     })
+    .await??;
+
+    Ok(Success::new(review))
 }

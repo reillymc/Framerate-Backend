@@ -3,7 +3,7 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::{
-    db::{establish_connection, DEFAULT_PAGE_SIZE},
+    db::{DbConnection, DEFAULT_PAGE_SIZE},
     error_handler::CustomError,
     movie::Movie,
     review::{self, Order, Review, ReviewFindParameters, Sort},
@@ -56,16 +56,16 @@ impl From<MovieReview> for Movie {
 
 impl MovieReview {
     pub fn find_by_review_id(
+        conn: &mut DbConnection,
         user_id: Uuid,
         review_id: Uuid,
     ) -> Result<MovieReviewReadResponse, CustomError> {
-        let connection = &mut establish_connection();
         let (movie_review, review_details) = movie_reviews::table
             .filter(movie_reviews::review_id.eq(review_id))
             .filter(movie_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
             .select((MovieReview::as_select(), Review::as_select()))
-            .first::<(MovieReview, Review)>(connection)?;
+            .first::<(MovieReview, Review)>(conn)?;
 
         let review = MovieReviewReadResponse {
             review_id: movie_review.review_id,
@@ -82,11 +82,10 @@ impl MovieReview {
     }
 
     pub fn find_all_reviews(
+        conn: &mut DbConnection,
         user_id: Uuid,
         params: ReviewFindParameters,
     ) -> Result<Vec<MovieReviewReadResponse>, CustomError> {
-        let connection = &mut establish_connection();
-
         let mut query = movie_reviews::table
             .filter(movie_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
@@ -145,7 +144,7 @@ impl MovieReview {
 
         let reviews = query
             .select((MovieReview::as_select(), Review::as_select()))
-            .load::<(MovieReview, Review)>(connection)?;
+            .load::<(MovieReview, Review)>(conn)?;
 
         let movie_reviews: Vec<MovieReviewReadResponse> = reviews
             .into_iter()
@@ -164,17 +163,17 @@ impl MovieReview {
     }
 
     pub fn find_by_movie_id(
+        conn: &mut DbConnection,
         user_id: Uuid,
         movie_id: i32,
     ) -> Result<Vec<MovieReviewReadResponse>, CustomError> {
-        let connection = &mut establish_connection();
         let reviews = movie_reviews::table
             .filter(movie_reviews::movie_id.eq(movie_id))
             .filter(movie_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
             .order(reviews::date.desc().nulls_last())
             .select((MovieReview::as_select(), Review::as_select()))
-            .load::<(MovieReview, Review)>(connection)?;
+            .load::<(MovieReview, Review)>(conn)?;
 
         let movie_reviews: Vec<MovieReviewReadResponse> = reviews
             .into_iter()
@@ -192,20 +191,18 @@ impl MovieReview {
         Ok(movie_reviews)
     }
 
-    pub fn create(review: MovieReview) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn create(conn: &mut DbConnection, review: MovieReview) -> Result<Self, CustomError> {
         let new_review = diesel::insert_into(movie_reviews::table)
             .values(review)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(new_review)
     }
 
-    pub fn update(review: MovieReview) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn update(conn: &mut DbConnection, review: MovieReview) -> Result<Self, CustomError> {
         let updated_review = diesel::update(movie_reviews::table)
             .filter(movie_reviews::review_id.eq(review.review_id))
             .set(review)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(updated_review)
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    db::establish_connection,
+    db::DbConnection,
     error_handler::{AuthError, CustomError},
     schema::users,
 };
@@ -73,8 +73,7 @@ pub struct UserFindResponse {
 }
 
 impl User {
-    pub fn find(user_id: Uuid) -> Result<UserFindResponse, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn find(conn: &mut DbConnection, user_id: Uuid) -> Result<UserFindResponse, CustomError> {
         let users = users::table
             .select((
                 users::user_id,
@@ -85,12 +84,14 @@ impl User {
                 users::configuration,
             ))
             .filter(users::user_id.eq(user_id))
-            .first(connection)?;
+            .first(conn)?;
         Ok(users)
     }
 
-    pub fn find_summary(user_id: Uuid) -> Result<UserResponse, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn find_summary(
+        conn: &mut DbConnection,
+        user_id: Uuid,
+    ) -> Result<UserResponse, CustomError> {
         let users = users::table
             .select((
                 users::user_id,
@@ -99,12 +100,11 @@ impl User {
                 users::avatar_uri,
             ))
             .filter(users::user_id.eq(user_id))
-            .first(connection)?;
+            .first(conn)?;
         Ok(users)
     }
 
-    pub fn find_all() -> Result<Vec<UserResponse>, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn find_all(conn: &mut DbConnection) -> Result<Vec<UserResponse>, CustomError> {
         let users = users::table
             .select((
                 users::user_id,
@@ -112,11 +112,11 @@ impl User {
                 users::last_name,
                 users::avatar_uri,
             ))
-            .load(connection)?;
+            .load(conn)?;
         Ok(users)
     }
 
-    pub fn create(user: NewUser) -> Result<Self, CustomError> {
+    pub fn create(conn: &mut DbConnection, user: NewUser) -> Result<Self, CustomError> {
         let password = if let Some(pwd) = user.password {
             Some(Self::hash_password(pwd)?)
         } else {
@@ -139,26 +139,26 @@ impl User {
             }),
         };
 
-        let connection = &mut establish_connection();
         let new_user = diesel::insert_into(users::table)
             .values(user_to_save)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(new_user)
     }
 
-    pub fn update(id: Uuid, user: UpdatedUser) -> Result<Self, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn update(
+        conn: &mut DbConnection,
+        id: Uuid,
+        user: UpdatedUser,
+    ) -> Result<Self, CustomError> {
         let updated_user = diesel::update(users::table)
             .filter(users::user_id.eq(id))
             .set(user)
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(updated_user)
     }
 
-    pub fn delete(user_id: Uuid) -> Result<usize, CustomError> {
-        let connection = &mut establish_connection();
-        let res =
-            diesel::delete(users::table.filter(users::user_id.eq(user_id))).execute(connection)?;
+    pub fn delete(conn: &mut DbConnection, user_id: Uuid) -> Result<usize, CustomError> {
+        let res = diesel::delete(users::table.filter(users::user_id.eq(user_id))).execute(conn)?;
         Ok(res)
     }
 
@@ -166,10 +166,9 @@ impl User {
         Ok(hash(plain, DEFAULT_COST)?)
     }
 
-    pub fn find_any() -> Result<bool, CustomError> {
-        let connection = &mut establish_connection();
+    pub fn find_any(conn: &mut DbConnection) -> Result<bool, CustomError> {
         let res = dsl::select(dsl::exists(users::table.select(users::user_id).limit(1)))
-            .get_result(connection)?;
+            .get_result(conn)?;
         Ok(res)
     }
 }
@@ -181,11 +180,10 @@ pub struct AuthUser {
 }
 
 impl AuthUser {
-    pub fn login(&self) -> Result<User, AuthError> {
-        let connection = &mut establish_connection();
+    pub fn login(&self, conn: &mut DbConnection) -> Result<User, AuthError> {
         let user: User = users::table
             .filter(users::email.eq(&self.email))
-            .first(connection)?;
+            .first(conn)?;
 
         let Some(password) = &user.password else {
             return Err(AuthError::WrongPassword("Invalid account".to_string()));
