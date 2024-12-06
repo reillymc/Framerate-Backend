@@ -1,18 +1,28 @@
 {
     "rust-analyzer.linkedProjects": ["./Cargo.toml"],
     "rust-analyzer.showUnlinkedFileNotification": false,
+    "rust-analyzer.testExplorer": true,
     "sqltools.connections": [
         {
             "previewLimit": 50,
-            "server": "localhost",
+            "server": "framerate-dev-database",
             "port": 5432,
             "driver": "PostgreSQL",
-            "name": "postgres",
+            "name": "Development",
+            "database": "postgres",
+            "username": "postgres"
+        },
+        {
+            "previewLimit": 50,
+            "server": "framerate-test-database",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "Testing",
             "database": "postgres",
             "username": "postgres"
         }
     ],
-    "cSpell.words": ["imdb", "tagline", "tbdb"],
+    "cSpell.words": ["actix", "conn", "imdb", "tagline", "tbdb"],
     "pgFormatter.commaBreak": false,
     "pgFormatter.commaStart": false,
     "pgFormatter.commaEnd": true,

@@ -9,34 +9,14 @@ use actix_web::{
     web::Data,
     App, HttpServer,
 };
-use log::setup_logger;
-use show_entry::ShowEntry;
 use std::{env, time::Duration};
 use tracing::info;
 
-mod authentication;
-mod db;
-mod error_handler;
-mod log;
-mod movie;
-mod movie_entry;
-mod movie_review;
-mod review;
-mod review_company;
-mod routes;
-mod schema;
-mod season;
-mod season_review;
-mod show;
-mod show_entry;
-mod show_review;
-mod user;
-mod utils;
-mod watchlist;
+use framerate::{db, log, routes, show_entry};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    setup_logger();
+    log::setup_logger();
     let pool = db::get_connection_pool();
     let mut conn = pool.get().unwrap();
     db::run_db_migrations(&mut conn);
@@ -57,7 +37,7 @@ async fn main() -> std::io::Result<()> {
             let mut previous_show_id = 0;
             loop {
                 interval.tick().await;
-                let entry = ShowEntry::internal_find_outdated(&mut conn);
+                let entry = show_entry::ShowEntry::internal_find_outdated(&mut conn);
                 if let Ok(entry) = entry {
                     if previous_show_id != entry.show_id {
                         previous_show_id = entry.show_id;
