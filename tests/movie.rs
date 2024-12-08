@@ -19,8 +19,11 @@ mod search {
 
     #[actix_web::test]
     async fn should_return_results() {
-        let (app, mut conn) = setup::create_app(search).await;
-        let (_, token) = data::get_authed_user(&mut conn);
+        let (app, pool) = setup::create_app(search).await;
+        let (_, token) = {
+            let mut conn = pool.get().unwrap();
+            data::get_authed_user(&mut conn)
+        };
 
         let request = test::TestRequest::get()
             .uri("/movies/search?query=Hot%20Fuzz")
@@ -52,8 +55,11 @@ mod popular {
 
     #[actix_web::test]
     async fn should_return_results() {
-        let (app, mut conn) = setup::create_app(popular).await;
-        let (_, token) = data::get_authed_user(&mut conn);
+        let (app, pool) = setup::create_app(popular).await;
+        let (_, token) = {
+            let mut conn = pool.get().unwrap();
+            data::get_authed_user(&mut conn)
+        };
 
         let request = test::TestRequest::get()
             .uri("/movies/popular")
@@ -87,8 +93,11 @@ mod details {
 
     #[actix_web::test]
     async fn should_return_movie() {
-        let (app, mut conn) = setup::create_app(details).await;
-        let (_, token) = data::get_authed_user(&mut conn);
+        let (app, pool) = setup::create_app(details).await;
+        let (_, token) = {
+            let mut conn = pool.get().unwrap();
+            data::get_authed_user(&mut conn)
+        };
 
         let request = test::TestRequest::get()
             .uri("/movies/4638/details")

@@ -2,6 +2,7 @@
     "rust-analyzer.linkedProjects": ["./Cargo.toml"],
     "rust-analyzer.showUnlinkedFileNotification": false,
     "rust-analyzer.testExplorer": true,
+    "debug.allowBreakpointsEverywhere": true,
     "sqltools.connections": [
         {
             "previewLimit": 50,

@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use r2d2::{CustomizeConnection, Pool};
+use r2d2::Pool;
 use std::env;
 use tracing::info;
 
@@ -15,28 +15,15 @@ pub fn get_connection_pool() -> DbPool {
     let db_password = env::var("POSTGRES_PASSWORD").expect("POSTGRES_PASSWORD must be set");
     let db_name = env::var("POSTGRES_DB").expect("POSTGRES_DB must be set");
     let db_port = env::var("PGPORT").expect("PGPORT must be set");
-
-    let db_host = if cfg!(test) {
-        env::var("TEST_POSTGRES_HOST").expect("TEST_POSTGRES_HOST must be set")
-    } else {
-        env::var("DB_HOST").expect("DB_HOST must be set")
-    };
+    let db_host = env::var("DB_HOST").expect("DB_HOST must be set");
 
     let database_url = format!("postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}");
 
     let manager = ConnectionManager::<DbConnection>::new(database_url);
 
-    if cfg!(test) {
-        info!("Creating test database pool...");
-        return Pool::builder()
-            .connection_customizer(Box::new(TestConnectionCustomizer))
-            .build(manager)
-            .expect("Failed to create database connection pool.");
-    } else {
-        return Pool::builder()
-            .build(manager)
-            .expect("Failed to create database connection pool.");
-    }
+    return Pool::builder()
+        .build(manager)
+        .expect("Failed to create database connection pool.");
 }
 
 pub fn run_db_migrations(conn: &mut DbConnection) {
@@ -47,27 +34,4 @@ pub fn run_db_migrations(conn: &mut DbConnection) {
     info!("Migrations completed: {res:?}");
 }
 
-pub fn revert_all_db_migrations(conn: &mut DbConnection) {
-    info!("Reverting migrations...");
-    let res = conn
-        .revert_all_migrations(MIGRATIONS)
-        .unwrap_or_else(|error| panic!("Could not revert migrations {error}"));
-    info!("Migration revert completed: {res:?}");
-}
-
 pub const DEFAULT_PAGE_SIZE: i64 = 10;
-
-#[derive(Debug, Clone, Copy)]
-struct TestConnectionCustomizer;
-
-impl<C, E> CustomizeConnection<C, E> for TestConnectionCustomizer
-where
-    C: diesel::Connection,
-{
-    fn on_acquire(&self, conn: &mut C) -> Result<(), E> {
-        conn.begin_test_transaction()
-            .expect("Failed to start test transaction");
-
-        Ok(())
-    }
-}

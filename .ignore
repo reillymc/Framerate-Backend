@@ -1,0 +1,7 @@
+# Read by `cargo watch` to exclude directories from triggering a reload
+
+tools/
+.devcontainer/
+.github/
+logs/
+tests/
