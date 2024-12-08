@@ -44,7 +44,7 @@ pub struct MovieResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all(serialize = "camelCase"))]
+#[serde(rename_all = "camelCase")]
 pub struct Movie {
     pub id: i32,
     #[serde(skip_serializing_if = "Option::is_none")]

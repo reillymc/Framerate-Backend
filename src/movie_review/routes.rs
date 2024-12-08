@@ -26,7 +26,7 @@ pub struct SaveMovieReviewRequest {
     pub company: Option<Vec<ReviewCompanySummary>>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MovieReviewResponse {
     pub review_id: Uuid,
