@@ -20,9 +20,9 @@ mod search {
     #[actix_web::test]
     async fn should_return_results() {
         let (app, pool) = setup::create_app(search).await;
-        let (_, token) = {
+        let (token, _) = {
             let mut conn = pool.get().unwrap();
-            data::get_authed_user(&mut conn)
+            data::create_authed_user(&mut conn)
         };
 
         let request = test::TestRequest::get()
@@ -56,9 +56,9 @@ mod popular {
     #[actix_web::test]
     async fn should_return_results() {
         let (app, pool) = setup::create_app(popular).await;
-        let (_, token) = {
+        let (token, _) = {
             let mut conn = pool.get().unwrap();
-            data::get_authed_user(&mut conn)
+            data::create_authed_user(&mut conn)
         };
 
         let request = test::TestRequest::get()
@@ -94,9 +94,9 @@ mod details {
     #[actix_web::test]
     async fn should_return_movie() {
         let (app, pool) = setup::create_app(details).await;
-        let (_, token) = {
+        let (token, _) = {
             let mut conn = pool.get().unwrap();
-            data::get_authed_user(&mut conn)
+            data::create_authed_user(&mut conn)
         };
 
         let request = test::TestRequest::get()

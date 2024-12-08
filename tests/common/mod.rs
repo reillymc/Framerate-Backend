@@ -64,18 +64,23 @@ pub mod setup {
 }
 
 pub mod data {
+    use chrono::{NaiveDate, Utc};
     use diesel::{r2d2::ConnectionManager, PgConnection};
     use r2d2::PooledConnection;
+    use rand::Rng;
     use uuid::Uuid;
 
     use framerate::{
+        movie::Movie,
+        movie_review::{MovieReview, SaveMovieReviewRequest},
+        review::Review,
         user::{self, NewUser, User},
         utils::jwt::create_token,
     };
 
-    pub fn get_authed_user(
+    pub fn create_authed_user(
         conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
-    ) -> (User, String) {
+    ) -> (String, User) {
         let new_user = NewUser {
             first_name: Uuid::new_v4().to_string(),
             last_name: Uuid::new_v4().to_string(),
@@ -92,7 +97,79 @@ pub mod data {
 
         let token = create_token(user.user_id, &user.email.clone().unwrap()).unwrap();
 
-        (user, token)
+        (token, user)
+    }
+
+    pub fn create_user(conn: &mut PooledConnection<ConnectionManager<PgConnection>>) -> User {
+        user::User::create(
+            conn,
+            NewUser {
+                first_name: Uuid::new_v4().to_string(),
+                last_name: Uuid::new_v4().to_string(),
+                avatar_uri: Some(Uuid::new_v4().to_string()),
+                email: Some(Uuid::new_v4().to_string()),
+                password: Some(Uuid::new_v4().to_string()),
+                configuration: None,
+                user_id: None,
+            },
+        )
+        .unwrap()
+    }
+
+    pub fn generate_review(user_id: Uuid) -> Review {
+        let mut rng = rand::thread_rng();
+
+        Review {
+            review_id: Uuid::new_v4(),
+            user_id,
+            title: Some(Uuid::new_v4().to_string()),
+            date: Some(Utc::now().naive_utc().date()),
+            rating: rng.gen(),
+            description: Some(Uuid::new_v4().to_string()),
+            venue: Some(Uuid::new_v4().to_string()),
+        }
+    }
+
+    pub fn generate_sample_movie() -> Movie {
+        Movie {
+        id: 4638,
+        imdb_id: Some("tt0425112".to_string()),
+        title: "Hot Fuzz".to_string(),
+        poster_path: Some("/zPib4ukTSdXvHP9pxGkFCe34f3y.jpg".to_string()),
+        backdrop_path: Some("/e1rPzkIcBEJiAd3piGirt7qVux7.jpg".to_string()),
+        release_date: NaiveDate::from_ymd_opt(2007, 5, 20),
+        overview: Some("Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in the sleepy British village of Sandford. Not only does he miss the excitement of the big city, but he also has a well-meaning oaf for a partner. However, when a series of grisly accidents rocks Sandford, Angel smells something rotten in the idyllic village.".to_string()),
+        tagline: Some("Big cops. Small town. Moderate violence.".to_string()),
+        popularity: Some(26.13),
+        runtime: Some(121)
+        }
+    }
+
+    pub fn generate_movie_review(user_id: Uuid, review_id: Uuid) -> MovieReview {
+        let mut rng = rand::thread_rng();
+
+        MovieReview {
+            review_id,
+            user_id,
+            imdb_id: Some(Uuid::new_v4().to_string()),
+            movie_id: rng.gen(),
+            title: Uuid::new_v4().to_string(),
+            poster_path: Some(Uuid::new_v4().to_string()),
+            release_date: Some(Utc::now().naive_utc().date()),
+        }
+    }
+
+    pub fn generate_save_movie_review() -> SaveMovieReviewRequest {
+        let mut rng = rand::thread_rng();
+
+        SaveMovieReviewRequest {
+            title: Some(Uuid::new_v4().to_string()),
+            date: Some(Utc::now().naive_utc().date()),
+            rating: rng.gen(),
+            description: Some(Uuid::new_v4().to_string()),
+            venue: Some(Uuid::new_v4().to_string()),
+            company: None,
+        }
     }
 }
 
@@ -104,6 +181,7 @@ pub mod process {
 
     pub async fn parse_body<T: for<'a> Deserialize<'a>>(response: ServiceResponse) -> Success<T> {
         let body = test::read_body(response).await;
+        // println!("{:?}", body);
         let data: Success<T> = serde_json::from_slice(&body).unwrap();
         data
     }

@@ -15,7 +15,7 @@ use diesel::Connection;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveMovieReviewRequest {
     pub date: Option<NaiveDate>,
@@ -24,6 +24,13 @@ pub struct SaveMovieReviewRequest {
     pub description: Option<String>,
     pub venue: Option<String>,
     pub company: Option<Vec<ReviewCompanySummary>>,
+}
+
+impl SaveMovieReviewRequest {
+    pub fn company(mut self, company: Vec<ReviewCompanySummary>) -> Self {
+        self.company = Some(company);
+        self
+    }
 }
 
 #[derive(Serialize, Deserialize)]

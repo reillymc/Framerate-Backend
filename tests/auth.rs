@@ -27,9 +27,9 @@ mod login {
     #[actix_web::test]
     async fn should_require_email_and_password() {
         let (app, pool) = setup::create_app(login).await;
-        let (_, _) = {
+        let _ = {
             let mut conn = pool.get().unwrap();
-            data::get_authed_user(&mut conn)
+            data::create_user(&mut conn)
         };
 
         let request = test::TestRequest::post().uri("/auth/login").to_request();
@@ -60,9 +60,9 @@ mod login {
     #[actix_web::test]
     async fn should_not_authenticate_invalid_credentials() {
         let (app, pool) = setup::create_app(login).await;
-        let (mut user, _) = {
+        let mut user = {
             let mut conn = pool.get().unwrap();
-            data::get_authed_user(&mut conn)
+            data::create_user(&mut conn)
         };
 
         user.password = Some(Uuid::new_v4().to_string());
@@ -79,9 +79,9 @@ mod login {
     #[actix_web::test]
     async fn should_authenticate_valid_credentials() {
         let (app, pool) = setup::create_app(login).await;
-        let (user, _) = {
+        let (_, user) = {
             let mut conn = pool.get().unwrap();
-            data::get_authed_user(&mut conn)
+            data::create_authed_user(&mut conn)
         };
 
         let user = LoginBody::from(user);
@@ -113,9 +113,9 @@ mod setup {
     #[actix_web::test]
     async fn should_prevent_setup_when_secret_unset() {
         let (app, pool) = setup::create_app(setupRoute).await;
-        let (_, _) = {
+        let _ = {
             let mut conn = pool.get().unwrap();
-            data::get_authed_user(&mut conn)
+            data::create_user(&mut conn)
         };
 
         let secret = Uuid::new_v4().to_string();
@@ -133,9 +133,9 @@ mod setup {
     #[actix_web::test]
     async fn should_prevent_setup_when_secret_incorrect() {
         let (app, pool) = setup::create_app(setupRoute).await;
-        let (_, _) = {
+        let _ = {
             let mut conn = pool.get().unwrap();
-            data::get_authed_user(&mut conn)
+            data::create_user(&mut conn)
         };
 
         env::set_var("SETUP_SECRET", Uuid::new_v4().to_string());
@@ -153,9 +153,9 @@ mod setup {
     #[actix_web::test]
     async fn should_prevent_setup_when_db_has_users() {
         let (app, pool) = setup::create_app(setupRoute).await;
-        let (_, _) = {
+        let _ = {
             let mut conn = pool.get().unwrap();
-            data::get_authed_user(&mut conn)
+            data::create_user(&mut conn)
         };
 
         let secret = Uuid::new_v4().to_string();
