@@ -25,7 +25,7 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(watchlist::find_all);
     config.service(watchlist::create);
 
-    config.service(movie::find);
+    config.service(movie::details);
     config.service(movie::popular);
     config.service(movie::search);
 
@@ -40,7 +40,7 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(movie_review::create);
     config.service(movie_review::update);
 
-    config.service(show::find);
+    config.service(show::details);
     config.service(show::popular);
     config.service(show::search);
 

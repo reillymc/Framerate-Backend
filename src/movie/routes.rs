@@ -38,7 +38,7 @@ async fn popular(_: Auth) -> impl Responder {
 }
 
 #[get("/movies/{movie_id}/details")]
-async fn find(_: Auth, movie_id: web::Path<i32>) -> impl Responder {
+async fn details(_: Auth, movie_id: web::Path<i32>) -> impl Responder {
     let movie = Movie::find(&movie_id.into_inner()).await;
 
     match movie {

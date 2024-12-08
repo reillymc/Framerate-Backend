@@ -17,7 +17,7 @@ pub fn get_connection_pool() -> DbPool {
     let db_port = env::var("PGPORT").expect("PGPORT must be set");
 
     let db_host = if cfg!(test) {
-        "framerate-test-database".to_string()
+        env::var("TEST_POSTGRES_HOST").expect("TEST_POSTGRES_HOST must be set")
     } else {
         env::var("DB_HOST").expect("DB_HOST must be set")
     };
@@ -27,6 +27,7 @@ pub fn get_connection_pool() -> DbPool {
     let manager = ConnectionManager::<DbConnection>::new(database_url);
 
     if cfg!(test) {
+        info!("Creating test database pool...");
         return Pool::builder()
             .connection_customizer(Box::new(TestConnectionCustomizer))
             .build(manager)
@@ -50,7 +51,7 @@ pub fn revert_all_db_migrations(conn: &mut DbConnection) {
     info!("Reverting migrations...");
     let res = conn
         .revert_all_migrations(MIGRATIONS)
-        .unwrap_or_else(|error| panic!("Could not run migrations {error}"));
+        .unwrap_or_else(|error| panic!("Could not revert migrations {error}"));
     info!("Migration revert completed: {res:?}");
 }
 

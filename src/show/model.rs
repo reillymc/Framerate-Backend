@@ -28,6 +28,7 @@ pub struct ShowResponse {
     pub backdrop_path: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub first_air_date: Option<NaiveDate>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub last_air_date: Option<NaiveDate>,
     pub last_episode_to_air: Option<Episode>,
     pub next_episode_to_air: Option<Episode>,
@@ -55,7 +56,7 @@ pub struct ShowSearchResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all(serialize = "camelCase"))]
+#[serde(rename_all = "camelCase")]
 pub struct Show {
     pub id: i32,
     pub name: String,
@@ -155,7 +156,7 @@ impl Show {
                         episode_count: season.episode_count,
                         episodes: None,
                     })
-                    .collect::<Vec<Season>>(),
+                    .collect(),
             )
         } else {
             None
