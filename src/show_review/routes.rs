@@ -171,12 +171,11 @@ async fn create(
     let review = web::block(move || {
         let mut conn = pool.get()?;
 
-        conn.transaction::<ShowReviewResponse, CustomError, _>(|mut conn| {
-            let created_review = Review::create(&mut conn, review_to_save)?;
-            let created_show_review = ShowReview::create(&mut conn, show_review_to_save)?;
+        conn.transaction::<ShowReviewResponse, CustomError, _>(|conn| {
+            let created_review = Review::create(conn, review_to_save)?;
+            let created_show_review = ShowReview::create(conn, show_review_to_save)?;
 
-            let company =
-                ReviewCompany::replace(&mut conn, created_review.review_id, review.company)?;
+            let company = ReviewCompany::replace(conn, created_review.review_id, review.company)?;
 
             let review_response = ShowReviewResponse {
                 review_id: created_review.review_id,
@@ -244,16 +243,13 @@ async fn update(
             first_air_date: show.first_air_date,
         };
 
-        conn.transaction::<ShowReviewResponse, CustomError, _>(|mut conn| {
-            let updated_review = Review::update(&mut conn, review_to_save)?;
+        conn.transaction::<ShowReviewResponse, CustomError, _>(|conn| {
+            let updated_review = Review::update(conn, review_to_save)?;
 
-            let updated_show_review = ShowReview::update(&mut conn, show_review_to_save)?;
+            let updated_show_review = ShowReview::update(conn, show_review_to_save)?;
 
-            let company = ReviewCompany::replace(
-                &mut conn,
-                updated_review.review_id,
-                review.company.clone(),
-            )?;
+            let company =
+                ReviewCompany::replace(conn, updated_review.review_id, review.company.clone())?;
 
             let review_response = ShowReviewResponse {
                 review_id: updated_review.review_id,

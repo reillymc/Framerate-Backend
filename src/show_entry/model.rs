@@ -129,6 +129,6 @@ impl ShowEntry {
             .set(self)
             .get_result(conn)?;
 
-        return Ok(updated);
+        Ok(updated)
     }
 }

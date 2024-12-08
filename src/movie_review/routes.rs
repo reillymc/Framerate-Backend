@@ -172,12 +172,11 @@ async fn create(
     let review = web::block(move || {
         let mut conn = pool.get()?;
 
-        conn.transaction::<MovieReviewResponse, CustomError, _>(|mut conn| {
-            let created_review = Review::create(&mut conn, review_to_save)?;
-            let created_movie_review = MovieReview::create(&mut conn, movie_review_to_save)?;
+        conn.transaction::<MovieReviewResponse, CustomError, _>(|conn| {
+            let created_review = Review::create(conn, review_to_save)?;
+            let created_movie_review = MovieReview::create(conn, movie_review_to_save)?;
 
-            let company =
-                ReviewCompany::replace(&mut conn, created_review.review_id, review.company)?;
+            let company = ReviewCompany::replace(conn, created_review.review_id, review.company)?;
 
             let review_response = MovieReviewResponse {
                 review_id: created_review.review_id,
@@ -239,16 +238,13 @@ async fn update(
             release_date: movie.release_date,
         };
 
-        conn.transaction::<MovieReviewResponse, CustomError, _>(|mut conn| {
-            let updated_review = Review::update(&mut conn, review_to_save)?;
+        conn.transaction::<MovieReviewResponse, CustomError, _>(|conn| {
+            let updated_review = Review::update(conn, review_to_save)?;
 
-            let updated_movie_review = MovieReview::update(&mut conn, movie_review_to_save)?;
+            let updated_movie_review = MovieReview::update(conn, movie_review_to_save)?;
 
-            let company = ReviewCompany::replace(
-                &mut conn,
-                updated_review.review_id,
-                review.company.clone(),
-            )?;
+            let company =
+                ReviewCompany::replace(conn, updated_review.review_id, review.company.clone())?;
 
             let review_response = MovieReviewResponse {
                 review_id: updated_review.review_id,

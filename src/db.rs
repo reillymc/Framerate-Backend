@@ -21,9 +21,9 @@ pub fn get_connection_pool() -> DbPool {
 
     let manager = ConnectionManager::<DbConnection>::new(database_url);
 
-    return Pool::builder()
+    Pool::builder()
         .build(manager)
-        .expect("Failed to create database connection pool.");
+        .expect("Failed to create database connection pool.")
 }
 
 pub fn run_db_migrations(conn: &mut DbConnection) {

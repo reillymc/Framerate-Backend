@@ -79,7 +79,7 @@ impl From<MovieResponse> for Movie {
                 match release_dates
                     .results
                     .iter()
-                    .find(|release_date| release_date.iso_3166_1 == "AU".to_string())
+                    .find(|release_date| release_date.iso_3166_1 == *"AU")
                 {
                     Some(rel) => {
                         match rel
@@ -102,7 +102,7 @@ impl From<MovieResponse> for Movie {
             title: movie.title,
             poster_path: movie.poster_path,
             backdrop_path: movie.backdrop_path,
-            release_date: release_date,
+            release_date,
             overview: movie.overview,
             tagline: movie.tagline,
             popularity: movie.popularity,

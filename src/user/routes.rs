@@ -36,7 +36,7 @@ async fn find(
 ) -> actix_web::Result<impl Responder> {
     let user = web::block(move || {
         let mut conn = pool.get()?;
-        let user = if auth.user_id == user_id.clone() {
+        let user = if auth.user_id == *user_id {
             UserRead::Type1(User::find(&mut conn, user_id.into_inner())?)
         } else {
             UserRead::Type2(User::find_summary(&mut conn, user_id.into_inner())?)
@@ -45,7 +45,7 @@ async fn find(
     })
     .await??;
 
-    return Ok(Success::new(user));
+    Ok(Success::new(user))
 }
 
 #[post("/users")]
@@ -66,10 +66,8 @@ async fn create(
         } else {
             return Err(CustomError::new(400, "Invalid password"))?;
         }
-    } else {
-        if let Some(_) = &user.password {
-            return Err(CustomError::new(400, "Invalid email or password"))?;
-        }
+    } else if user.password.is_none() {
+        return Err(CustomError::new(400, "Invalid email or password"))?;
     }
 
     let user = web::block(move || {
@@ -88,7 +86,7 @@ async fn update(
     user_id: web::Path<Uuid>,
     user: web::Json<UpdatedUser>,
 ) -> actix_web::Result<impl Responder> {
-    if auth.user_id != user_id.clone() {
+    if auth.user_id != *user_id {
         return Err(CustomError::new(401, "Missing permissions for this user"))?;
     }
 

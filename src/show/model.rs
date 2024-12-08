@@ -145,7 +145,7 @@ impl Show {
         let seasons = if let Some(seasons) = &show.seasons {
             Some(
                 seasons
-                    .into_iter()
+                    .iter()
                     .map(|season| Season {
                         show_id: show.id,
                         season_number: season.season_number,
