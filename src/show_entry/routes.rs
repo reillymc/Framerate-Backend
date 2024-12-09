@@ -3,6 +3,7 @@ use super::ShowEntry;
 use crate::db::DbPool;
 use crate::error_handler::CustomError;
 use crate::show::Show;
+use crate::tmdb::TmdbClient;
 use crate::utils::jwt::Auth;
 use crate::utils::response_body::Success;
 use crate::watchlist::Watchlist;
@@ -60,11 +61,12 @@ async fn find_all(
 #[post("/shows/entries/{watchlist_id}")]
 async fn create(
     pool: web::Data<DbPool>,
+    client: web::Data<TmdbClient>,
     auth: Auth,
     _: web::Path<String>,
     watchlist_entry: web::Json<SaveShowEntryRequest>,
 ) -> actix_web::Result<impl Responder> {
-    let show = Show::find(&watchlist_entry.show_id).await?;
+    let show = Show::find(&client, &watchlist_entry.show_id).await?;
 
     let show_entry = web::block(move || {
         let mut conn = pool.get()?;

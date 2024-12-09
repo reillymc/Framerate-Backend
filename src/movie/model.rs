@@ -1,11 +1,10 @@
-use std::env;
+use crate::error_handler::CustomError;
+use crate::tmdb::{generate_endpoint, TmdbClient};
+use crate::utils::serialization::{date_time_as_date, empty_string_as_none};
 
 use chrono::NaiveDate;
-use reqwest::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
-
-use crate::error_handler::CustomError;
-use crate::utils::serialization::{date_time_as_date, empty_string_as_none};
+use std::collections::HashMap;
 
 #[derive(Deserialize, Debug)]
 pub struct ReleaseDate {
@@ -113,20 +112,13 @@ impl From<MovieResponse> for Movie {
 }
 
 impl Movie {
-    pub async fn find(id: &i32) -> Result<Movie, CustomError> {
-        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(500, "TMDB API key must be set"));
-        };
+    pub async fn find(client: &TmdbClient, id: &i32) -> Result<Movie, CustomError> {
+        let request_url = generate_endpoint(
+            format!("movie/{id}"),
+            Some(HashMap::from([("append_to_response", "release_dates")])),
+        );
 
-        let request_url = format!("https://api.themoviedb.org/3/movie/{id}?language=en-AU&append_to_response=release_dates");
-
-        let client = reqwest::Client::new();
-
-        let response = client
-            .get(&request_url)
-            .header(AUTHORIZATION, format!("Bearer {tbdb_api_key}"))
-            .send()
-            .await?;
+        let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
             return Err(CustomError::new(
@@ -139,22 +131,18 @@ impl Movie {
         Ok(movie.into())
     }
 
-    pub async fn search(query: &str) -> Result<Vec<Movie>, CustomError> {
-        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(500, "TMDB API key must be set"));
-        };
-
-        let request_url = format!(
-            "https://api.themoviedb.org/3/search/movie?query={query}&include_adult=false&language=en-US&region=AU&without_keywords=210024&page=1"
+    pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Movie>, CustomError> {
+        let request_url = generate_endpoint(
+            format!("discover/movie"),
+            Some(HashMap::from([
+                ("query", query),
+                ("region", "AU"),
+                ("without_keywords", "210024"),
+                ("page", "1"),
+            ])),
         );
 
-        let client = reqwest::Client::new();
-
-        let response = client
-            .get(&request_url)
-            .header(AUTHORIZATION, format!("Bearer {tbdb_api_key}"))
-            .send()
-            .await?;
+        let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
             return Err(CustomError::new(
@@ -167,23 +155,24 @@ impl Movie {
         Ok(search_results.results)
     }
 
-    pub async fn popular() -> Result<Vec<Movie>, CustomError> {
-        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(500, "TMDB API key must be set"));
-        };
-
+    pub async fn popular(client: &TmdbClient) -> Result<Vec<Movie>, CustomError> {
         let min_date = (chrono::Utc::now().date_naive() - chrono::Duration::days(30)).to_string();
         let max_date = (chrono::Utc::now().date_naive() + chrono::Duration::days(7)).to_string();
 
-        let request_url = format!("https://api.themoviedb.org/3/discover/movie?include_adult=false&region=AU&include_video=false&language=en-US&page=1&sort_by=popularity.desc&with_release_type=2|3&release_date.gte={min_date}&release_date.lte={max_date}");
+        let request_url = generate_endpoint(
+            format!("discover/movie"),
+            Some(HashMap::from([
+                ("region", "AU"),
+                ("include_video", "false"),
+                ("page", "1"),
+                ("sort_by", "popularity.desc"),
+                ("with_release_type", "2|3"),
+                ("release_date.gte", min_date.as_str()),
+                ("release_date.lte", max_date.as_str()),
+            ])),
+        );
 
-        let client = reqwest::Client::new();
-
-        let response = client
-            .get(&request_url)
-            .header(AUTHORIZATION, format!("Bearer {tbdb_api_key}"))
-            .send()
-            .await?;
+        let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
             return Err(CustomError::new(

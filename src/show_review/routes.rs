@@ -6,6 +6,7 @@ use crate::review::{Review, ReviewFindParameters};
 use crate::review_company::{ReviewCompany, ReviewCompanyDetails, ReviewCompanySummary};
 use crate::show::Show;
 use crate::show_review::ShowReview;
+use crate::tmdb::TmdbClient;
 use crate::utils::jwt::Auth;
 use crate::utils::response_body::Success;
 use actix_web::{get, post, web};
@@ -131,6 +132,7 @@ async fn find_by_show_id(
 #[post("/shows/{show_id}/reviews")]
 async fn create(
     pool: web::Data<DbPool>,
+    client: web::Data<TmdbClient>,
     auth: Auth,
     review: web::Json<SaveShowReviewRequest>,
     show_id: web::Path<i32>,
@@ -138,7 +140,7 @@ async fn create(
     let review = review.into_inner();
     let show_id = show_id.into_inner();
 
-    let show = Show::find(&show_id).await?;
+    let show = Show::find(&client, &show_id).await?;
 
     let review_id = Uuid::new_v4();
 
@@ -200,13 +202,14 @@ async fn create(
 #[put("/shows/{show_id}/reviews/{review_id}")]
 async fn update(
     pool: web::Data<DbPool>,
+    client: web::Data<TmdbClient>,
     auth: Auth,
     review: web::Json<SaveShowReviewRequest>,
     path: web::Path<(i32, Uuid)>,
 ) -> actix_web::Result<impl Responder> {
     let (show_id, review_id) = path.into_inner();
 
-    let show = Show::find(&show_id).await?;
+    let show = Show::find(&client, &show_id).await?;
 
     let review = web::block(move || {
         let mut conn = pool.get()?;

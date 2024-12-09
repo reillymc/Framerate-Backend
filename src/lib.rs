@@ -14,6 +14,7 @@ pub mod season_review;
 pub mod show;
 pub mod show_entry;
 pub mod show_review;
+pub mod tmdb;
 pub mod user;
 pub mod utils;
 pub mod watchlist;

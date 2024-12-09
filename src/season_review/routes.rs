@@ -6,6 +6,7 @@ use crate::review::Review;
 use crate::review_company::{ReviewCompany, ReviewCompanyDetails, ReviewCompanySummary};
 use crate::season::Season;
 use crate::season_review::SeasonReview;
+use crate::tmdb::TmdbClient;
 use crate::utils::jwt::Auth;
 use crate::utils::response_body::Success;
 use actix_web::{get, post, web};
@@ -113,6 +114,7 @@ async fn find_by_review_id(
 #[post("/shows/{show_id}/seasons/{season_number}/reviews")]
 async fn create(
     pool: web::Data<DbPool>,
+    client: web::Data<TmdbClient>,
     auth: Auth,
     review: web::Json<SaveSeasonReviewRequest>,
     path: web::Path<(i32, i32)>,
@@ -120,7 +122,7 @@ async fn create(
     let review = review.into_inner();
     let (show_id, season_number) = path.into_inner();
 
-    let season = Season::find(&show_id, &season_number).await?;
+    let season = Season::find(&client, &show_id, &season_number).await?;
 
     let review_id = Uuid::new_v4();
 
@@ -176,13 +178,14 @@ async fn create(
 #[put("shows/{show_id}/seasons/{season_number}/reviews/{review_id}")]
 async fn update(
     pool: web::Data<DbPool>,
+    client: web::Data<TmdbClient>,
     auth: Auth,
     review: web::Json<SaveSeasonReviewRequest>,
     path: web::Path<(i32, i32, Uuid)>,
 ) -> actix_web::Result<impl Responder> {
     let (show_id, season_number, review_id) = path.into_inner();
 
-    let season = Season::find(&show_id, &season_number).await?;
+    let season = Season::find(&client, &show_id, &season_number).await?;
 
     let review = web::block(move || {
         let mut conn = pool.get()?;

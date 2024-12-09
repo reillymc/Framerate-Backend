@@ -12,7 +12,7 @@ use actix_web::{
 use std::{env, time::Duration};
 use tracing::info;
 
-use framerate::{db, log, routes, show_entry};
+use framerate::{db, log, routes, show_entry, tmdb};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -20,6 +20,9 @@ async fn main() -> std::io::Result<()> {
     let pool = db::get_connection_pool();
     let mut conn = pool.get().unwrap();
     db::run_db_migrations(&mut conn);
+
+    // Don't use caching until appropriate clean-up solution is implemented
+    let client = tmdb::get_client(false);
 
     let host = env::var("HOST").unwrap_or("localhost".to_string());
     let port = env::var("PORT").unwrap_or("3000".to_string());
@@ -30,6 +33,7 @@ async fn main() -> std::io::Result<()> {
         .unwrap_or(3600);
 
     if job_interval != 0 {
+        let job_client = client.clone();
         spawn(async move {
             info!(target: "Entry Updater", "Creating entry updater job with interval of {job_interval:?} seconds");
 
@@ -44,7 +48,7 @@ async fn main() -> std::io::Result<()> {
                     } else {
                         continue;
                     }
-                    match entry.internal_update_status(&mut conn).await {
+                    match entry.internal_update_status(&mut conn, &job_client).await {
                         Ok(updated) => {
                             info!(target: "Entry Updater",
                                 "Updated status for entry {} ({})",
@@ -69,6 +73,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(pool.clone()))
+            .app_data(Data::new(client.clone()))
             .wrap(Cors::default())
             .wrap(Logger::default())
             .wrap(actix_cors::Cors::permissive())

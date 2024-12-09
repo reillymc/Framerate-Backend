@@ -7,7 +7,7 @@ pub mod setup {
         App, Error,
     };
     use diesel::{r2d2::ConnectionManager, PgConnection};
-    use framerate::db::DbConnection;
+    use framerate::{db::DbConnection, tmdb};
     use r2d2::{CustomizeConnection, Pool};
     use std::env;
 
@@ -52,9 +52,12 @@ pub mod setup {
             .connection_customizer(Box::new(TestConnectionCustomizer))
             .build(manager)
             .expect("Failed to create database connection pool.");
+
+        let client = tmdb::get_client(true);
         let app = test::init_service(
             App::new()
                 .app_data(Data::new(pool.clone()))
+                .app_data(Data::new(client.clone()))
                 .service(service),
         )
         .await;

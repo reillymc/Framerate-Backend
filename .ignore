@@ -3,4 +3,5 @@
 tools/
 .devcontainer/
 .github/
+.reqwest-cache/
 logs/

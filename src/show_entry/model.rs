@@ -2,6 +2,7 @@ use crate::db::DbConnection;
 use crate::error_handler::CustomError;
 use crate::schema::show_entries;
 use crate::show::{Show, SHOW_ACTIVE_STATUSES};
+use crate::tmdb::TmdbClient;
 use crate::{user, watchlist};
 use chrono::{Duration, NaiveDate, Utc};
 use diesel::prelude::*;
@@ -114,8 +115,9 @@ impl ShowEntry {
     pub async fn internal_update_status(
         mut self,
         conn: &mut DbConnection,
+        client: &TmdbClient,
     ) -> Result<Self, CustomError> {
-        if let Ok(show) = Show::find(&self.show_id).await {
+        if let Ok(show) = Show::find(client, &self.show_id).await {
             self.last_air_date = show.last_air_date;
             self.next_air_date = show.next_air_date;
             self.poster_path = show.poster_path;

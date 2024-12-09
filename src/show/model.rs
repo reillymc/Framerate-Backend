@@ -1,14 +1,13 @@
-use std::env;
-
 use crate::{
+    error_handler::CustomError,
     season::{Episode, Season, SeasonResponse},
+    tmdb::{generate_endpoint, TmdbClient},
     utils::serialization::empty_string_as_none,
 };
-use chrono::NaiveDate;
-use reqwest::header::AUTHORIZATION;
-use serde::{Deserialize, Serialize};
 
-use crate::error_handler::CustomError;
+use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase"))]
@@ -116,22 +115,13 @@ struct ShowSearchResults {
 }
 
 impl Show {
-    pub async fn find(id: &i32) -> Result<Show, CustomError> {
-        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(500, "TMDB API key must be set"));
-        };
-
-        let request_url = format!(
-            "https://api.themoviedb.org/3/tv/{id}?language=en-AU&append_to_response=external_ids"
+    pub async fn find(client: &TmdbClient, id: &i32) -> Result<Show, CustomError> {
+        let request_url = generate_endpoint(
+            format!("tv/{id}"),
+            Some(HashMap::from([("append_to_response", "external_ids")])),
         );
 
-        let client = reqwest::Client::new();
-
-        let response = client
-            .get(&request_url)
-            .header(AUTHORIZATION, format!("Bearer {tbdb_api_key}"))
-            .send()
-            .await?;
+        let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
             return Err(CustomError::new(
@@ -192,22 +182,13 @@ impl Show {
         Ok(show)
     }
 
-    pub async fn search(query: &str) -> Result<Vec<Show>, CustomError> {
-        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(500, "TMDB API key must be set"));
-        };
-
-        let request_url = format!(
-            "https://api.themoviedb.org/3/search/tv?query={query}&include_adult=false&language=en-US&page=1"
+    pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Show>, CustomError> {
+        let request_url = generate_endpoint(
+            format!("search/tv"),
+            Some(HashMap::from([("query", query), ("page", "1")])),
         );
 
-        let client = reqwest::Client::new();
-
-        let response = client
-            .get(&request_url)
-            .header(AUTHORIZATION, format!("Bearer {tbdb_api_key}"))
-            .send()
-            .await?;
+        let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
             return Err(CustomError::new(
@@ -224,24 +205,24 @@ impl Show {
             .collect())
     }
 
-    pub async fn popular() -> Result<Vec<Show>, CustomError> {
-        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(500, "TMDB API key must be set"));
-        };
-
+    pub async fn popular(client: &TmdbClient) -> Result<Vec<Show>, CustomError> {
         let max_date = (chrono::Utc::now().date_naive() + chrono::Duration::weeks(26)).to_string();
 
-        let request_url = format!(
-            "https://api.themoviedb.org/3/discover/tv?air_date.lte={max_date}&page=1&region=AU|NZ|US|XX&show_me=everything&sort_by=popularity.desc&watch_region=AU&with_original_language=en&with_watch_monetization_types=flatrate|free|ads|rent|buy&without_keywords=210024"
+        let request_url = generate_endpoint(
+            format!("discover/tv"),
+            Some(HashMap::from([
+                ("air_date.lte", max_date.as_str()),
+                ("page", "1"),
+                ("region", "AU|NZ|US|XX"),
+                ("show_me", "everything"),
+                ("sort_by", "popularity.desc"),
+                ("watch_region", "AU"),
+                ("with_original_language", "en"),
+                ("without_keywords", "210024"),
+            ])),
         );
 
-        let client = reqwest::Client::new();
-
-        let response = client
-            .get(&request_url)
-            .header(AUTHORIZATION, format!("Bearer {tbdb_api_key}"))
-            .send()
-            .await?;
+        let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
             return Err(CustomError::new(

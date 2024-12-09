@@ -6,6 +6,7 @@ use crate::movie::Movie;
 use crate::movie_review::MovieReview;
 use crate::review::{Review, ReviewFindParameters};
 use crate::review_company::{ReviewCompany, ReviewCompanyDetails, ReviewCompanySummary};
+use crate::tmdb::TmdbClient;
 use crate::utils::jwt::Auth;
 use crate::utils::response_body::Success;
 use actix_web::{get, post, web};
@@ -138,6 +139,7 @@ async fn find_by_movie_id(
 #[post("/movies/{movie_id}/reviews")]
 async fn create(
     pool: web::Data<DbPool>,
+    client: web::Data<TmdbClient>,
     auth: Auth,
     review: web::Json<SaveMovieReviewRequest>,
     movie_id: web::Path<i32>,
@@ -145,7 +147,7 @@ async fn create(
     let review = review.into_inner();
     let movie_id = movie_id.into_inner();
 
-    let movie = Movie::find(&movie_id).await?;
+    let movie = Movie::find(&client, &movie_id).await?;
 
     let review_id = Uuid::new_v4();
 
@@ -201,13 +203,14 @@ async fn create(
 #[put("/movies/{movie_id}/reviews/{review_id}")]
 async fn update(
     pool: web::Data<DbPool>,
+    client: web::Data<TmdbClient>,
     auth: Auth,
     review: web::Json<SaveMovieReviewRequest>,
     path: web::Path<(i32, Uuid)>,
 ) -> actix_web::Result<impl Responder> {
     let (movie_id, review_id) = path.into_inner();
 
-    let movie = Movie::find(&movie_id).await?;
+    let movie = Movie::find(&client, &movie_id).await?;
 
     let review = web::block(move || {
         let mut conn = pool.get()?;

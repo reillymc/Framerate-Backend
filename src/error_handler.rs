@@ -67,6 +67,12 @@ impl From<reqwest::Error> for CustomError {
     }
 }
 
+impl From<reqwest_middleware::Error> for CustomError {
+    fn from(_error: reqwest_middleware::Error) -> CustomError {
+        CustomError::new(500, "Unable to complete external request")
+    }
+}
+
 impl From<BcryptError> for CustomError {
     fn from(_error: BcryptError) -> CustomError {
         CustomError::new(500, "Internal error")

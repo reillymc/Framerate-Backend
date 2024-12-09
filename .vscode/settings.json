@@ -23,7 +23,7 @@
             "username": "postgres"
         }
     ],
-    "cSpell.words": ["actix", "conn", "imdb", "tagline", "tbdb"],
+    "cSpell.words": ["actix", "conn", "imdb", "tagline", "tmdb"],
     "pgFormatter.commaBreak": false,
     "pgFormatter.commaStart": false,
     "pgFormatter.commaEnd": true,

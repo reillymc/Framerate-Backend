@@ -1,5 +1,6 @@
 use crate::{
     show::Show,
+    tmdb::TmdbClient,
     utils::{
         jwt::Auth,
         response_body::{Error, Success},
@@ -14,8 +15,12 @@ struct SearchParameters {
 }
 
 #[get("/shows/search")]
-async fn search(_: Auth, params: web::Query<SearchParameters>) -> impl Responder {
-    let shows = Show::search(&params.query).await;
+async fn search(
+    _: Auth,
+    client: web::Data<TmdbClient>,
+    params: web::Query<SearchParameters>,
+) -> impl Responder {
+    let shows = Show::search(&client, &params.query).await;
 
     match shows {
         Ok(_) => HttpResponse::Ok().json(Success::new(shows.unwrap())),
@@ -26,8 +31,8 @@ async fn search(_: Auth, params: web::Query<SearchParameters>) -> impl Responder
 }
 
 #[get("/shows/popular")]
-async fn popular(_: Auth) -> impl Responder {
-    let shows = Show::popular().await;
+async fn popular(_: Auth, client: web::Data<TmdbClient>) -> impl Responder {
+    let shows = Show::popular(&client).await;
 
     match shows {
         Ok(_) => HttpResponse::Ok().json(Success::new(shows.unwrap())),
@@ -38,8 +43,12 @@ async fn popular(_: Auth) -> impl Responder {
 }
 
 #[get("/shows/{show_id}/details")]
-async fn details(_: Auth, show_id: web::Path<i32>) -> impl Responder {
-    let show = Show::find(&show_id.into_inner()).await;
+async fn details(
+    _: Auth,
+    client: web::Data<TmdbClient>,
+    show_id: web::Path<i32>,
+) -> impl Responder {
+    let show = Show::find(&client, &show_id.into_inner()).await;
 
     match show {
         Ok(_) => HttpResponse::Ok().json(Success::new(show.unwrap())),

@@ -1,8 +1,9 @@
-use std::env;
-
-use crate::{error_handler::CustomError, utils::serialization::empty_string_as_none};
+use crate::{
+    error_handler::CustomError,
+    tmdb::{generate_endpoint, TmdbClient},
+    utils::serialization::empty_string_as_none,
+};
 use chrono::NaiveDate;
-use reqwest::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
@@ -74,22 +75,14 @@ impl From<EpisodeResponse> for Episode {
 }
 
 impl Season {
-    pub async fn find(show_id: &i32, season_number: &i32) -> Result<Season, CustomError> {
-        let Ok(tbdb_api_key) = env::var("TMDB_API_KEY") else {
-            return Err(CustomError::new(500, "TMDB API key must be set"));
-        };
+    pub async fn find(
+        client: &TmdbClient,
+        show_id: &i32,
+        season_number: &i32,
+    ) -> Result<Season, CustomError> {
+        let request_url = generate_endpoint(format!("tv/{show_id}/season/{season_number}"), None);
 
-        let request_url = format!(
-            "https://api.themoviedb.org/3/tv/{show_id}/season/{season_number}?language=en-AU"
-        );
-
-        let client = reqwest::Client::new();
-
-        let response = client
-            .get(&request_url)
-            .header(AUTHORIZATION, format!("Bearer {tbdb_api_key}"))
-            .send()
-            .await?;
+        let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
             return Err(CustomError::new(

@@ -3,6 +3,7 @@ use super::MovieEntry;
 use crate::db::DbPool;
 use crate::error_handler::CustomError;
 use crate::movie::Movie;
+use crate::tmdb::TmdbClient;
 use crate::utils::jwt::Auth;
 use crate::utils::response_body::Success;
 use crate::watchlist::Watchlist;
@@ -59,11 +60,12 @@ async fn find_all(
 #[post("/movies/entries/{watchlist_id}")]
 async fn create(
     pool: web::Data<DbPool>,
+    client: web::Data<TmdbClient>,
     auth: Auth,
     _: web::Path<String>,
     watchlist_entry: web::Json<SaveMovieEntryRequest>,
 ) -> actix_web::Result<impl Responder> {
-    let movie = Movie::find(&watchlist_entry.movie_id).await?;
+    let movie = Movie::find(&client, &watchlist_entry.movie_id).await?;
 
     let movie_entry = web::block(move || {
         let mut conn = pool.get()?;
