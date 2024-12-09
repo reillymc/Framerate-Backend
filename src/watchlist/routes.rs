@@ -10,7 +10,7 @@ use actix_web::{get, post, web};
 use uuid::Uuid;
 
 #[get("/watchlists/{media_type}")]
-async fn find(
+async fn find_by_media_type(
     pool: web::Data<DbPool>,
     auth: Auth,
     media_type: web::Path<String>,

@@ -21,7 +21,7 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(user::create);
     config.service(user::update);
 
-    config.service(watchlist::find);
+    config.service(watchlist::find_by_media_type);
     config.service(watchlist::find_all);
     config.service(watchlist::create);
 

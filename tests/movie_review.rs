@@ -326,9 +326,10 @@ mod create {
     #[actix_web::test]
     async fn should_require_authentication() {
         let (app, _) = setup::create_app(create).await;
+        let movie = data::generate_sample_movie();
 
         let request = test::TestRequest::post()
-            .uri(&format!("/movies/reviews"))
+            .uri(&format!("/movies/{}/reviews", movie.id))
             .to_request();
 
         let response = test::call_service(&app, request).await;
@@ -451,5 +452,296 @@ mod create {
         assert_eq!(review_company.user_id, result_company.user_id);
         assert_eq!(company_details.first_name, result_company.first_name);
         assert_eq!(company_details.last_name, result_company.last_name);
+    }
+}
+
+mod update {
+    use crate::common::{data, process, setup};
+    use actix_web::{http::header::AUTHORIZATION, test};
+    use framerate::{
+        movie_review::{update, MovieReview, MovieReviewResponse},
+        review::Review,
+        review_company::{ReviewCompany, ReviewCompanySummary},
+    };
+    use uuid::Uuid;
+
+    #[actix_web::test]
+    async fn should_require_authentication() {
+        let (app, pool) = setup::create_app(update).await;
+        let movie_review = {
+            let mut conn = pool.get().unwrap();
+            let user = data::create_user(&mut conn);
+
+            let review = Review::create(&mut conn, data::generate_review(user.user_id)).unwrap();
+            let movie_review = MovieReview::create(
+                &mut conn,
+                data::generate_movie_review(user.user_id, review.review_id),
+            )
+            .unwrap();
+
+            movie_review
+        };
+
+        let updated_review = data::generate_save_movie_review();
+
+        let request = test::TestRequest::put()
+            .uri(&format!(
+                "/movies/{}/reviews/{}",
+                movie_review.movie_id, movie_review.review_id
+            ))
+            .set_json(&updated_review)
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_client_error());
+    }
+
+    #[actix_web::test]
+    async fn should_not_update_other_users_review() {
+        let (app, pool) = setup::create_app(update).await;
+        let (token, movie_review) = {
+            let mut conn = pool.get().unwrap();
+            let user = data::create_user(&mut conn);
+
+            let review = Review::create(&mut conn, data::generate_review(user.user_id)).unwrap();
+            let movie_review = MovieReview::create(
+                &mut conn,
+                data::generate_movie_review(user.user_id, review.review_id),
+            )
+            .unwrap();
+
+            let (token, _) = data::create_authed_user(&mut conn);
+
+            (token, movie_review)
+        };
+
+        let updated_review = data::generate_save_movie_review();
+
+        let request = test::TestRequest::put()
+            .uri(&format!(
+                "/movies/{}/reviews/{}",
+                movie_review.movie_id, movie_review.review_id
+            ))
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .set_json(&updated_review)
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(404, response.status());
+    }
+
+    #[actix_web::test]
+    async fn should_discard_review_changes_on_company_save_error() {
+        let (app, pool) = setup::create_app(update).await;
+        let (token, user, review, movie_review) = {
+            let mut conn = pool.get().unwrap();
+            let (token, user) = data::create_authed_user(&mut conn);
+
+            let review = Review::create(&mut conn, data::generate_review(user.user_id)).unwrap();
+            let movie_review = MovieReview::create(
+                &mut conn,
+                data::generate_movie_review(user.user_id, review.review_id),
+            )
+            .unwrap();
+
+            (token, user, review, movie_review)
+        };
+
+        let updated_review =
+            data::generate_save_movie_review().company(vec![ReviewCompanySummary {
+                user_id: Uuid::new_v4(),
+            }]);
+
+        let request = test::TestRequest::put()
+            .uri(&format!(
+                "/movies/{}/reviews/{}",
+                movie_review.movie_id, movie_review.review_id
+            ))
+            .set_json(&updated_review)
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_client_error());
+
+        let (review_response, company_response) = {
+            let mut conn = pool.get().unwrap();
+            let review =
+                MovieReview::find_by_review_id(&mut conn, user.user_id, movie_review.review_id)
+                    .unwrap();
+            let company = ReviewCompany::find_by_review(&mut conn, movie_review.review_id).unwrap();
+            (review, company)
+        };
+
+        assert_eq!(review.date, review_response.date);
+        assert_eq!(review.description, review_response.description);
+        assert_eq!(review.rating, review_response.rating);
+        assert_eq!(review.review_id, review_response.review_id);
+        assert_eq!(review.title, review_response.title);
+        assert_eq!(review.user_id, review_response.user_id);
+        assert_eq!(review.venue, review_response.venue);
+        assert_eq!(0, company_response.len());
+    }
+
+    #[actix_web::test]
+    async fn should_update_review() {
+        let (app, pool) = setup::create_app(update).await;
+        let (token, review, movie_review) = {
+            let mut conn = pool.get().unwrap();
+            let (token, user) = data::create_authed_user(&mut conn);
+
+            let review = Review::create(&mut conn, data::generate_review(user.user_id)).unwrap();
+            let movie_review = MovieReview::create(
+                &mut conn,
+                data::generate_movie_review(user.user_id, review.review_id),
+            )
+            .unwrap();
+
+            (token, review, movie_review)
+        };
+
+        let updated_review = data::generate_save_movie_review();
+
+        let request = test::TestRequest::put()
+            .uri(&format!(
+                "/movies/{}/reviews/{}",
+                movie_review.movie_id, movie_review.review_id
+            ))
+            .set_json(&updated_review)
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_success());
+
+        let review_response = process::parse_body::<MovieReviewResponse>(response)
+            .await
+            .data;
+
+        assert_eq!(review.review_id, review_response.review_id);
+        assert_eq!(review.user_id, review_response.user_id);
+        assert_eq!(updated_review.date, review_response.date);
+        assert_eq!(updated_review.description, review_response.description);
+        assert_eq!(updated_review.rating, review_response.rating);
+        assert_eq!(updated_review.title, review_response.title);
+        assert_eq!(updated_review.venue, review_response.venue);
+    }
+
+    #[actix_web::test]
+    async fn should_update_review_company() {
+        let (app, pool) = setup::create_app(update).await;
+        let (token, movie_review, company_user1, company_user2) = {
+            let mut conn = pool.get().unwrap();
+            let (token, user) = data::create_authed_user(&mut conn);
+
+            let review = Review::create(&mut conn, data::generate_review(user.user_id)).unwrap();
+            let movie_review = MovieReview::create(
+                &mut conn,
+                data::generate_movie_review(user.user_id, review.review_id),
+            )
+            .unwrap();
+
+            let company_user1 = data::create_user(&mut conn);
+            let company_user2 = data::create_user(&mut conn);
+
+            ReviewCompany::replace(
+                &mut conn,
+                movie_review.review_id,
+                Some(vec![ReviewCompanySummary {
+                    user_id: company_user1.user_id,
+                }]),
+            )
+            .unwrap();
+
+            (token, movie_review, company_user1, company_user2)
+        };
+
+        // Add a user to review company
+        let updated_review = data::generate_save_movie_review().company(vec![
+            ReviewCompanySummary {
+                user_id: company_user1.user_id,
+            },
+            ReviewCompanySummary {
+                user_id: company_user2.user_id,
+            },
+        ]);
+
+        let request = test::TestRequest::put()
+            .uri(&format!(
+                "/movies/{}/reviews/{}",
+                movie_review.movie_id, movie_review.review_id
+            ))
+            .set_json(&updated_review)
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_success());
+        let review_response = process::parse_body::<MovieReviewResponse>(response)
+            .await
+            .data;
+
+        let company = review_response.company.unwrap();
+
+        assert_eq!(&2, &company.len());
+        assert!(&company
+            .iter()
+            .find(|company| company.user_id == company_user1.user_id)
+            .is_some());
+        assert!(&company
+            .iter()
+            .find(|company| company.user_id == company_user2.user_id)
+            .is_some());
+
+        // Remove a user from review company
+        let updated_review =
+            data::generate_save_movie_review().company(vec![ReviewCompanySummary {
+                user_id: company_user2.user_id,
+            }]);
+
+        let request = test::TestRequest::put()
+            .uri(&format!(
+                "/movies/{}/reviews/{}",
+                movie_review.movie_id, movie_review.review_id
+            ))
+            .set_json(&updated_review)
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_success());
+        let review_response = process::parse_body::<MovieReviewResponse>(response)
+            .await
+            .data;
+
+        let company = review_response.company.unwrap();
+
+        assert_eq!(&1, &company.len());
+        assert!(&company
+            .iter()
+            .find(|company| company.user_id == company_user2.user_id)
+            .is_some());
+
+        // Clear review company
+        let updated_review = data::generate_save_movie_review();
+
+        let request = test::TestRequest::put()
+            .uri(&format!(
+                "/movies/{}/reviews/{}",
+                movie_review.movie_id, movie_review.review_id
+            ))
+            .set_json(&updated_review)
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_success());
+        let review_response = process::parse_body::<MovieReviewResponse>(response)
+            .await
+            .data;
+
+        let company = review_response.company.unwrap();
+
+        assert_eq!(&0, &company.len());
     }
 }

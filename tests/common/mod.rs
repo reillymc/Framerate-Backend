@@ -76,6 +76,7 @@ pub mod data {
         review::Review,
         user::{self, NewUser, User},
         utils::jwt::create_token,
+        watchlist::{NewWatchlist, Watchlist},
     };
 
     pub fn create_authed_user(
@@ -135,7 +136,7 @@ pub mod data {
         id: 4638,
         imdb_id: Some("tt0425112".to_string()),
         title: "Hot Fuzz".to_string(),
-        poster_path: Some("/zPib4ukTSdXvHP9pxGkFCe34f3y.jpg".to_string()),
+        poster_path: Some("/1ub4urtlb2Re27Qw0lBcc1kt2pw.jpg".to_string()),
         backdrop_path: Some("/e1rPzkIcBEJiAd3piGirt7qVux7.jpg".to_string()),
         release_date: NaiveDate::from_ymd_opt(2007, 5, 20),
         overview: Some("Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in the sleepy British village of Sandford. Not only does he miss the excitement of the big city, but he also has a well-meaning oaf for a partner. However, when a series of grisly accidents rocks Sandford, Angel smells something rotten in the idyllic village.".to_string()),
@@ -146,13 +147,11 @@ pub mod data {
     }
 
     pub fn generate_movie_review(user_id: Uuid, review_id: Uuid) -> MovieReview {
-        let mut rng = rand::thread_rng();
-
         MovieReview {
             review_id,
             user_id,
             imdb_id: Some(Uuid::new_v4().to_string()),
-            movie_id: rng.gen(),
+            movie_id: generate_sample_movie().id,
             title: Uuid::new_v4().to_string(),
             poster_path: Some(Uuid::new_v4().to_string()),
             release_date: Some(Utc::now().naive_utc().date()),
@@ -169,6 +168,35 @@ pub mod data {
             description: Some(Uuid::new_v4().to_string()),
             venue: Some(Uuid::new_v4().to_string()),
             company: None,
+        }
+    }
+
+    pub fn generate_watchlist(user_id: Uuid) -> Watchlist {
+        let mut rng = rand::thread_rng();
+        let media_type = if rng.gen() {
+            "movie".to_string()
+        } else {
+            "show".to_string()
+        };
+        Watchlist {
+            watchlist_id: Uuid::new_v4(),
+            user_id,
+            name: Uuid::new_v4().to_string(),
+            media_type,
+        }
+    }
+
+    pub fn generate_new_watchlist() -> NewWatchlist {
+        let mut rng = rand::thread_rng();
+        let media_type = if rng.gen() {
+            "movie".to_string()
+        } else {
+            "show".to_string()
+        };
+
+        NewWatchlist {
+            name: Uuid::new_v4().to_string(),
+            media_type,
         }
     }
 }
