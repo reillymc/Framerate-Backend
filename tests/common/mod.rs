@@ -75,6 +75,7 @@ pub mod data {
 
     use framerate::{
         movie::Movie,
+        movie_entry::{MovieEntry, SaveMovieEntryRequest},
         movie_review::{MovieReview, SaveMovieReviewRequest},
         review::Review,
         user::{self, NewUser, User},
@@ -128,7 +129,7 @@ pub mod data {
             user_id,
             title: Some(Uuid::new_v4().to_string()),
             date: Some(Utc::now().naive_utc().date()),
-            rating: rng.gen(),
+            rating: Some(rng.gen_range(0..101)),
             description: Some(Uuid::new_v4().to_string()),
             venue: Some(Uuid::new_v4().to_string()),
         }
@@ -136,28 +137,30 @@ pub mod data {
 
     pub fn generate_sample_movie() -> Movie {
         Movie {
-        id: 4638,
-        imdb_id: Some("tt0425112".to_string()),
-        title: "Hot Fuzz".to_string(),
-        poster_path: Some("/1ub4urtlb2Re27Qw0lBcc1kt2pw.jpg".to_string()),
-        backdrop_path: Some("/e1rPzkIcBEJiAd3piGirt7qVux7.jpg".to_string()),
-        release_date: NaiveDate::from_ymd_opt(2007, 5, 20),
-        overview: Some("Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in the sleepy British village of Sandford. Not only does he miss the excitement of the big city, but he also has a well-meaning oaf for a partner. However, when a series of grisly accidents rocks Sandford, Angel smells something rotten in the idyllic village.".to_string()),
-        tagline: Some("Big cops. Small town. Moderate violence.".to_string()),
-        popularity: Some(26.13),
-        runtime: Some(121)
+            id: 4638,
+            imdb_id: Some("tt0425112".to_string()),
+            title: "Hot Fuzz".to_string(),
+            poster_path: Some("/1ub4urtlb2Re27Qw0lBcc1kt2pw.jpg".to_string()),
+            backdrop_path: Some("/e1rPzkIcBEJiAd3piGirt7qVux7.jpg".to_string()),
+            release_date: NaiveDate::from_ymd_opt(2007, 5, 20),
+            overview: Some("Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in the sleepy British village of Sandford. Not only does he miss the excitement of the big city, but he also has a well-meaning oaf for a partner. However, when a series of grisly accidents rocks Sandford, Angel smells something rotten in the idyllic village.".to_string()),
+            tagline: Some("Big cops. Small town. Moderate violence.".to_string()),
+            popularity: Some(26.13),
+            runtime: Some(121)
         }
     }
 
     pub fn generate_movie_review(user_id: Uuid, review_id: Uuid) -> MovieReview {
+        let movie = generate_sample_movie();
+
         MovieReview {
             review_id,
             user_id,
-            imdb_id: Some(Uuid::new_v4().to_string()),
-            movie_id: generate_sample_movie().id,
-            title: Uuid::new_v4().to_string(),
-            poster_path: Some(Uuid::new_v4().to_string()),
-            release_date: Some(Utc::now().naive_utc().date()),
+            imdb_id: movie.imdb_id,
+            movie_id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            release_date: movie.release_date,
         }
     }
 
@@ -167,7 +170,7 @@ pub mod data {
         SaveMovieReviewRequest {
             title: Some(Uuid::new_v4().to_string()),
             date: Some(Utc::now().naive_utc().date()),
-            rating: rng.gen(),
+            rating: Some(rng.gen_range(0..101)),
             description: Some(Uuid::new_v4().to_string()),
             venue: Some(Uuid::new_v4().to_string()),
             company: None,
@@ -189,6 +192,15 @@ pub mod data {
         }
     }
 
+    pub fn generate_movie_watchlist(user_id: Uuid) -> Watchlist {
+        Watchlist {
+            watchlist_id: Uuid::new_v4(),
+            user_id,
+            name: Uuid::new_v4().to_string(),
+            media_type: "movie".to_string(),
+        }
+    }
+
     pub fn generate_new_watchlist() -> NewWatchlist {
         let mut rng = rand::thread_rng();
         let media_type = if rng.gen() {
@@ -201,6 +213,26 @@ pub mod data {
             name: Uuid::new_v4().to_string(),
             media_type,
         }
+    }
+
+    pub fn generate_movie_entry(user_id: Uuid, watchlist_id: Uuid) -> MovieEntry {
+        let movie = generate_sample_movie();
+
+        MovieEntry {
+            user_id,
+            watchlist_id,
+            imdb_id: movie.imdb_id,
+            movie_id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            release_date: movie.release_date,
+        }
+    }
+
+    pub fn generate_save_movie_entry() -> SaveMovieEntryRequest {
+        let movie = generate_sample_movie();
+
+        SaveMovieEntryRequest { movie_id: movie.id }
     }
 }
 

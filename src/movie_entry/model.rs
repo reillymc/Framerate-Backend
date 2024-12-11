@@ -7,7 +7,17 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, AsChangeset, Insertable, Associations, Selectable, Queryable)]
+#[derive(
+    Serialize,
+    Deserialize,
+    AsChangeset,
+    Insertable,
+    Associations,
+    Selectable,
+    Queryable,
+    Debug,
+    PartialEq,
+)]
 #[diesel(belongs_to(user::User))]
 #[diesel(belongs_to(watchlist::Watchlist))]
 #[diesel(table_name = movie_entries)]

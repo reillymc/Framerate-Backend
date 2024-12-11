@@ -12,7 +12,7 @@ mod find_all {
         let request = test::TestRequest::get().uri("/watchlists").to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
@@ -67,7 +67,7 @@ mod find_all {
 
         let returned_watchlist = result.data.first().unwrap();
         assert_eq!(watchlist.watchlist_id, returned_watchlist.watchlist_id);
-        assert_eq!(watchlist.user_id, user.user_id);
+        assert_eq!(user.user_id, returned_watchlist.user_id);
         assert_eq!(watchlist.media_type, returned_watchlist.media_type);
         assert_eq!(watchlist.name, returned_watchlist.name);
     }
@@ -93,7 +93,7 @@ mod find_by_media_type {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
@@ -150,7 +150,7 @@ mod find_by_media_type {
 
         let returned_watchlist = result.data;
         assert_eq!(watchlist.watchlist_id, returned_watchlist.watchlist_id);
-        assert_eq!(watchlist.user_id, user.user_id);
+        assert_eq!(user.user_id, returned_watchlist.user_id);
         assert_eq!(watchlist.media_type, returned_watchlist.media_type);
         assert_eq!(watchlist.name, returned_watchlist.name);
     }
@@ -186,7 +186,7 @@ mod find_by_media_type {
 
         let returned_watchlist = result.data;
         assert!(!returned_watchlist.watchlist_id.is_nil());
-        assert_eq!(user.user_id, user.user_id);
+        assert_eq!(user.user_id, returned_watchlist.user_id);
         assert_eq!(media_type, returned_watchlist.media_type);
         assert_eq!(expected_name, returned_watchlist.name);
     }
@@ -204,7 +204,7 @@ mod create {
         let request = test::TestRequest::post().uri("/watchlists").to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
@@ -231,7 +231,7 @@ mod create {
         let returned_watchlist = result.data;
 
         assert!(!returned_watchlist.watchlist_id.is_nil());
-        assert_eq!(user.user_id, user.user_id);
+        assert_eq!(user.user_id, returned_watchlist.user_id);
         assert_eq!(watchlist.media_type, returned_watchlist.media_type);
         assert_eq!(watchlist.name, returned_watchlist.name);
     }

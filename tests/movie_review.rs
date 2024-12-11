@@ -16,7 +16,7 @@ mod find_all {
         let request = test::TestRequest::get().uri("/movies/reviews").to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
@@ -127,7 +127,7 @@ mod find_by_review_id {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
@@ -230,7 +230,7 @@ mod find_by_movie_id {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
@@ -333,7 +333,7 @@ mod create {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
@@ -493,7 +493,7 @@ mod update {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]

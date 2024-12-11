@@ -11,13 +11,13 @@ use actix_web::{delete, Responder};
 use actix_web::{get, post, web};
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveMovieEntryRequest {
     pub movie_id: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteResponse {
     pub count: usize,

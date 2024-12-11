@@ -50,7 +50,7 @@ mod popular {
         let request = test::TestRequest::get().uri("/shows/popular").to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
@@ -88,7 +88,7 @@ mod details {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
