@@ -6,8 +6,6 @@ services:
             - framerate-database
         restart: unless-stopped
         env_file: .env
-        volumes:
-            - ./framerate-data/logs:/home/app/logs
         ports:
             - $PORT:$PORT
         networks:

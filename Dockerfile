@@ -14,8 +14,9 @@ RUN cargo build --release
 # Run
 FROM debian:bookworm-slim
 
-# Manually install library to avoid libpq.so.5 not found error. Curl allows reqwest to make requests.
-RUN apt-get update && apt-get install libpq5 curl -y
+# Manually install library to avoid libpq.so.5 not found error.
+RUN apt-get update && apt-get install libpq5 -y
+
 WORKDIR /app
 
 COPY --from=builder /app/target/release/ .

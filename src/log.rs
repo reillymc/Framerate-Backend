@@ -3,8 +3,8 @@ use tracing_appender::rolling;
 use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt};
 
 pub fn setup_logger() {
-    let debug_file = rolling::daily("./logs", "info").with_max_level(Level::INFO);
-    let warn_file = rolling::daily("./logs", "warnings").with_max_level(Level::WARN);
+    let debug_file = rolling::daily("logs", "info").with_max_level(Level::INFO);
+    let warn_file = rolling::daily("logs", "warnings").with_max_level(Level::WARN);
     let all_files = debug_file.and(warn_file);
 
     let stdout_log =

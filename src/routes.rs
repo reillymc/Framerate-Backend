@@ -1,4 +1,6 @@
+use actix_web::get;
 use actix_web::web;
+use actix_web::HttpResponse;
 
 use crate::authentication;
 use crate::movie;
@@ -12,7 +14,17 @@ use crate::show_review;
 use crate::user;
 use crate::watchlist;
 
+#[get("/health")]
+async fn health() -> HttpResponse {
+    let version = env!("CARGO_PKG_VERSION");
+    HttpResponse::Ok()
+        .append_header(("version", version))
+        .finish()
+}
+
 pub fn init_routes(config: &mut web::ServiceConfig) {
+    config.service(health);
+
     config.service(authentication::login);
     config.service(authentication::setup);
 
