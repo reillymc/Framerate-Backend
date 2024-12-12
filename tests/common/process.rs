@@ -6,6 +6,5 @@ use serde::Deserialize;
 pub async fn parse_body<T: for<'a> Deserialize<'a>>(response: ServiceResponse) -> Success<T> {
     let body = test::read_body(response).await;
     // println!("{:?}", body);
-    let data: Success<T> = serde_json::from_slice(&body).unwrap();
-    data
+    serde_json::from_slice(&body).unwrap()
 }

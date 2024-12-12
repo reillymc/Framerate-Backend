@@ -16,7 +16,7 @@ use diesel::Connection;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveShowReviewRequest {
     pub rating: Option<i16>,
@@ -27,7 +27,14 @@ pub struct SaveShowReviewRequest {
     pub company: Option<Vec<ReviewCompanySummary>>,
 }
 
-#[derive(Serialize)]
+impl SaveShowReviewRequest {
+    pub fn company(mut self, company: Vec<ReviewCompanySummary>) -> Self {
+        self.company = Some(company);
+        self
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShowReviewResponse {
     pub review_id: Uuid,

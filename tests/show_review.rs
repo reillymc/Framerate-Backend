@@ -3,13 +3,13 @@ pub mod common;
 mod find_all {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::{movie_review::find_all, movie_review::MovieReviewResponse};
+    use framerate::{show_review::find_all, show_review::ShowReviewResponse};
 
     #[actix_web::test]
     async fn should_require_authentication() {
         let (app, _) = setup::create_app(find_all).await;
 
-        let request = test::TestRequest::get().uri("/movies/reviews").to_request();
+        let request = test::TestRequest::get().uri("/shows/reviews").to_request();
 
         let response = test::call_service(&app, request).await;
         assert_eq!(401, response.status());
@@ -23,20 +23,20 @@ mod find_all {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            data::create_movie_review(&mut conn, &user, &review);
+            data::create_show_review(&mut conn, &user, &review);
             let (token, _) = data::create_authed_user(&mut conn);
             token
         };
 
         let request = test::TestRequest::get()
-            .uri("/movies/reviews")
+            .uri("/shows/reviews")
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<Vec<MovieReviewResponse>>(response).await;
+        let result = process::parse_body::<Vec<ShowReviewResponse>>(response).await;
         assert_eq!(0, result.data.len());
     }
 
@@ -44,23 +44,23 @@ mod find_all {
     async fn should_return_user_reviews() {
         let (app, pool) = setup::create_app(find_all).await;
 
-        let (user, token, review, movie_review) = {
+        let (user, token, review, show_review) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
-            (user, token, review, movie_review)
+            let show_review = data::create_show_review(&mut conn, &user, &review);
+            (user, token, review, show_review)
         };
 
         let request = test::TestRequest::get()
-            .uri("/movies/reviews")
+            .uri("/shows/reviews")
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<Vec<MovieReviewResponse>>(response).await;
+        let result = process::parse_body::<Vec<ShowReviewResponse>>(response).await;
         assert_eq!(1, result.data.len());
 
         let returned_review = result.data.first().unwrap();
@@ -71,13 +71,12 @@ mod find_all {
         assert_eq!(review.rating, returned_review.rating);
         assert_eq!(review.title, returned_review.title);
         assert_eq!(review.venue, returned_review.venue);
-        assert_eq!(movie_review.movie_id, returned_review.movie.id);
-        assert_eq!(movie_review.title, returned_review.movie.title);
-        assert_eq!(movie_review.imdb_id, returned_review.movie.imdb_id);
-        assert_eq!(movie_review.poster_path, returned_review.movie.poster_path);
+        assert_eq!(show_review.show_id, returned_review.show.id);
+        assert_eq!(show_review.name, returned_review.show.name);
+        assert_eq!(show_review.poster_path, returned_review.show.poster_path);
         assert_eq!(
-            movie_review.release_date,
-            returned_review.movie.release_date
+            show_review.first_air_date,
+            returned_review.show.first_air_date
         );
     }
 }
@@ -85,21 +84,21 @@ mod find_all {
 mod find_by_review_id {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::movie_review::{find_by_review_id, MovieReviewResponse};
+    use framerate::show_review::{find_by_review_id, ShowReviewResponse};
 
     #[actix_web::test]
     async fn should_require_authentication() {
         let (app, pool) = setup::create_app(find_by_review_id).await;
 
-        let movie_review = {
+        let show_review = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            data::create_movie_review(&mut conn, &user, &review)
+            data::create_show_review(&mut conn, &user, &review)
         };
 
         let request = test::TestRequest::get()
-            .uri(&format!("/movies/reviews/{}", movie_review.review_id))
+            .uri(&format!("/shows/reviews/{}", show_review.review_id))
             .to_request();
 
         let response = test::call_service(&app, request).await;
@@ -110,17 +109,17 @@ mod find_by_review_id {
     async fn should_not_return_other_users_review() {
         let (app, pool) = setup::create_app(find_by_review_id).await;
 
-        let (token, movie_review) = {
+        let (token, show_review) = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
+            let show_review = data::create_show_review(&mut conn, &user, &review);
             let (token, _) = data::create_authed_user(&mut conn);
-            (token, movie_review)
+            (token, show_review)
         };
 
         let request = test::TestRequest::get()
-            .uri(&format!("/movies/reviews/{}", movie_review.review_id))
+            .uri(&format!("/shows/reviews/{}", show_review.review_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
@@ -132,23 +131,23 @@ mod find_by_review_id {
     async fn should_return_review_details() {
         let (app, pool) = setup::create_app(find_by_review_id).await;
 
-        let (user, token, review, movie_review) = {
+        let (user, token, review, show_review) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
-            (user, token, review, movie_review)
+            let show_review = data::create_show_review(&mut conn, &user, &review);
+            (user, token, review, show_review)
         };
 
         let request = test::TestRequest::get()
-            .uri(&format!("/movies/reviews/{}", review.review_id))
+            .uri(&format!("/shows/reviews/{}", review.review_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<MovieReviewResponse>(response).await;
+        let result = process::parse_body::<ShowReviewResponse>(response).await;
 
         assert_eq!(review.review_id, result.data.review_id);
         assert_eq!(user.user_id, result.data.user_id);
@@ -157,35 +156,34 @@ mod find_by_review_id {
         assert_eq!(review.rating, result.data.rating);
         assert_eq!(review.title, result.data.title);
         assert_eq!(review.venue, result.data.venue);
-        assert_eq!(movie_review.movie_id, result.data.movie.id);
-        assert_eq!(movie_review.title, result.data.movie.title);
-        assert_eq!(movie_review.imdb_id, result.data.movie.imdb_id);
-        assert_eq!(movie_review.poster_path, result.data.movie.poster_path);
-        assert_eq!(movie_review.release_date, result.data.movie.release_date);
+        assert_eq!(show_review.show_id, result.data.show.id);
+        assert_eq!(show_review.name, result.data.show.name);
+        assert_eq!(show_review.poster_path, result.data.show.poster_path);
+        assert_eq!(show_review.first_air_date, result.data.show.first_air_date);
     }
 }
 
-mod find_by_movie_id {
+mod find_by_show_id {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::movie_review::{find_by_movie_id, MovieReviewResponse};
+    use framerate::show_review::{find_by_show_id, ShowReviewResponse};
 
     #[actix_web::test]
     async fn should_require_authentication() {
-        let (app, pool) = setup::create_app(find_by_movie_id).await;
+        let (app, pool) = setup::create_app(find_by_show_id).await;
 
-        let movie_review = {
+        let show_review = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
 
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
+            let show_review = data::create_show_review(&mut conn, &user, &review);
 
-            movie_review
+            show_review
         };
 
         let request = test::TestRequest::get()
-            .uri(&format!("/movies/{}/reviews", movie_review.movie_id))
+            .uri(&format!("/shows/{}/reviews", show_review.show_id))
             .to_request();
 
         let response = test::call_service(&app, request).await;
@@ -194,68 +192,70 @@ mod find_by_movie_id {
 
     #[actix_web::test]
     async fn should_not_return_other_users_reviews() {
-        let (app, pool) = setup::create_app(find_by_movie_id).await;
+        let (app, pool) = setup::create_app(find_by_show_id).await;
 
-        let (token, movie_review) = {
+        let (token, show_review) = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
+            let show_review = data::create_show_review(&mut conn, &user, &review);
             let (token, _) = data::create_authed_user(&mut conn);
-            (token, movie_review)
+            (token, show_review)
         };
 
         let request = test::TestRequest::get()
-            .uri(&format!("/movies/{}/reviews", movie_review.movie_id))
+            .uri(&format!("/shows/{}/reviews", show_review.show_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<Vec<MovieReviewResponse>>(response).await;
+        let result = process::parse_body::<Vec<ShowReviewResponse>>(response).await;
         assert_eq!(0, result.data.len());
     }
 
     #[actix_web::test]
     async fn should_return_review_details() {
-        let (app, pool) = setup::create_app(find_by_movie_id).await;
+        let (app, pool) = setup::create_app(find_by_show_id).await;
 
-        let (user, token, review, movie_review) = {
+        let (user, token, review, show_review) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
-            (user, token, review, movie_review)
+            let show_review = data::create_show_review(&mut conn, &user, &review);
+            (user, token, review, show_review)
         };
 
         let request = test::TestRequest::get()
-            .uri(&format!("/movies/{}/reviews", movie_review.movie_id))
+            .uri(&format!("/shows/{}/reviews", show_review.show_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<Vec<MovieReviewResponse>>(response).await;
+        let result = process::parse_body::<Vec<ShowReviewResponse>>(response).await;
         assert_eq!(1, result.data.len());
 
         let returned_review = result.data.first().unwrap();
 
         assert_eq!(review.review_id, returned_review.review_id);
-        assert_eq!(user.user_id, returned_review.user_id);
+        assert_eq!(user.user_id, review.user_id);
         assert_eq!(review.date, returned_review.date);
         assert_eq!(review.description, returned_review.description);
         assert_eq!(review.rating, returned_review.rating);
         assert_eq!(review.title, returned_review.title);
         assert_eq!(review.venue, returned_review.venue);
-        assert_eq!(movie_review.movie_id, returned_review.movie.id);
-        assert_eq!(movie_review.title, returned_review.movie.title);
-        assert_eq!(movie_review.imdb_id, returned_review.movie.imdb_id);
-        assert_eq!(movie_review.poster_path, returned_review.movie.poster_path);
+        assert_eq!(show_review.show_id, returned_review.show.id);
+        assert_eq!(review.title, returned_review.title);
+        assert_eq!(review.venue, returned_review.venue);
+        assert_eq!(show_review.show_id, returned_review.show.id);
+        assert_eq!(show_review.name, returned_review.show.name);
+        assert_eq!(show_review.poster_path, returned_review.show.poster_path);
         assert_eq!(
-            movie_review.release_date,
-            returned_review.movie.release_date
+            show_review.first_air_date,
+            returned_review.show.first_air_date
         );
     }
 }
@@ -264,8 +264,8 @@ mod create {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
     use framerate::{
-        movie_review::{create, MovieReview, MovieReviewResponse},
         review_company::ReviewCompanySummary,
+        show_review::{create, ShowReview, ShowReviewResponse},
     };
     use uuid::Uuid;
 
@@ -273,10 +273,10 @@ mod create {
     async fn should_require_authentication() {
         let (app, _) = setup::create_app(create).await;
 
-        let movie = data::generate_sample_movie();
+        let show = data::generate_sample_show();
 
         let request = test::TestRequest::post()
-            .uri(&format!("/movies/{}/reviews", movie.id))
+            .uri(&format!("/shows/{}/reviews", show.id))
             .to_request();
 
         let response = test::call_service(&app, request).await;
@@ -293,13 +293,13 @@ mod create {
             (token, user)
         };
 
-        let movie = data::generate_sample_movie();
-        let review = data::generate_save_movie_review().company(vec![ReviewCompanySummary {
+        let show = data::generate_sample_show();
+        let review = data::generate_save_show_review().company(vec![ReviewCompanySummary {
             user_id: Uuid::new_v4(),
         }]);
 
         let request = test::TestRequest::post()
-            .uri(&format!("/movies/{}/reviews", movie.id))
+            .uri(&format!("/shows/{}/reviews", show.id))
             .set_json(&review)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
@@ -309,7 +309,7 @@ mod create {
 
         let reviews = {
             let mut conn = pool.get().unwrap();
-            MovieReview::find_by_movie_id(&mut conn, user.user_id, movie.id).unwrap()
+            ShowReview::find_by_show_id(&mut conn, user.user_id, show.id).unwrap()
         };
 
         assert_eq!(0, reviews.len());
@@ -325,11 +325,11 @@ mod create {
             (token, user)
         };
 
-        let movie = data::generate_sample_movie();
-        let review = data::generate_save_movie_review();
+        let show = data::generate_sample_show();
+        let review = data::generate_save_show_review();
 
         let request = test::TestRequest::post()
-            .uri(&format!("/movies/{}/reviews", movie.id))
+            .uri(&format!("/shows/{}/reviews", show.id))
             .set_json(&review)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
@@ -337,7 +337,7 @@ mod create {
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<MovieReviewResponse>(response).await;
+        let result = process::parse_body::<ShowReviewResponse>(response).await;
 
         assert!(!result.data.review_id.is_nil());
         assert_eq!(user.user_id, result.data.user_id);
@@ -346,10 +346,7 @@ mod create {
         assert_eq!(review.rating, result.data.rating);
         assert_eq!(review.title, result.data.title);
         assert_eq!(review.venue, result.data.venue);
-        assert_eq!(movie.id, result.data.movie.id);
-        assert_eq!(movie.imdb_id, result.data.movie.imdb_id);
-        assert_eq!(movie.poster_path, result.data.movie.poster_path);
-        assert_eq!(movie.release_date, result.data.movie.release_date);
+        assert_eq!(show.id, result.data.show.id);
     }
 
     #[actix_web::test]
@@ -363,14 +360,14 @@ mod create {
             (token, company_details)
         };
 
-        let movie = data::generate_sample_movie();
+        let show = data::generate_sample_show();
 
-        let review = data::generate_save_movie_review().company(vec![ReviewCompanySummary {
+        let review = data::generate_save_show_review().company(vec![ReviewCompanySummary {
             user_id: company_details.user_id,
         }]);
 
         let request = test::TestRequest::post()
-            .uri(&format!("/movies/{}/reviews", movie.id))
+            .uri(&format!("/shows/{}/reviews", show.id))
             .set_json(&review)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
@@ -378,7 +375,7 @@ mod create {
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<MovieReviewResponse>(response).await;
+        let result = process::parse_body::<ShowReviewResponse>(response).await;
 
         assert!(!result.data.review_id.is_nil());
 
@@ -400,8 +397,8 @@ mod update {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
     use framerate::{
-        movie_review::{update, MovieReview, MovieReviewResponse},
         review_company::{ReviewCompany, ReviewCompanySummary},
+        show_review::{update, ShowReview, ShowReviewResponse},
     };
     use uuid::Uuid;
 
@@ -409,19 +406,19 @@ mod update {
     async fn should_require_authentication() {
         let (app, pool) = setup::create_app(update).await;
 
-        let movie_review = {
+        let show_review = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            data::create_movie_review(&mut conn, &user, &review)
+            data::create_show_review(&mut conn, &user, &review)
         };
 
-        let updated_review = data::generate_save_movie_review();
+        let updated_review = data::generate_save_show_review();
 
         let request = test::TestRequest::put()
             .uri(&format!(
-                "/movies/{}/reviews/{}",
-                movie_review.movie_id, movie_review.review_id
+                "/shows/{}/reviews/{}",
+                show_review.show_id, show_review.review_id
             ))
             .set_json(&updated_review)
             .to_request();
@@ -434,21 +431,21 @@ mod update {
     async fn should_not_update_other_users_review() {
         let (app, pool) = setup::create_app(update).await;
 
-        let (token, movie_review) = {
+        let (token, show_review) = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
+            let show_review = data::create_show_review(&mut conn, &user, &review);
             let (token, _) = data::create_authed_user(&mut conn);
-            (token, movie_review)
+            (token, show_review)
         };
 
-        let updated_review = data::generate_save_movie_review();
+        let updated_review = data::generate_save_show_review();
 
         let request = test::TestRequest::put()
             .uri(&format!(
-                "/movies/{}/reviews/{}",
-                movie_review.movie_id, movie_review.review_id
+                "/shows/{}/reviews/{}",
+                show_review.show_id, show_review.review_id
             ))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .set_json(&updated_review)
@@ -462,23 +459,23 @@ mod update {
     async fn should_discard_review_changes_on_company_save_error() {
         let (app, pool) = setup::create_app(update).await;
 
-        let (token, user, review, movie_review) = {
+        let (token, user, review, show_review) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
-            (token, user, review, movie_review)
+            let show_review = data::create_show_review(&mut conn, &user, &review);
+            (token, user, review, show_review)
         };
 
         let updated_review =
-            data::generate_save_movie_review().company(vec![ReviewCompanySummary {
+            data::generate_save_show_review().company(vec![ReviewCompanySummary {
                 user_id: Uuid::new_v4(),
             }]);
 
         let request = test::TestRequest::put()
             .uri(&format!(
-                "/movies/{}/reviews/{}",
-                movie_review.movie_id, movie_review.review_id
+                "/shows/{}/reviews/{}",
+                show_review.show_id, show_review.review_id
             ))
             .set_json(&updated_review)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
@@ -490,9 +487,9 @@ mod update {
         let (review_response, company_response) = {
             let mut conn = pool.get().unwrap();
             let review =
-                MovieReview::find_by_review_id(&mut conn, user.user_id, movie_review.review_id)
+                ShowReview::find_by_review_id(&mut conn, user.user_id, show_review.review_id)
                     .unwrap();
-            let company = ReviewCompany::find_by_review(&mut conn, movie_review.review_id).unwrap();
+            let company = ReviewCompany::find_by_review(&mut conn, show_review.review_id).unwrap();
             (review, company)
         };
 
@@ -510,20 +507,20 @@ mod update {
     async fn should_update_review() {
         let (app, pool) = setup::create_app(update).await;
 
-        let (token, review, movie_review) = {
+        let (token, review, show_review) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
-            (token, review, movie_review)
+            let show_review = data::create_show_review(&mut conn, &user, &review);
+            (token, review, show_review)
         };
 
-        let updated_review = data::generate_save_movie_review();
+        let updated_review = data::generate_save_show_review();
 
         let request = test::TestRequest::put()
             .uri(&format!(
-                "/movies/{}/reviews/{}",
-                movie_review.movie_id, movie_review.review_id
+                "/shows/{}/reviews/{}",
+                show_review.show_id, show_review.review_id
             ))
             .set_json(&updated_review)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
@@ -532,7 +529,7 @@ mod update {
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let review_response = process::parse_body::<MovieReviewResponse>(response)
+        let review_response = process::parse_body::<ShowReviewResponse>(response)
             .await
             .data;
 
@@ -549,28 +546,28 @@ mod update {
     async fn should_update_review_company() {
         let (app, pool) = setup::create_app(update).await;
 
-        let (token, movie_review, company_user1, company_user2) = {
+        let (token, show_review, company_user1, company_user2) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
-            let movie_review = data::create_movie_review(&mut conn, &user, &review);
+            let show_review = data::create_show_review(&mut conn, &user, &review);
             let company_user1 = data::create_user(&mut conn);
             let company_user2 = data::create_user(&mut conn);
 
             ReviewCompany::replace(
                 &mut conn,
-                movie_review.review_id,
+                show_review.review_id,
                 Some(vec![ReviewCompanySummary {
                     user_id: company_user1.user_id,
                 }]),
             )
             .unwrap();
 
-            (token, movie_review, company_user1, company_user2)
+            (token, show_review, company_user1, company_user2)
         };
 
         // Add a user to review company
-        let updated_review = data::generate_save_movie_review().company(vec![
+        let updated_review = data::generate_save_show_review().company(vec![
             ReviewCompanySummary {
                 user_id: company_user1.user_id,
             },
@@ -581,8 +578,8 @@ mod update {
 
         let request = test::TestRequest::put()
             .uri(&format!(
-                "/movies/{}/reviews/{}",
-                movie_review.movie_id, movie_review.review_id
+                "/shows/{}/reviews/{}",
+                show_review.show_id, show_review.review_id
             ))
             .set_json(&updated_review)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
@@ -590,7 +587,7 @@ mod update {
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
-        let review_response = process::parse_body::<MovieReviewResponse>(response)
+        let review_response = process::parse_body::<ShowReviewResponse>(response)
             .await
             .data;
 
@@ -608,14 +605,14 @@ mod update {
 
         // Remove a user from review company
         let updated_review =
-            data::generate_save_movie_review().company(vec![ReviewCompanySummary {
+            data::generate_save_show_review().company(vec![ReviewCompanySummary {
                 user_id: company_user2.user_id,
             }]);
 
         let request = test::TestRequest::put()
             .uri(&format!(
-                "/movies/{}/reviews/{}",
-                movie_review.movie_id, movie_review.review_id
+                "/shows/{}/reviews/{}",
+                show_review.show_id, show_review.review_id
             ))
             .set_json(&updated_review)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
@@ -623,7 +620,7 @@ mod update {
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
-        let review_response = process::parse_body::<MovieReviewResponse>(response)
+        let review_response = process::parse_body::<ShowReviewResponse>(response)
             .await
             .data;
 
@@ -636,12 +633,12 @@ mod update {
             .is_some());
 
         // Clear review company
-        let updated_review = data::generate_save_movie_review();
+        let updated_review = data::generate_save_show_review();
 
         let request = test::TestRequest::put()
             .uri(&format!(
-                "/movies/{}/reviews/{}",
-                movie_review.movie_id, movie_review.review_id
+                "/shows/{}/reviews/{}",
+                show_review.show_id, show_review.review_id
             ))
             .set_json(&updated_review)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
@@ -649,7 +646,7 @@ mod update {
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
-        let review_response = process::parse_body::<MovieReviewResponse>(response)
+        let review_response = process::parse_body::<ShowReviewResponse>(response)
             .await
             .data;
 

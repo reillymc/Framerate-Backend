@@ -11,6 +11,7 @@ use framerate::{
     review::Review,
     show::{ExternalIds, Show},
     show_entry::{SaveShowEntryRequest, ShowEntry},
+    show_review::{SaveShowReviewRequest, ShowReview},
     user::{NewUser, User},
     utils::jwt::create_token,
     watchlist::{NewWatchlist, Watchlist},
@@ -64,9 +65,13 @@ pub fn create_show_watchlist(
 pub fn create_show_entry(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
     user: &User,
-    watchlist: &Watchlist
+    watchlist: &Watchlist,
 ) -> ShowEntry {
-    ShowEntry::create(conn, generate_show_entry(user.user_id, watchlist.watchlist_id)).unwrap()
+    ShowEntry::create(
+        conn,
+        generate_show_entry(user.user_id, watchlist.watchlist_id),
+    )
+    .unwrap()
 }
 
 pub fn create_movie_watchlist(
@@ -79,12 +84,38 @@ pub fn create_movie_watchlist(
 pub fn create_movie_entry(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
     user: &User,
-    watchlist: &Watchlist
+    watchlist: &Watchlist,
 ) -> MovieEntry {
-    MovieEntry::create(conn, generate_movie_entry(user.user_id, watchlist.watchlist_id)).unwrap()
+    MovieEntry::create(
+        conn,
+        generate_movie_entry(user.user_id, watchlist.watchlist_id),
+    )
+    .unwrap()
 }
 
-pub fn generate_review(user_id: Uuid) -> Review {
+pub fn create_review(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+) -> Review {
+    Review::create(conn, generate_review(user.user_id)).unwrap()
+}
+
+pub fn create_movie_review(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+    review: &Review,
+) -> MovieReview {
+    MovieReview::create(conn, generate_movie_review(user.user_id, review.review_id)).unwrap()
+}
+pub fn create_show_review(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+    review: &Review,
+) -> ShowReview {
+    ShowReview::create(conn, generate_show_review(user.user_id, review.review_id)).unwrap()
+}
+
+fn generate_review(user_id: Uuid) -> Review {
     let mut rng = rand::thread_rng();
 
     Review {
@@ -106,7 +137,7 @@ pub fn generate_sample_movie() -> Movie {
         poster_path: Some("/1ub4urtlb2Re27Qw0lBcc1kt2pw.jpg".to_string()),
         backdrop_path: Some("/e1rPzkIcBEJiAd3piGirt7qVux7.jpg".to_string()),
         release_date: NaiveDate::from_ymd_opt(2007, 5, 20),
-        overview: Some("Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in the sleepy British village of Sandford. Not only does he miss the excitement of the big city, but he also has a well-meaning oaf for a partner. However, when a series of grisly accidents rocks Sandford, Angel smells something rotten in the idyllic village.".to_string()),
+        overview: Some("Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in...".to_string()),
         tagline: Some("Big cops. Small town. Moderate violence.".to_string()),
         popularity: Some(26.13),
         runtime: Some(121)
@@ -122,19 +153,22 @@ pub fn generate_sample_show() -> Show {
         first_air_date: NaiveDate::from_ymd_opt(2005, 3, 26),
         last_air_date: NaiveDate::from_ymd_opt(2021, 12, 05),
         status: Some("Ended".to_string()),
-        overview: Some("The Doctor is a Time Lord: a 900 year old alien with 2 hearts, part of a gifted civilization who mastered time travel. The Doctor saves planets for a living—more of a hobby actually, and the Doctor's very, very good at it.".to_string()),
+        overview: Some(
+            "The Doctor is a Time Lord: a 900 year old alien with 2 hearts, part of a gifted..."
+                .to_string(),
+        ),
         tagline: Some("Space. For all.".to_string()),
-        popularity: Some(361.611),   
+        popularity: Some(361.611),
         external_ids: Some(ExternalIds {
             imdb_id: Some("tt0436992".to_string()),
-            tvdb_id: Some(78804)       
-         }),
-         next_air_date: None,
-         seasons: None
-     }
+            tvdb_id: Some(78804),
+        }),
+        next_air_date: None,
+        seasons: None,
+    }
 }
 
-pub fn generate_movie_review(user_id: Uuid, review_id: Uuid) -> MovieReview {
+fn generate_movie_review(user_id: Uuid, review_id: Uuid) -> MovieReview {
     let movie = generate_sample_movie();
 
     MovieReview {
@@ -152,6 +186,19 @@ pub fn generate_save_movie_review() -> SaveMovieReviewRequest {
     let mut rng = rand::thread_rng();
 
     SaveMovieReviewRequest {
+        title: Some(Uuid::new_v4().to_string()),
+        date: Some(Utc::now().naive_utc().date()),
+        rating: Some(rng.gen_range(0..101)),
+        description: Some(Uuid::new_v4().to_string()),
+        venue: Some(Uuid::new_v4().to_string()),
+        company: None,
+    }
+}
+
+pub fn generate_save_show_review() -> SaveShowReviewRequest {
+    let mut rng = rand::thread_rng();
+
+    SaveShowReviewRequest {
         title: Some(Uuid::new_v4().to_string()),
         date: Some(Utc::now().naive_utc().date()),
         rating: Some(rng.gen_range(0..101)),
@@ -222,7 +269,7 @@ fn generate_movie_entry(user_id: Uuid, watchlist_id: Uuid) -> MovieEntry {
     }
 }
 
-pub fn generate_show_entry(user_id: Uuid, watchlist_id: Uuid) -> ShowEntry {
+fn generate_show_entry(user_id: Uuid, watchlist_id: Uuid) -> ShowEntry {
     let show = generate_sample_show();
 
     ShowEntry {
@@ -236,7 +283,21 @@ pub fn generate_show_entry(user_id: Uuid, watchlist_id: Uuid) -> ShowEntry {
         last_air_date: show.last_air_date,
         next_air_date: show.next_air_date,
         status: show.status,
-        updated_at: Utc::now().naive_utc().date()
+        updated_at: Utc::now().naive_utc().date(),
+    }
+}
+
+fn generate_show_review(user_id: Uuid, review_id: Uuid) -> ShowReview {
+    let show = generate_sample_show();
+
+    ShowReview {
+        review_id,
+        user_id,
+        imdb_id: show.external_ids.unwrap().imdb_id,
+        show_id: show.id,
+        name: show.name,
+        poster_path: show.poster_path,
+        first_air_date: show.first_air_date,
     }
 }
 
