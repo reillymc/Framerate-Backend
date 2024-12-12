@@ -133,7 +133,7 @@ impl Movie {
 
     pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Movie>, CustomError> {
         let request_url = generate_endpoint(
-            format!("discover/movie"),
+            "discover/movie".to_string(),
             Some(HashMap::from([
                 ("query", query),
                 ("region", "AU"),
@@ -160,7 +160,7 @@ impl Movie {
         let max_date = (chrono::Utc::now().date_naive() + chrono::Duration::days(7)).to_string();
 
         let request_url = generate_endpoint(
-            format!("discover/movie"),
+            "discover/movie".to_string(),
             Some(HashMap::from([
                 ("region", "AU"),
                 ("include_video", "false"),

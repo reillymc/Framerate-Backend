@@ -7,7 +7,7 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 pub type TmdbClient = ClientWithMiddleware;
 
 pub fn generate_endpoint(path: String, query: Option<HashMap<&str, &str>>) -> String {
-    let mut query = query.unwrap_or(HashMap::<&str, &str>::new());
+    let mut query = query.unwrap_or_default();
 
     query.insert("language", "en-AU");
     query.insert("include_adult", "false");
@@ -17,7 +17,7 @@ pub fn generate_endpoint(path: String, query: Option<HashMap<&str, &str>>) -> St
         .map(|(k, v)| format!("{k}={v}"))
         .collect::<Vec<String>>();
 
-    query_params.sort_by(|a, b| a.cmp(b));
+    query_params.sort();
 
     let query_params = query_params.join("&");
 

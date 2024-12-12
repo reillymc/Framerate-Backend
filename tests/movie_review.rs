@@ -1,4 +1,4 @@
-mod common;
+pub mod common;
 
 mod find_all {
     use crate::common::{data, process, setup};

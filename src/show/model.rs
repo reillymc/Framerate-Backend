@@ -184,7 +184,7 @@ impl Show {
 
     pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Show>, CustomError> {
         let request_url = generate_endpoint(
-            format!("search/tv"),
+            "search/tv".to_string(),
             Some(HashMap::from([("query", query), ("page", "1")])),
         );
 
@@ -209,7 +209,7 @@ impl Show {
         let max_date = (chrono::Utc::now().date_naive() + chrono::Duration::weeks(26)).to_string();
 
         let request_url = generate_endpoint(
-            format!("discover/tv"),
+            "discover/tv".to_string(),
             Some(HashMap::from([
                 ("air_date.lte", max_date.as_str()),
                 ("page", "1"),

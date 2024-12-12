@@ -3,23 +3,23 @@ pub mod common;
 mod find {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::movie_entry::{find, MovieEntry};
+    use framerate::show_entry::{find, ShowEntry};
 
     #[actix_web::test]
     async fn should_require_authentication() {
         let (app, pool) = setup::create_app(find).await;
 
-        let movie_entry = {
+        let show_entry = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
-            data::create_movie_entry(&mut conn, &user, &watchlist)
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
+            data::create_show_entry(&mut conn, &user, &watchlist)
         };
 
         let request = test::TestRequest::get()
             .uri(&format!(
-                "/movies/entries/{}/{}",
-                movie_entry.watchlist_id, movie_entry.movie_id
+                "/shows/entries/{}/{}",
+                show_entry.watchlist_id, show_entry.show_id
             ))
             .to_request();
 
@@ -28,22 +28,22 @@ mod find {
     }
 
     #[actix_web::test]
-    async fn should_not_return_other_users_movie_entry() {
+    async fn should_not_return_other_users_show_entry() {
         let (app, pool) = setup::create_app(find).await;
 
-        let (token, movie_entry) = {
+        let (token, show_entry) = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
-            let movie_entry = data::create_movie_entry(&mut conn, &user, &watchlist);
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
+            let show_entry = data::create_show_entry(&mut conn, &user, &watchlist);
             let (token, _) = data::create_authed_user(&mut conn);
-            (token, movie_entry)
+            (token, show_entry)
         };
 
         let request = test::TestRequest::get()
             .uri(&format!(
-                "/movies/entries/{}/{}",
-                movie_entry.watchlist_id, movie_entry.movie_id
+                "/shows/entries/{}/{}",
+                show_entry.watchlist_id, show_entry.show_id
             ))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
@@ -53,20 +53,21 @@ mod find {
     }
 
     #[actix_web::test]
-    async fn should_return_movie_entry() {
+    async fn should_return_show_entry() {
         let (app, pool) = setup::create_app(find).await;
-        let (token, movie_entry) = {
+
+        let (token, show_entry) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
-            let movie_entry = data::create_movie_entry(&mut conn, &user, &watchlist);
-            (token, movie_entry)
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
+            let show_entry = data::create_show_entry(&mut conn, &user, &watchlist);
+            (token, show_entry)
         };
 
         let request = test::TestRequest::get()
             .uri(&format!(
-                "/movies/entries/{}/{}",
-                movie_entry.watchlist_id, movie_entry.movie_id
+                "/shows/entries/{}/{}",
+                show_entry.watchlist_id, show_entry.show_id
             ))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
@@ -74,31 +75,31 @@ mod find {
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<MovieEntry>(response).await;
+        let result = process::parse_body::<ShowEntry>(response).await;
 
-        let returned_movie_entry = result.data;
-        assert_eq!(movie_entry, returned_movie_entry);
+        let returned_show_entry = result.data;
+        assert_eq!(show_entry, returned_show_entry);
     }
 }
 
 mod find_all {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::movie_entry::{find_all, MovieEntry};
+    use framerate::show_entry::{find_all, ShowEntry};
 
     #[actix_web::test]
     async fn should_require_authentication() {
         let (app, pool) = setup::create_app(find_all).await;
 
-        let movie_entry = {
+        let show_entry = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
-            data::create_movie_entry(&mut conn, &user, &watchlist)
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
+            data::create_show_entry(&mut conn, &user, &watchlist)
         };
 
         let request = test::TestRequest::get()
-            .uri(&format!("/movies/entries/{}", movie_entry.watchlist_id))
+            .uri(&format!("/shows/entries/{}", show_entry.watchlist_id))
             .to_request();
 
         let response = test::call_service(&app, request).await;
@@ -106,62 +107,62 @@ mod find_all {
     }
 
     #[actix_web::test]
-    async fn should_not_return_other_users_movie_entries() {
+    async fn should_not_return_other_users_show_entries() {
         let (app, pool) = setup::create_app(find_all).await;
 
         let (token, watchlist) = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
-            data::create_movie_entry(&mut conn, &user, &watchlist);
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
+            data::create_show_entry(&mut conn, &user, &watchlist);
             let (token, _) = data::create_authed_user(&mut conn);
             (token, watchlist)
         };
 
         let request = test::TestRequest::get()
-            .uri(&format!("/movies/entries/{}", watchlist.watchlist_id))
+            .uri(&format!("/shows/entries/{}", watchlist.watchlist_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<Vec<MovieEntry>>(response).await;
+        let result = process::parse_body::<Vec<ShowEntry>>(response).await;
         assert_eq!(0, result.data.len());
     }
 
     #[actix_web::test]
-    async fn should_return_user_movie_entries() {
+    async fn should_return_user_show_entries() {
         let (app, pool) = setup::create_app(find_all).await;
 
-        let (token, movie_entry) = {
+        let (token, show_entry) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
-            let movie_entry = data::create_movie_entry(&mut conn, &user, &watchlist);
-            (token, movie_entry)
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
+            let show_entry = data::create_show_entry(&mut conn, &user, &watchlist);
+            (token, show_entry)
         };
 
         let request = test::TestRequest::get()
-            .uri(&format!("/movies/entries/{}", movie_entry.watchlist_id))
+            .uri(&format!("/shows/entries/{}", show_entry.watchlist_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<Vec<MovieEntry>>(response).await;
+        let result = process::parse_body::<Vec<ShowEntry>>(response).await;
         assert_eq!(1, result.data.len());
 
-        let returned_movie_entry = result.data.first().unwrap();
-        assert_eq!(&movie_entry, returned_movie_entry);
+        let returned_show_entry = result.data.first().unwrap();
+        assert_eq!(&show_entry, returned_show_entry);
     }
 }
 
 mod create {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::movie_entry::{create, MovieEntry};
+    use framerate::show_entry::{create, ShowEntry};
 
     #[actix_web::test]
     async fn should_require_authentication() {
@@ -170,15 +171,15 @@ mod create {
         let watchlist = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
             watchlist
         };
 
-        let movie_entry = data::generate_save_movie_entry();
+        let show_entry = data::generate_save_show_entry();
 
         let request = test::TestRequest::post()
-            .uri(&format!("/movies/entries/{}", watchlist.watchlist_id))
-            .set_json(&movie_entry)
+            .uri(&format!("/shows/entries/{}", watchlist.watchlist_id))
+            .set_json(&show_entry)
             .to_request();
 
         let response = test::call_service(&app, request).await;
@@ -186,85 +187,85 @@ mod create {
     }
 
     #[actix_web::test]
-    async fn should_not_create_movie_entry_on_other_users_watchlist() {
+    async fn should_not_create_show_entry_on_other_users_watchlist() {
         let (app, pool) = setup::create_app(create).await;
 
         let (token, watchlist) = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
             let (token, _) = data::create_authed_user(&mut conn);
             (token, watchlist)
         };
 
-        let movie_entry = data::generate_save_movie_entry();
+        let show_entry = data::generate_save_show_entry();
 
         let request = test::TestRequest::post()
-            .uri(&format!("/movies/entries/{}", watchlist.watchlist_id))
-            .set_json(&movie_entry)
+            .uri(&format!("/shows/entries/{}", watchlist.watchlist_id))
+            .set_json(&show_entry)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<MovieEntry>(response).await;
+        let result = process::parse_body::<ShowEntry>(response).await;
 
         // This will generate a new watchlist for the user, so check that the other watchlist id is not used
         assert_ne!(watchlist.watchlist_id, result.data.watchlist_id);
     }
 
     #[actix_web::test]
-    async fn should_create_movie_entry() {
+    async fn should_create_show_entry() {
         let (app, pool) = setup::create_app(create).await;
 
         let (token, user, watchlist) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
             (token, user, watchlist)
         };
 
-        let movie_entry = data::generate_save_movie_entry();
+        let show_entry = data::generate_save_show_entry();
 
         let request = test::TestRequest::post()
-            .uri(&format!("/movies/entries/{}", watchlist.watchlist_id))
-            .set_json(&movie_entry)
+            .uri(&format!("/shows/entries/{}", watchlist.watchlist_id))
+            .set_json(&show_entry)
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<MovieEntry>(response).await;
-        let returned_movie_entry = result.data;
+        let result = process::parse_body::<ShowEntry>(response).await;
+        let returned_show_entry = result.data;
 
-        assert!(!returned_movie_entry.watchlist_id.is_nil());
-        assert_eq!(movie_entry.movie_id, returned_movie_entry.movie_id);
-        assert_eq!(user.user_id, returned_movie_entry.user_id);
+        assert!(!returned_show_entry.watchlist_id.is_nil());
+        assert_eq!(show_entry.show_id, returned_show_entry.show_id);
+        assert_eq!(user.user_id, returned_show_entry.user_id);
     }
 }
 
 mod delete {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::movie_entry::{delete, DeleteResponse};
+    use framerate::show_entry::{delete, DeleteResponse};
 
     #[actix_web::test]
     async fn should_require_authentication() {
         let (app, pool) = setup::create_app(delete).await;
 
-        let movie_entry = {
+        let show_entry = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
-            data::create_movie_entry(&mut conn, &user, &watchlist)
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
+            data::create_show_entry(&mut conn, &user, &watchlist)
         };
 
         let request = test::TestRequest::delete()
             .uri(&format!(
-                "/movies/entries/{}/{}",
-                movie_entry.watchlist_id, movie_entry.movie_id
+                "/shows/entries/{}/{}",
+                show_entry.watchlist_id, show_entry.show_id
             ))
             .to_request();
 
@@ -273,22 +274,22 @@ mod delete {
     }
 
     #[actix_web::test]
-    async fn should_not_delete_other_users_movie_entry() {
+    async fn should_not_delete_other_users_show_entry() {
         let (app, pool) = setup::create_app(delete).await;
 
-        let (token, movie_entry) = {
+        let (token, show_entry) = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
-            let movie_entry = data::create_movie_entry(&mut conn, &user, &watchlist);
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
+            let show_entry = data::create_show_entry(&mut conn, &user, &watchlist);
             let (token, _) = data::create_authed_user(&mut conn);
-            (token, movie_entry)
+            (token, show_entry)
         };
 
         let request = test::TestRequest::delete()
             .uri(&format!(
-                "/movies/entries/{}/{}",
-                movie_entry.watchlist_id, movie_entry.movie_id
+                "/shows/entries/{}/{}",
+                show_entry.watchlist_id, show_entry.show_id
             ))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
@@ -298,21 +299,21 @@ mod delete {
     }
 
     #[actix_web::test]
-    async fn should_delete_movie_entry() {
+    async fn should_delete_show_entry() {
         let (app, pool) = setup::create_app(delete).await;
 
-        let (token, movie_entry) = {
+        let (token, show_entry) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
-            let watchlist = data::create_movie_watchlist(&mut conn, &user);
-            let movie_entry = data::create_movie_entry(&mut conn, &user, &watchlist);
-            (token, movie_entry)
+            let watchlist = data::create_show_watchlist(&mut conn, &user);
+            let show_entry = data::create_show_entry(&mut conn, &user, &watchlist);
+            (token, show_entry)
         };
 
         let request = test::TestRequest::delete()
             .uri(&format!(
-                "/movies/entries/{}/{}",
-                movie_entry.watchlist_id, movie_entry.movie_id
+                "/shows/entries/{}/{}",
+                show_entry.watchlist_id, show_entry.show_id
             ))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();

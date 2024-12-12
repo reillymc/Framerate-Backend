@@ -12,13 +12,13 @@ use actix_web::{get, post, web};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveShowEntryRequest {
     pub show_id: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteResponse {
     pub count: usize,

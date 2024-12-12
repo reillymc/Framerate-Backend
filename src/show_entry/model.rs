@@ -10,7 +10,15 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(
-    Serialize, Deserialize, AsChangeset, Insertable, Associations, Selectable, Queryable, Debug,
+    Serialize,
+    Deserialize,
+    AsChangeset,
+    Insertable,
+    Associations,
+    Selectable,
+    Queryable,
+    Debug,
+    PartialEq,
 )]
 #[diesel(belongs_to(user::User))]
 #[diesel(belongs_to(watchlist::Watchlist))]

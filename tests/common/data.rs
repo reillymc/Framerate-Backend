@@ -1,0 +1,253 @@
+use chrono::{NaiveDate, Utc};
+use diesel::{r2d2::ConnectionManager, PgConnection};
+use r2d2::PooledConnection;
+use rand::Rng;
+use uuid::Uuid;
+
+use framerate::{
+    movie::Movie,
+    movie_entry::{MovieEntry, SaveMovieEntryRequest},
+    movie_review::{MovieReview, SaveMovieReviewRequest},
+    review::Review,
+    show::{ExternalIds, Show},
+    show_entry::{SaveShowEntryRequest, ShowEntry},
+    user::{NewUser, User},
+    utils::jwt::create_token,
+    watchlist::{NewWatchlist, Watchlist},
+};
+
+pub fn create_authed_user(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+) -> (String, User) {
+    let new_user = NewUser {
+        first_name: Uuid::new_v4().to_string(),
+        last_name: Uuid::new_v4().to_string(),
+        avatar_uri: Some(Uuid::new_v4().to_string()),
+        email: Some(Uuid::new_v4().to_string()),
+        password: Some(Uuid::new_v4().to_string()),
+        configuration: None,
+        user_id: None,
+    };
+
+    let mut user = User::create(conn, new_user.clone()).unwrap();
+
+    user.password = new_user.password;
+
+    let token = create_token(user.user_id, &user.email.clone().unwrap()).unwrap();
+
+    (token, user)
+}
+
+pub fn create_user(conn: &mut PooledConnection<ConnectionManager<PgConnection>>) -> User {
+    User::create(
+        conn,
+        NewUser {
+            first_name: Uuid::new_v4().to_string(),
+            last_name: Uuid::new_v4().to_string(),
+            avatar_uri: Some(Uuid::new_v4().to_string()),
+            email: Some(Uuid::new_v4().to_string()),
+            password: Some(Uuid::new_v4().to_string()),
+            configuration: None,
+            user_id: None,
+        },
+    )
+    .unwrap()
+}
+
+pub fn create_show_watchlist(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+) -> Watchlist {
+    Watchlist::create(conn, generate_show_watchlist(user.user_id)).unwrap()
+}
+
+pub fn create_show_entry(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+    watchlist: &Watchlist
+) -> ShowEntry {
+    ShowEntry::create(conn, generate_show_entry(user.user_id, watchlist.watchlist_id)).unwrap()
+}
+
+pub fn create_movie_watchlist(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+) -> Watchlist {
+    Watchlist::create(conn, generate_movie_watchlist(user.user_id)).unwrap()
+}
+
+pub fn create_movie_entry(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+    watchlist: &Watchlist
+) -> MovieEntry {
+    MovieEntry::create(conn, generate_movie_entry(user.user_id, watchlist.watchlist_id)).unwrap()
+}
+
+pub fn generate_review(user_id: Uuid) -> Review {
+    let mut rng = rand::thread_rng();
+
+    Review {
+        review_id: Uuid::new_v4(),
+        user_id,
+        title: Some(Uuid::new_v4().to_string()),
+        date: Some(Utc::now().naive_utc().date()),
+        rating: Some(rng.gen_range(0..101)),
+        description: Some(Uuid::new_v4().to_string()),
+        venue: Some(Uuid::new_v4().to_string()),
+    }
+}
+
+pub fn generate_sample_movie() -> Movie {
+    Movie {
+        id: 4638,
+        imdb_id: Some("tt0425112".to_string()),
+        title: "Hot Fuzz".to_string(),
+        poster_path: Some("/1ub4urtlb2Re27Qw0lBcc1kt2pw.jpg".to_string()),
+        backdrop_path: Some("/e1rPzkIcBEJiAd3piGirt7qVux7.jpg".to_string()),
+        release_date: NaiveDate::from_ymd_opt(2007, 5, 20),
+        overview: Some("Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in the sleepy British village of Sandford. Not only does he miss the excitement of the big city, but he also has a well-meaning oaf for a partner. However, when a series of grisly accidents rocks Sandford, Angel smells something rotten in the idyllic village.".to_string()),
+        tagline: Some("Big cops. Small town. Moderate violence.".to_string()),
+        popularity: Some(26.13),
+        runtime: Some(121)
+    }
+}
+
+pub fn generate_sample_show() -> Show {
+    Show {
+        id: 57243,
+        name: "Doctor Who".to_string(),
+        poster_path: Some("/4edFyasCrkH4MKs6H4mHqlrxA6b.jpg".to_string()),
+        backdrop_path: Some("/vcFW09U4834DyFOeRZpsx9x1D3S.jpg".to_string()),
+        first_air_date: NaiveDate::from_ymd_opt(2005, 3, 26),
+        last_air_date: NaiveDate::from_ymd_opt(2021, 12, 05),
+        status: Some("Ended".to_string()),
+        overview: Some("The Doctor is a Time Lord: a 900 year old alien with 2 hearts, part of a gifted civilization who mastered time travel. The Doctor saves planets for a living—more of a hobby actually, and the Doctor's very, very good at it.".to_string()),
+        tagline: Some("Space. For all.".to_string()),
+        popularity: Some(361.611),   
+        external_ids: Some(ExternalIds {
+            imdb_id: Some("tt0436992".to_string()),
+            tvdb_id: Some(78804)       
+         }),
+         next_air_date: None,
+         seasons: None
+     }
+}
+
+pub fn generate_movie_review(user_id: Uuid, review_id: Uuid) -> MovieReview {
+    let movie = generate_sample_movie();
+
+    MovieReview {
+        review_id,
+        user_id,
+        imdb_id: movie.imdb_id,
+        movie_id: movie.id,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        release_date: movie.release_date,
+    }
+}
+
+pub fn generate_save_movie_review() -> SaveMovieReviewRequest {
+    let mut rng = rand::thread_rng();
+
+    SaveMovieReviewRequest {
+        title: Some(Uuid::new_v4().to_string()),
+        date: Some(Utc::now().naive_utc().date()),
+        rating: Some(rng.gen_range(0..101)),
+        description: Some(Uuid::new_v4().to_string()),
+        venue: Some(Uuid::new_v4().to_string()),
+        company: None,
+    }
+}
+
+pub fn generate_watchlist(user_id: Uuid) -> Watchlist {
+    let mut rng = rand::thread_rng();
+    let media_type = if rng.gen() {
+        "movie".to_string()
+    } else {
+        "show".to_string()
+    };
+    Watchlist {
+        watchlist_id: Uuid::new_v4(),
+        user_id,
+        name: Uuid::new_v4().to_string(),
+        media_type,
+    }
+}
+
+fn generate_movie_watchlist(user_id: Uuid) -> Watchlist {
+    Watchlist {
+        watchlist_id: Uuid::new_v4(),
+        user_id,
+        name: Uuid::new_v4().to_string(),
+        media_type: "movie".to_string(),
+    }
+}
+
+fn generate_show_watchlist(user_id: Uuid) -> Watchlist {
+    Watchlist {
+        watchlist_id: Uuid::new_v4(),
+        user_id,
+        name: Uuid::new_v4().to_string(),
+        media_type: "show".to_string(),
+    }
+}
+
+pub fn generate_new_watchlist() -> NewWatchlist {
+    let mut rng = rand::thread_rng();
+    let media_type = if rng.gen() {
+        "movie".to_string()
+    } else {
+        "show".to_string()
+    };
+
+    NewWatchlist {
+        name: Uuid::new_v4().to_string(),
+        media_type,
+    }
+}
+
+fn generate_movie_entry(user_id: Uuid, watchlist_id: Uuid) -> MovieEntry {
+    let movie = generate_sample_movie();
+
+    MovieEntry {
+        user_id,
+        watchlist_id,
+        imdb_id: movie.imdb_id,
+        movie_id: movie.id,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        release_date: movie.release_date,
+    }
+}
+
+pub fn generate_show_entry(user_id: Uuid, watchlist_id: Uuid) -> ShowEntry {
+    let show = generate_sample_show();
+
+    ShowEntry {
+        user_id,
+        watchlist_id,
+        imdb_id: show.external_ids.unwrap().imdb_id,
+        show_id: show.id,
+        name: show.name,
+        poster_path: show.poster_path,
+        first_air_date: show.first_air_date,
+        last_air_date: show.last_air_date,
+        next_air_date: show.next_air_date,
+        status: show.status,
+        updated_at: Utc::now().naive_utc().date()
+    }
+}
+
+pub fn generate_save_movie_entry() -> SaveMovieEntryRequest {
+    let movie = generate_sample_movie();
+
+    SaveMovieEntryRequest { movie_id: movie.id }
+}
+
+pub fn generate_save_show_entry() -> SaveShowEntryRequest {
+    let show = generate_sample_show();
+
+    SaveShowEntryRequest { show_id: show.id }
+}
