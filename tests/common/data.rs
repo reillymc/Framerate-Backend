@@ -39,6 +39,8 @@ pub fn create_authed_user(
     (token, user)
 }
 
+// Create in DB
+
 pub fn create_user(conn: &mut PooledConnection<ConnectionManager<PgConnection>>) -> User {
     User::create(
         conn,
@@ -53,6 +55,13 @@ pub fn create_user(conn: &mut PooledConnection<ConnectionManager<PgConnection>>)
         },
     )
     .unwrap()
+}
+
+pub fn create_watchlist(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+) -> Watchlist {
+    Watchlist::create(conn, generate_watchlist(user.user_id)).unwrap()
 }
 
 pub fn create_show_watchlist(
@@ -115,19 +124,54 @@ pub fn create_show_review(
     ShowReview::create(conn, generate_show_review(user.user_id, review.review_id)).unwrap()
 }
 
-fn generate_review(user_id: Uuid) -> Review {
+// Generate save request items
+
+pub fn generate_save_movie_review() -> SaveMovieReviewRequest {
     let mut rng = rand::thread_rng();
 
-    Review {
-        review_id: Uuid::new_v4(),
-        user_id,
+    SaveMovieReviewRequest {
         title: Some(Uuid::new_v4().to_string()),
         date: Some(Utc::now().naive_utc().date()),
         rating: Some(rng.gen_range(0..101)),
         description: Some(Uuid::new_v4().to_string()),
         venue: Some(Uuid::new_v4().to_string()),
+        company: None,
     }
 }
+
+pub fn generate_save_show_review() -> SaveShowReviewRequest {
+    let mut rng = rand::thread_rng();
+
+    SaveShowReviewRequest {
+        title: Some(Uuid::new_v4().to_string()),
+        date: Some(Utc::now().naive_utc().date()),
+        rating: Some(rng.gen_range(0..101)),
+        description: Some(Uuid::new_v4().to_string()),
+        venue: Some(Uuid::new_v4().to_string()),
+        company: None,
+    }
+}
+
+pub fn generate_save_watchlist() -> NewWatchlist {
+    NewWatchlist {
+        name: Uuid::new_v4().to_string(),
+        media_type: generate_sample_media_type(),
+    }
+}
+
+pub fn generate_save_movie_entry() -> SaveMovieEntryRequest {
+    let movie = generate_sample_movie();
+
+    SaveMovieEntryRequest { movie_id: movie.id }
+}
+
+pub fn generate_save_show_entry() -> SaveShowEntryRequest {
+    let show = generate_sample_show();
+
+    SaveShowEntryRequest { show_id: show.id }
+}
+
+// Generate sample data
 
 pub fn generate_sample_movie() -> Movie {
     Movie {
@@ -168,6 +212,33 @@ pub fn generate_sample_show() -> Show {
     }
 }
 
+pub fn generate_sample_media_type() -> String {
+    let mut rng = rand::thread_rng();
+    let media_type = if rng.gen() {
+        "movie".to_string()
+    } else {
+        "show".to_string()
+    };
+
+    media_type
+}
+
+// Helpers
+
+fn generate_review(user_id: Uuid) -> Review {
+    let mut rng = rand::thread_rng();
+
+    Review {
+        review_id: Uuid::new_v4(),
+        user_id,
+        title: Some(Uuid::new_v4().to_string()),
+        date: Some(Utc::now().naive_utc().date()),
+        rating: Some(rng.gen_range(0..101)),
+        description: Some(Uuid::new_v4().to_string()),
+        venue: Some(Uuid::new_v4().to_string()),
+    }
+}
+
 fn generate_movie_review(user_id: Uuid, review_id: Uuid) -> MovieReview {
     let movie = generate_sample_movie();
 
@@ -182,44 +253,12 @@ fn generate_movie_review(user_id: Uuid, review_id: Uuid) -> MovieReview {
     }
 }
 
-pub fn generate_save_movie_review() -> SaveMovieReviewRequest {
-    let mut rng = rand::thread_rng();
-
-    SaveMovieReviewRequest {
-        title: Some(Uuid::new_v4().to_string()),
-        date: Some(Utc::now().naive_utc().date()),
-        rating: Some(rng.gen_range(0..101)),
-        description: Some(Uuid::new_v4().to_string()),
-        venue: Some(Uuid::new_v4().to_string()),
-        company: None,
-    }
-}
-
-pub fn generate_save_show_review() -> SaveShowReviewRequest {
-    let mut rng = rand::thread_rng();
-
-    SaveShowReviewRequest {
-        title: Some(Uuid::new_v4().to_string()),
-        date: Some(Utc::now().naive_utc().date()),
-        rating: Some(rng.gen_range(0..101)),
-        description: Some(Uuid::new_v4().to_string()),
-        venue: Some(Uuid::new_v4().to_string()),
-        company: None,
-    }
-}
-
-pub fn generate_watchlist(user_id: Uuid) -> Watchlist {
-    let mut rng = rand::thread_rng();
-    let media_type = if rng.gen() {
-        "movie".to_string()
-    } else {
-        "show".to_string()
-    };
+fn generate_watchlist(user_id: Uuid) -> Watchlist {
     Watchlist {
         watchlist_id: Uuid::new_v4(),
         user_id,
         name: Uuid::new_v4().to_string(),
-        media_type,
+        media_type: generate_sample_media_type(),
     }
 }
 
@@ -238,20 +277,6 @@ fn generate_show_watchlist(user_id: Uuid) -> Watchlist {
         user_id,
         name: Uuid::new_v4().to_string(),
         media_type: "show".to_string(),
-    }
-}
-
-pub fn generate_new_watchlist() -> NewWatchlist {
-    let mut rng = rand::thread_rng();
-    let media_type = if rng.gen() {
-        "movie".to_string()
-    } else {
-        "show".to_string()
-    };
-
-    NewWatchlist {
-        name: Uuid::new_v4().to_string(),
-        media_type,
     }
 }
 
@@ -299,16 +324,4 @@ fn generate_show_review(user_id: Uuid, review_id: Uuid) -> ShowReview {
         poster_path: show.poster_path,
         first_air_date: show.first_air_date,
     }
-}
-
-pub fn generate_save_movie_entry() -> SaveMovieEntryRequest {
-    let movie = generate_sample_movie();
-
-    SaveMovieEntryRequest { movie_id: movie.id }
-}
-
-pub fn generate_save_show_entry() -> SaveShowEntryRequest {
-    let show = generate_sample_show();
-
-    SaveShowEntryRequest { show_id: show.id }
 }

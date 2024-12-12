@@ -6,7 +6,7 @@ use crate::{
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct EpisodeResponse {
     pub episode_number: i32,
     pub name: Option<String>,
@@ -17,7 +17,7 @@ pub struct EpisodeResponse {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all(serialize = "camelCase"))]
+#[serde(rename_all = "camelCase")]
 pub struct Episode {
     pub episode_number: i32,
     #[serde(skip_serializing_if = "Option::is_none")]

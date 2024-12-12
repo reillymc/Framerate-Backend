@@ -1,6 +1,6 @@
 use crate::{
     error_handler::CustomError,
-    season::{Episode, Season, SeasonResponse},
+    season::{EpisodeResponse, Season, SeasonResponse},
     tmdb::{generate_endpoint, TmdbClient},
     utils::serialization::empty_string_as_none,
 };
@@ -19,7 +19,6 @@ pub struct ExternalIds {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(rename_all(serialize = "camelCase"))]
 pub struct ShowResponse {
     pub id: i32,
     pub name: String,
@@ -29,8 +28,8 @@ pub struct ShowResponse {
     pub first_air_date: Option<NaiveDate>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub last_air_date: Option<NaiveDate>,
-    pub last_episode_to_air: Option<Episode>,
-    pub next_episode_to_air: Option<Episode>,
+    pub last_episode_to_air: Option<EpisodeResponse>,
+    pub next_episode_to_air: Option<EpisodeResponse>,
     pub status: Option<String>,
     pub overview: Option<String>,
     pub tagline: Option<String>,

@@ -18,14 +18,12 @@ mod find_all {
     #[actix_web::test]
     async fn should_not_return_other_users_watchlists() {
         let (app, pool) = setup::create_app(find_all).await;
+
         let token = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-
-            Watchlist::create(&mut conn, data::generate_watchlist(user.user_id)).unwrap();
-
+            data::create_watchlist(&mut conn, &user);
             let (token, _) = data::create_authed_user(&mut conn);
-
             token
         };
 
@@ -44,13 +42,11 @@ mod find_all {
     #[actix_web::test]
     async fn should_return_user_watchlists() {
         let (app, pool) = setup::create_app(find_all).await;
+
         let (user, token, watchlist) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
-
-            let watchlist =
-                Watchlist::create(&mut conn, data::generate_watchlist(user.user_id)).unwrap();
-
+            let watchlist = data::create_watchlist(&mut conn, &user);
             (user, token, watchlist)
         };
 
@@ -81,11 +77,11 @@ mod find_by_media_type {
     #[actix_web::test]
     async fn should_require_authentication() {
         let (app, pool) = setup::create_app(find_by_media_type).await;
+
         let watchlist = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-
-            Watchlist::create(&mut conn, data::generate_watchlist(user.user_id)).unwrap()
+            data::create_watchlist(&mut conn, &user)
         };
 
         let request = test::TestRequest::get()
@@ -99,15 +95,12 @@ mod find_by_media_type {
     #[actix_web::test]
     async fn should_not_return_other_users_watchlists() {
         let (app, pool) = setup::create_app(find_by_media_type).await;
+
         let (token, watchlist) = {
             let mut conn = pool.get().unwrap();
             let user = data::create_user(&mut conn);
-
-            let watchlist =
-                Watchlist::create(&mut conn, data::generate_watchlist(user.user_id)).unwrap();
-
+            let watchlist = data::create_watchlist(&mut conn, &user);
             let (token, _) = data::create_authed_user(&mut conn);
-
             (token, watchlist)
         };
 
@@ -128,13 +121,11 @@ mod find_by_media_type {
     #[actix_web::test]
     async fn should_return_watchlists() {
         let (app, pool) = setup::create_app(find_by_media_type).await;
+
         let (user, token, watchlist) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
-
-            let watchlist =
-                Watchlist::create(&mut conn, data::generate_watchlist(user.user_id)).unwrap();
-
+            let watchlist = data::create_watchlist(&mut conn, &user);
             (user, token, watchlist)
         };
 
@@ -158,14 +149,14 @@ mod find_by_media_type {
     #[actix_web::test]
     async fn should_return_new_watchlist_when_none_exist() {
         let (app, pool) = setup::create_app(find_by_media_type).await;
+
         let (user, token) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
-
             (user, token)
         };
 
-        let media_type = data::generate_watchlist(user.user_id).media_type;
+        let media_type = data::generate_sample_media_type();
 
         let request = test::TestRequest::get()
             .uri(&format!("/watchlists/{}", media_type))
@@ -210,13 +201,14 @@ mod create {
     #[actix_web::test]
     async fn should_create_watchlist() {
         let (app, pool) = setup::create_app(create).await;
+
         let (token, user) = {
             let mut conn = pool.get().unwrap();
             let (token, user) = data::create_authed_user(&mut conn);
             (token, user)
         };
 
-        let watchlist = data::generate_new_watchlist();
+        let watchlist = data::generate_save_watchlist();
 
         let request = test::TestRequest::post()
             .uri("/watchlists")

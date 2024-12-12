@@ -9,7 +9,7 @@ use crate::{
 use actix_web::{get, web, HttpResponse, Responder};
 
 #[get("/shows/{show_id}/seasons/{season_number}/details")]
-async fn find(
+async fn details(
     _: Auth,
     client: web::Data<TmdbClient>,
     path: web::Path<(i32, i32)>,

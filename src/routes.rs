@@ -67,7 +67,7 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(show_review::create);
     config.service(show_review::update);
 
-    config.service(season::find);
+    config.service(season::details);
 
     config.service(season_review::find_by_show_season);
     config.service(season_review::find_by_review_id);
