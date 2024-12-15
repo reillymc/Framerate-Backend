@@ -9,6 +9,8 @@ use framerate::{
     movie_entry::{MovieEntry, SaveMovieEntryRequest},
     movie_review::{MovieReview, SaveMovieReviewRequest},
     review::Review,
+    season::Season,
+    season_review::{SaveSeasonReviewRequest, SeasonReview},
     show::{ExternalIds, Show},
     show_entry::{SaveShowEntryRequest, ShowEntry},
     show_review::{SaveShowReviewRequest, ShowReview},
@@ -116,12 +118,21 @@ pub fn create_movie_review(
 ) -> MovieReview {
     MovieReview::create(conn, generate_movie_review(user.user_id, review.review_id)).unwrap()
 }
+
 pub fn create_show_review(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
     user: &User,
     review: &Review,
 ) -> ShowReview {
     ShowReview::create(conn, generate_show_review(user.user_id, review.review_id)).unwrap()
+}
+
+pub fn create_season_review(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+    review: &Review,
+) -> SeasonReview {
+    SeasonReview::create(conn, generate_season_review(user.user_id, review.review_id)).unwrap()
 }
 
 // Generate save request items
@@ -143,6 +154,19 @@ pub fn generate_save_show_review() -> SaveShowReviewRequest {
     let mut rng = rand::thread_rng();
 
     SaveShowReviewRequest {
+        title: Some(Uuid::new_v4().to_string()),
+        date: Some(Utc::now().naive_utc().date()),
+        rating: Some(rng.gen_range(0..101)),
+        description: Some(Uuid::new_v4().to_string()),
+        venue: Some(Uuid::new_v4().to_string()),
+        company: None,
+    }
+}
+
+pub fn generate_save_season_review() -> SaveSeasonReviewRequest {
+    let mut rng = rand::thread_rng();
+
+    SaveSeasonReviewRequest {
         title: Some(Uuid::new_v4().to_string()),
         date: Some(Utc::now().naive_utc().date()),
         rating: Some(rng.gen_range(0..101)),
@@ -209,6 +233,22 @@ pub fn generate_sample_show() -> Show {
         }),
         next_air_date: None,
         seasons: None,
+    }
+}
+
+pub fn generate_sample_season() -> Season {
+    Season {
+        show_id: 57243,
+        season_number: 1,
+        name: Some("Series 1".to_string()),
+        poster_path: Some("/9Jt2FFCAME7eHDC28r4qCHErhhF.jpg".to_string()),
+        overview: Some(
+            "The first series features Christopher Eccleston as the ninth incarnation of the..."
+                .to_string(),
+        ),
+        air_date: NaiveDate::from_ymd_opt(2005, 3, 26),
+        episode_count: None,
+        episodes: None,
     }
 }
 
@@ -323,5 +363,19 @@ fn generate_show_review(user_id: Uuid, review_id: Uuid) -> ShowReview {
         name: show.name,
         poster_path: show.poster_path,
         first_air_date: show.first_air_date,
+    }
+}
+
+fn generate_season_review(user_id: Uuid, review_id: Uuid) -> SeasonReview {
+    let season = generate_sample_season();
+
+    SeasonReview {
+        review_id,
+        user_id,
+        show_id: season.show_id,
+        season_number: season.season_number,
+        name: season.name,
+        poster_path: season.poster_path,
+        air_date: season.air_date,
     }
 }

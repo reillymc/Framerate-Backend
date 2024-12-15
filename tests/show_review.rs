@@ -124,7 +124,7 @@ mod find_by_review_id {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert_eq!(404, response.status());
     }
 
     #[actix_web::test]
