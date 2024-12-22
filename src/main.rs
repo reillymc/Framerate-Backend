@@ -3,20 +3,15 @@ extern crate diesel;
 extern crate diesel_migrations;
 
 use actix_cors::Cors;
-use actix_web::{
-    middleware::Logger,
-    rt::{spawn, time},
-    web::Data,
-    App, HttpServer,
-};
-use std::{env, time::Duration};
+use actix_web::{middleware::Logger, rt::spawn, web::Data, App, HttpServer};
+use std::env;
 use tracing::info;
 
-use framerate::{db, log, routes, show_entry, tmdb};
+use framerate::{db, jobs, routes, tmdb, utils};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    log::setup_logger();
+    utils::log::setup_logger();
     let pool = db::get_connection_pool();
     let mut conn = pool.get().unwrap();
     db::run_db_migrations(&mut conn);
@@ -30,41 +25,14 @@ async fn main() -> std::io::Result<()> {
     let job_interval = env::var("JOB_INTERVAL")
         .ok()
         .and_then(|port| port.parse::<u64>().ok())
-        .unwrap_or(3600);
+        .unwrap_or(0);
 
     if job_interval != 0 {
         let job_client = client.clone();
+        let job_pool = pool.clone();
         spawn(async move {
             info!(target: "Entry Updater", "Creating entry updater job with interval of {job_interval:?} seconds");
-
-            let mut interval = time::interval(Duration::from_secs(job_interval));
-            let mut previous_show_id = 0;
-            loop {
-                interval.tick().await;
-                let entry = show_entry::ShowEntry::internal_find_outdated(&mut conn);
-                if let Ok(entry) = entry {
-                    if previous_show_id != entry.show_id {
-                        previous_show_id = entry.show_id;
-                    } else {
-                        continue;
-                    }
-                    match entry.internal_update_status(&mut conn, &job_client).await {
-                        Ok(updated) => {
-                            info!(target: "Entry Updater",
-                                "Updated status for entry {} ({})",
-                                updated.show_id, updated.name
-                            );
-                        }
-                        Err(e) => {
-                            // TODO: handle potential infinite loop if update fails
-                            info!(target: "Entry Updater", "Error updating status: {}", e);
-                        }
-                    }
-                } else {
-                    info!(target: "Entry Updater", "No outdated entries found");
-                    interval.reset_after(Duration::from_secs(86400));
-                }
-            }
+            jobs::show_entry_updater(job_pool, job_client, job_interval)
         });
     }
 

@@ -2,7 +2,7 @@ pub mod authentication;
 pub mod company;
 pub mod db;
 pub mod error_handler;
-pub mod log;
+pub mod jobs;
 pub mod movie;
 pub mod movie_entry;
 pub mod movie_review;
