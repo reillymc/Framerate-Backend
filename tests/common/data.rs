@@ -5,6 +5,7 @@ use rand::Rng;
 use uuid::Uuid;
 
 use framerate::{
+    company::{Company, SaveCompany},
     movie::Movie,
     movie_entry::{MovieEntry, SaveMovieEntryRequest},
     movie_review::{MovieReview, SaveMovieReviewRequest},
@@ -129,6 +130,13 @@ pub fn create_season_review(
     SeasonReview::create(conn, generate_season_review(user.user_id, review.review_id)).unwrap()
 }
 
+pub fn create_company(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+) -> Company {
+    Company::create(conn, generate_save_company(), user.user_id).unwrap()
+}
+
 // Generate save request items
 
 pub fn generate_save_movie_review() -> SaveMovieReviewRequest {
@@ -198,6 +206,13 @@ pub fn generate_save_show_entry() -> SaveShowEntryRequest {
     let show = generate_sample_show();
 
     SaveShowEntryRequest { show_id: show.id }
+}
+
+pub fn generate_save_company() -> SaveCompany {
+    SaveCompany {
+        first_name: Uuid::new_v4().to_string(),
+        last_name: Uuid::new_v4().to_string(),
+    }
 }
 
 // Generate sample data

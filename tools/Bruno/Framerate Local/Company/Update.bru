@@ -1,0 +1,22 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{host}}/{{endpoint}}/{{userId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "firstName": "company2",
+    "lastName": "company2"
+  }
+}
+
+vars:pre-request {
+  userId: 011a5778-8b4c-48cb-a99a-91f618f74040
+}

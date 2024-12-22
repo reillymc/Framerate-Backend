@@ -1,0 +1,18 @@
+meta {
+  name: Create
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/{{endpoint}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "firstName": "test",
+    "lastName": "test",
+  }
+}

@@ -1,4 +1,5 @@
 pub mod authentication;
+pub mod company;
 pub mod db;
 pub mod error_handler;
 pub mod log;

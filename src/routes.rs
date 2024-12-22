@@ -3,6 +3,7 @@ use actix_web::web;
 use actix_web::HttpResponse;
 
 use crate::authentication;
+use crate::company;
 use crate::movie;
 use crate::movie_entry;
 use crate::movie_review;
@@ -27,6 +28,10 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
 
     config.service(authentication::login);
     config.service(authentication::setup);
+
+    config.service(company::find_all);
+    config.service(company::create);
+    config.service(company::update);
 
     config.service(user::find);
     config.service(user::find_all);
