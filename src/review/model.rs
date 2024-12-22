@@ -1,5 +1,5 @@
 use crate::db::DbConnection;
-use crate::error_handler::CustomError;
+use crate::utils::AppError;
 use crate::schema::reviews;
 use crate::user;
 use chrono::{Datelike, Days, NaiveDate, Weekday};
@@ -59,11 +59,7 @@ pub struct ReviewStatistics {
 }
 
 impl Review {
-    pub fn find(
-        conn: &mut DbConnection,
-        user_id: Uuid,
-        review_id: Uuid,
-    ) -> Result<Self, CustomError> {
+    pub fn find(conn: &mut DbConnection, user_id: Uuid, review_id: Uuid) -> Result<Self, AppError> {
         let reviews = reviews::table
             .select(Review::as_select())
             .filter(reviews::review_id.eq(review_id))
@@ -72,14 +68,14 @@ impl Review {
         Ok(reviews)
     }
 
-    pub fn create(conn: &mut DbConnection, review: Review) -> Result<Self, CustomError> {
+    pub fn create(conn: &mut DbConnection, review: Review) -> Result<Self, AppError> {
         let new_review = diesel::insert_into(reviews::table)
             .values(review)
             .get_result(conn)?;
         Ok(new_review)
     }
 
-    pub fn update(conn: &mut DbConnection, review: Review) -> Result<Self, CustomError> {
+    pub fn update(conn: &mut DbConnection, review: Review) -> Result<Self, AppError> {
         let updated_review = diesel::update(reviews::table)
             .filter(reviews::review_id.eq(review.review_id))
             .set(review)
@@ -87,7 +83,7 @@ impl Review {
         Ok(updated_review)
     }
 
-    pub fn delete(conn: &mut DbConnection, review_id: Uuid) -> Result<usize, CustomError> {
+    pub fn delete(conn: &mut DbConnection, review_id: Uuid) -> Result<usize, AppError> {
         let res = diesel::delete(reviews::table.filter(reviews::review_id.eq(review_id)))
             .execute(conn)?;
         Ok(res)
@@ -96,7 +92,7 @@ impl Review {
     pub fn find_statistics(
         conn: &mut DbConnection,
         user_id: Uuid,
-    ) -> Result<ReviewStatistics, CustomError> {
+    ) -> Result<ReviewStatistics, AppError> {
         let current_year = chrono::offset::Local::now().year();
         let current_year_start = NaiveDate::from_ymd_opt(current_year, 1, 1).unwrap();
         let current_year_end = NaiveDate::from_ymd_opt(current_year + 1, 1, 1)

@@ -1,6 +1,6 @@
 use crate::db::DbConnection;
-use crate::error_handler::CustomError;
 use crate::schema::movie_entries;
+use crate::utils::AppError;
 use crate::{user, watchlist};
 use chrono::NaiveDate;
 use diesel::prelude::*;
@@ -40,7 +40,7 @@ impl MovieEntry {
         conn: &mut DbConnection,
         user_id: Uuid,
         watchlist_id: Uuid,
-    ) -> Result<Vec<Self>, CustomError> {
+    ) -> Result<Vec<Self>, AppError> {
         let movie_entries = movie_entries::table
             .filter(movie_entries::user_id.eq(user_id))
             .filter(movie_entries::watchlist_id.eq(watchlist_id))
@@ -55,7 +55,7 @@ impl MovieEntry {
         user_id: Uuid,
         watchlist_id: Uuid,
         movie_id: i32,
-    ) -> Result<Self, CustomError> {
+    ) -> Result<Self, AppError> {
         let movie_entries = movie_entries::table
             .filter(movie_entries::user_id.eq(user_id))
             .filter(movie_entries::watchlist_id.eq(watchlist_id))
@@ -66,10 +66,7 @@ impl MovieEntry {
         Ok(movie_entries)
     }
 
-    pub fn create(
-        conn: &mut DbConnection,
-        watchlist_entry: MovieEntry,
-    ) -> Result<Self, CustomError> {
+    pub fn create(conn: &mut DbConnection, watchlist_entry: MovieEntry) -> Result<Self, AppError> {
         let new_watchlist = diesel::insert_into(movie_entries::table)
             .values(watchlist_entry)
             .get_result(conn)?;
@@ -80,7 +77,7 @@ impl MovieEntry {
         conn: &mut DbConnection,
         watchlist_id: Uuid,
         movie_id: i32,
-    ) -> Result<usize, CustomError> {
+    ) -> Result<usize, AppError> {
         let res = diesel::delete(
             movie_entries::table.filter(
                 movie_entries::watchlist_id

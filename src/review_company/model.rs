@@ -1,8 +1,8 @@
 use crate::db::DbConnection;
-use crate::error_handler::CustomError;
 use crate::schema::review_company;
 use crate::schema::users;
 use crate::user::User;
+use crate::utils::AppError;
 use crate::{review, user};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -36,7 +36,6 @@ impl From<ReviewCompany> for ReviewCompanySummary {
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-
 pub struct ReviewCompanyDetails {
     pub user_id: Uuid,
     pub first_name: String,
@@ -47,7 +46,7 @@ impl ReviewCompany {
     pub fn find_by_review(
         conn: &mut DbConnection,
         review_id: Uuid,
-    ) -> Result<Vec<ReviewCompanyDetails>, CustomError> {
+    ) -> Result<Vec<ReviewCompanyDetails>, AppError> {
         let review_company = review_company::table
             .filter(review_company::review_id.eq(review_id))
             .inner_join(users::table)
@@ -69,7 +68,7 @@ impl ReviewCompany {
         conn: &mut DbConnection,
         review_id: Uuid,
         review_company: Option<Vec<ReviewCompanySummary>>,
-    ) -> Result<Vec<ReviewCompanyDetails>, CustomError> {
+    ) -> Result<Vec<ReviewCompanyDetails>, AppError> {
         conn.transaction::<_, diesel::result::Error, _>(|conn| {
             diesel::delete(review_company::table.filter(review_company::review_id.eq(review_id)))
                 .execute(conn)?;

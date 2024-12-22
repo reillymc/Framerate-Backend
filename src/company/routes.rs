@@ -1,8 +1,7 @@
 use crate::{
     company::model::{Company, SaveCompany},
     db::DbPool,
-    error_handler::CustomError,
-    utils::{jwt::Auth, response_body::Success},
+    utils::{jwt::Auth, response_body::Success, AppError},
 };
 use actix_web::{get, post, put, web, Responder};
 use uuid::Uuid;
@@ -52,7 +51,7 @@ async fn update(
     .await?;
 
     let Ok(company) = company else {
-        return Err(CustomError::new(404, "Company not found"))?;
+        return Err(AppError::external(404, "Company not found"))?;
     };
 
     Ok(Success::new(company))

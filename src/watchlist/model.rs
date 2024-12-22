@@ -1,7 +1,7 @@
 use crate::db::DbConnection;
-use crate::error_handler::CustomError;
 use crate::schema::watchlists;
 use crate::user;
+use crate::utils::AppError;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -29,7 +29,7 @@ impl Watchlist {
         conn: &mut DbConnection,
         user_id: Uuid,
         media_type: &str,
-    ) -> Result<Self, CustomError> {
+    ) -> Result<Self, AppError> {
         let watchlist = watchlists::table
             .select(Watchlist::as_select())
             .filter(
@@ -62,7 +62,7 @@ impl Watchlist {
         Ok(new_watchlist)
     }
 
-    pub fn find_by_user(conn: &mut DbConnection, user_id: Uuid) -> Result<Vec<Self>, CustomError> {
+    pub fn find_by_user(conn: &mut DbConnection, user_id: Uuid) -> Result<Vec<Self>, AppError> {
         let watchlists = watchlists::table
             .filter(watchlists::user_id.eq(user_id))
             .order(watchlists::name.desc())
@@ -71,14 +71,14 @@ impl Watchlist {
         Ok(watchlists)
     }
 
-    pub fn create(conn: &mut DbConnection, watchlist: Watchlist) -> Result<Self, CustomError> {
+    pub fn create(conn: &mut DbConnection, watchlist: Watchlist) -> Result<Self, AppError> {
         let new_watchlist = diesel::insert_into(watchlists::table)
             .values(watchlist)
             .get_result(conn)?;
         Ok(new_watchlist)
     }
 
-    pub fn update(conn: &mut DbConnection, watchlist: Watchlist) -> Result<Self, CustomError> {
+    pub fn update(conn: &mut DbConnection, watchlist: Watchlist) -> Result<Self, AppError> {
         let updated_watchlist = diesel::update(watchlists::table)
             .filter(watchlists::watchlist_id.eq(watchlist.watchlist_id))
             .set(watchlist)
@@ -86,7 +86,7 @@ impl Watchlist {
         Ok(updated_watchlist)
     }
 
-    pub fn delete(conn: &mut DbConnection, watchlist_id: Uuid) -> Result<usize, CustomError> {
+    pub fn delete(conn: &mut DbConnection, watchlist_id: Uuid) -> Result<usize, AppError> {
         let res =
             diesel::delete(watchlists::table.filter(watchlists::watchlist_id.eq(watchlist_id)))
                 .execute(conn)?;

@@ -1,14 +1,12 @@
 use super::ShowReviewReadResponse;
 
 use crate::db::DbPool;
-use crate::error_handler::CustomError;
 use crate::review::{Review, ReviewFindParameters};
 use crate::review_company::{ReviewCompany, ReviewCompanyDetails, ReviewCompanySummary};
 use crate::show::Show;
 use crate::show_review::ShowReview;
 use crate::tmdb::TmdbClient;
-use crate::utils::jwt::Auth;
-use crate::utils::response_body::Success;
+use crate::utils::{jwt::Auth, response_body::Success, AppError};
 use actix_web::{get, post, web};
 use actix_web::{put, Responder};
 use chrono::NaiveDate;
@@ -109,7 +107,7 @@ async fn find_by_review_id(
             ShowReview::find_by_review_id(&mut conn, auth.user_id, review_id.into_inner())?;
         let company = ReviewCompany::find_by_review(&mut conn, review.review_id)?;
 
-        Ok::<ShowReviewResponse, CustomError>(ShowReviewResponse::from(review).company(company))
+        Ok::<ShowReviewResponse, AppError>(ShowReviewResponse::from(review).company(company))
     })
     .await??;
 
@@ -180,7 +178,7 @@ async fn create(
     let review = web::block(move || {
         let mut conn = pool.get()?;
 
-        conn.transaction::<ShowReviewResponse, CustomError, _>(|conn| {
+        conn.transaction::<ShowReviewResponse, AppError, _>(|conn| {
             let created_review = Review::create(conn, review_to_save)?;
             let created_show_review = ShowReview::create(conn, show_review_to_save)?;
 
@@ -224,7 +222,7 @@ async fn update(
         let existing_review = ShowReview::find_by_review_id(&mut conn, auth.user_id, review_id)?;
 
         if show_id != existing_review.show.id {
-            return Err(CustomError::new(400, "Review show cannot be changed"));
+            return Err(AppError::external(400, "Review show cannot be changed"));
         }
 
         let review_to_save = Review {
@@ -253,7 +251,7 @@ async fn update(
             first_air_date: show.first_air_date,
         };
 
-        conn.transaction::<ShowReviewResponse, CustomError, _>(|conn| {
+        conn.transaction(|conn| {
             let updated_review = Review::update(conn, review_to_save)?;
 
             let updated_show_review = ShowReview::update(conn, show_review_to_save)?;

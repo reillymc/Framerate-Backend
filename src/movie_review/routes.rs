@@ -1,14 +1,12 @@
 use super::MovieReviewReadResponse;
 
 use crate::db::DbPool;
-use crate::error_handler::CustomError;
 use crate::movie::Movie;
 use crate::movie_review::MovieReview;
 use crate::review::{Review, ReviewFindParameters};
 use crate::review_company::{ReviewCompany, ReviewCompanyDetails, ReviewCompanySummary};
 use crate::tmdb::TmdbClient;
-use crate::utils::jwt::Auth;
-use crate::utils::response_body::Success;
+use crate::utils::{jwt::Auth, response_body::Success, AppError};
 use actix_web::{get, post, web};
 use actix_web::{put, Responder};
 use chrono::NaiveDate;
@@ -109,7 +107,7 @@ async fn find_by_review_id(
             MovieReview::find_by_review_id(&mut conn, auth.user_id, review_id.into_inner())?;
         let company = ReviewCompany::find_by_review(&mut conn, review.review_id)?;
 
-        Ok::<MovieReviewResponse, CustomError>(MovieReviewResponse::from(review).company(company))
+        Ok::<MovieReviewResponse, AppError>(MovieReviewResponse::from(review).company(company))
     })
     .await??;
 
@@ -174,7 +172,7 @@ async fn create(
     let review = web::block(move || {
         let mut conn = pool.get()?;
 
-        conn.transaction::<MovieReviewResponse, CustomError, _>(|conn| {
+        conn.transaction::<MovieReviewResponse, AppError, _>(|conn| {
             let created_review = Review::create(conn, review_to_save)?;
             let created_movie_review = MovieReview::create(conn, movie_review_to_save)?;
 
@@ -208,6 +206,7 @@ async fn update(
     review: web::Json<SaveMovieReviewRequest>,
     path: web::Path<(i32, Uuid)>,
 ) -> actix_web::Result<impl Responder> {
+    let review = review.into_inner();
     let (movie_id, review_id) = path.into_inner();
 
     let movie = Movie::find(&client, &movie_id).await?;
@@ -218,7 +217,7 @@ async fn update(
         let existing_review = MovieReview::find_by_review_id(&mut conn, auth.user_id, review_id)?;
 
         if movie_id != existing_review.movie.id {
-            return Err(CustomError::new(400, "Review movie cannot be changed"));
+            return Err(AppError::external(400, "Review movie cannot be changed"));
         }
 
         let review_to_save = Review {
@@ -241,13 +240,12 @@ async fn update(
             release_date: movie.release_date,
         };
 
-        conn.transaction::<MovieReviewResponse, CustomError, _>(|conn| {
+        conn.transaction(|conn| {
             let updated_review = Review::update(conn, review_to_save)?;
 
             let updated_movie_review = MovieReview::update(conn, movie_review_to_save)?;
 
-            let company =
-                ReviewCompany::replace(conn, updated_review.review_id, review.company.clone())?;
+            let company = ReviewCompany::replace(conn, updated_review.review_id, review.company)?;
 
             let review_response = MovieReviewResponse {
                 review_id: updated_review.review_id,

@@ -1,6 +1,6 @@
 use crate::{
     db::DbConnection,
-    error_handler::CustomError,
+    utils::AppError,
     schema::users::{self},
     user::{PermissionLevel, User},
 };
@@ -66,7 +66,7 @@ impl From<User> for Company {
 }
 
 impl Company {
-    pub fn find_all(conn: &mut DbConnection, created_by: &Uuid) -> Result<Vec<Self>, CustomError> {
+    pub fn find_all(conn: &mut DbConnection, created_by: &Uuid) -> Result<Vec<Self>, AppError> {
         let company = users::table
             .select((
                 users::user_id,
@@ -85,7 +85,7 @@ impl Company {
         conn: &mut DbConnection,
         company: SaveCompany,
         created_by: Uuid,
-    ) -> Result<Self, CustomError> {
+    ) -> Result<Self, AppError> {
         let user_to_save = User::from(company).created_by(created_by);
 
         let new_user: User = diesel::insert_into(users::table)
@@ -100,7 +100,7 @@ impl Company {
         user_id: Uuid,
         company: SaveCompany,
         created_by: &Uuid,
-    ) -> Result<Self, CustomError> {
+    ) -> Result<Self, AppError> {
         let updated_user: User = diesel::update(users::table)
             .filter(users::created_by.eq(created_by))
             .filter(users::user_id.eq(user_id))
@@ -114,7 +114,7 @@ impl Company {
         conn: &mut DbConnection,
         user_id: Uuid,
         created_by: &Uuid,
-    ) -> Result<usize, CustomError> {
+    ) -> Result<usize, AppError> {
         let res = diesel::delete(users::table)
             .filter(users::created_by.eq(created_by))
             .filter(users::user_id.eq(user_id))

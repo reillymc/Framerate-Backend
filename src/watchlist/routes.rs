@@ -2,9 +2,7 @@ use super::NewWatchlist;
 use super::Watchlist;
 
 use crate::db::DbPool;
-use crate::error_handler::CustomError;
-use crate::utils::jwt::Auth;
-use crate::utils::response_body::Success;
+use crate::utils::{jwt::Auth, response_body::Success, AppError};
 use actix_web::Responder;
 use actix_web::{get, post, web};
 use uuid::Uuid;
@@ -16,7 +14,7 @@ async fn find_by_media_type(
     media_type: web::Path<String>,
 ) -> actix_web::Result<impl Responder> {
     if media_type.as_str() != "movie" && media_type.as_str() != "show" {
-        Err(CustomError::new(400, "Invalid media type"))?
+        Err(AppError::external(400, "Invalid media type"))?
     }
 
     let watchlist = web::block(move || {

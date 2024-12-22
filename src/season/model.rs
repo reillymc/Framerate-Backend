@@ -1,7 +1,6 @@
 use crate::{
-    error_handler::CustomError,
     tmdb::{generate_endpoint, TmdbClient},
-    utils::serialization::empty_string_as_none,
+    utils::{serialization::empty_string_as_none, AppError},
 };
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -79,13 +78,13 @@ impl Season {
         client: &TmdbClient,
         show_id: &i32,
         season_number: &i32,
-    ) -> Result<Season, CustomError> {
+    ) -> Result<Season, AppError> {
         let request_url = generate_endpoint(format!("tv/{show_id}/season/{season_number}"), None);
 
         let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
-            return Err(CustomError::new(
+            return Err(AppError::tmdb_error(
                 response.status().as_u16(),
                 response.text().await?.as_str(),
             ));

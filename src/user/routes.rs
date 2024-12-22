@@ -1,9 +1,6 @@
-use crate::{
-    db::DbPool,
-    error_handler::CustomError,
-    user::NewUser,
-    utils::{jwt::Auth, response_body::Success},
-};
+use crate::db::DbPool;
+use crate::user::NewUser;
+use crate::utils::{jwt::Auth, response_body::Success, AppError};
 use actix_web::{get, post, put, web, Responder};
 use serde::Serialize;
 use uuid::Uuid;
@@ -20,7 +17,7 @@ enum UserRead {
 #[get("/users")]
 async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Responder> {
     if !auth.is_at_least_admin() {
-        return Err(CustomError::new(401, "Unauthorized to list users"))?;
+        return Err(AppError::external(401, "Unauthorized to list users"))?;
     }
 
     let users = web::block(move || {
@@ -45,7 +42,7 @@ async fn find(
         } else {
             UserRead::Type2(User::find_summary(&mut conn, user_id.into_inner())?)
         };
-        Ok::<UserRead, CustomError>(user)
+        Ok::<UserRead, AppError>(user)
     })
     .await??;
 
@@ -59,11 +56,11 @@ async fn create(
     user: web::Json<NewUser>,
 ) -> actix_web::Result<impl Responder> {
     if !auth.is_at_least_admin() {
-        return Err(CustomError::new(401, "Unauthorized to create users"))?;
+        return Err(AppError::external(401, "Unauthorized to create users"))?;
     }
 
     if user.email.is_empty() || user.password.is_empty() {
-        return Err(CustomError::new(400, "Email and password are mandatory"))?;
+        return Err(AppError::external(400, "Email and password are mandatory"))?;
     }
 
     let user = web::block(move || {
@@ -83,7 +80,7 @@ async fn update(
     user: web::Json<UpdatedUser>,
 ) -> actix_web::Result<impl Responder> {
     if auth.user_id != *user_id {
-        return Err(CustomError::new(404, "User not found"))?;
+        return Err(AppError::external(404, "User not found"))?;
     }
 
     let user = web::block(move || {

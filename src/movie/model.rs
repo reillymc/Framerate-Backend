@@ -1,6 +1,8 @@
-use crate::error_handler::CustomError;
 use crate::tmdb::{generate_endpoint, TmdbClient};
-use crate::utils::serialization::{date_time_as_date, empty_string_as_none};
+use crate::utils::{
+    serialization::{date_time_as_date, empty_string_as_none},
+    AppError,
+};
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -112,7 +114,7 @@ impl From<MovieResponse> for Movie {
 }
 
 impl Movie {
-    pub async fn find(client: &TmdbClient, id: &i32) -> Result<Movie, CustomError> {
+    pub async fn find(client: &TmdbClient, id: &i32) -> Result<Movie, AppError> {
         let request_url = generate_endpoint(
             format!("movie/{id}"),
             Some(HashMap::from([("append_to_response", "release_dates")])),
@@ -121,7 +123,7 @@ impl Movie {
         let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
-            return Err(CustomError::new(
+            return Err(AppError::tmdb_error(
                 response.status().as_u16(),
                 response.text().await?.as_str(),
             ));
@@ -131,7 +133,7 @@ impl Movie {
         Ok(movie.into())
     }
 
-    pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Movie>, CustomError> {
+    pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Movie>, AppError> {
         let request_url = generate_endpoint(
             "discover/movie".to_string(),
             Some(HashMap::from([
@@ -145,7 +147,7 @@ impl Movie {
         let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
-            return Err(CustomError::new(
+            return Err(AppError::tmdb_error(
                 response.status().as_u16(),
                 response.text().await?.as_str(),
             ));
@@ -155,7 +157,7 @@ impl Movie {
         Ok(search_results.results)
     }
 
-    pub async fn popular(client: &TmdbClient) -> Result<Vec<Movie>, CustomError> {
+    pub async fn popular(client: &TmdbClient) -> Result<Vec<Movie>, AppError> {
         let min_date = (chrono::Utc::now().date_naive() - chrono::Duration::days(30)).to_string();
         let max_date = (chrono::Utc::now().date_naive() + chrono::Duration::days(7)).to_string();
 
@@ -175,7 +177,7 @@ impl Movie {
         let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
-            return Err(CustomError::new(
+            return Err(AppError::tmdb_error(
                 response.status().as_u16(),
                 response.text().await?.as_str(),
             ));

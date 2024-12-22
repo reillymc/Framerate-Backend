@@ -1,8 +1,6 @@
-use crate::{
-    db::DbConnection,
-    error_handler::{AuthError, CustomError},
-    schema::users::{self},
-};
+use crate::db::DbConnection;
+use crate::schema::users;
+use crate::utils::AppError;
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::NaiveDateTime;
 use diesel::{dsl, prelude::*};
@@ -162,7 +160,7 @@ impl User {
 }
 
 impl User {
-    pub fn find(conn: &mut DbConnection, user_id: Uuid) -> Result<UserFindResponse, CustomError> {
+    pub fn find(conn: &mut DbConnection, user_id: Uuid) -> Result<UserFindResponse, AppError> {
         let users = users::table
             .select((
                 users::user_id,
@@ -177,10 +175,7 @@ impl User {
         Ok(users)
     }
 
-    pub fn find_summary(
-        conn: &mut DbConnection,
-        user_id: Uuid,
-    ) -> Result<UserResponse, CustomError> {
+    pub fn find_summary(conn: &mut DbConnection, user_id: Uuid) -> Result<UserResponse, AppError> {
         let users = users::table
             .select((
                 users::user_id,
@@ -193,7 +188,7 @@ impl User {
         Ok(users)
     }
 
-    pub fn find_all(conn: &mut DbConnection) -> Result<Vec<UserResponse>, CustomError> {
+    pub fn find_all(conn: &mut DbConnection) -> Result<Vec<UserResponse>, AppError> {
         let users = users::table
             .select((
                 users::user_id,
@@ -205,7 +200,7 @@ impl User {
         Ok(users)
     }
 
-    pub fn create(conn: &mut DbConnection, user: NewUser) -> Result<Self, CustomError> {
+    pub fn create(conn: &mut DbConnection, user: NewUser) -> Result<Self, AppError> {
         let password = Self::hash_password(&user.password)?;
 
         let user_to_save = User::from(user).password(password);
@@ -216,7 +211,7 @@ impl User {
         Ok(new_user)
     }
 
-    pub fn create_admin(conn: &mut DbConnection, user: NewUser) -> Result<Self, CustomError> {
+    pub fn create_admin(conn: &mut DbConnection, user: NewUser) -> Result<Self, AppError> {
         let password = Self::hash_password(&user.password)?;
 
         let user_to_save = User::from(user)
@@ -233,7 +228,7 @@ impl User {
         conn: &mut DbConnection,
         user_id: Uuid,
         user: UpdatedUser,
-    ) -> Result<Self, CustomError> {
+    ) -> Result<Self, AppError> {
         let updated_user = diesel::update(users::table)
             .filter(users::user_id.eq(user_id))
             .set(user)
@@ -241,16 +236,16 @@ impl User {
         Ok(updated_user)
     }
 
-    pub fn delete(conn: &mut DbConnection, user_id: Uuid) -> Result<usize, CustomError> {
+    pub fn delete(conn: &mut DbConnection, user_id: Uuid) -> Result<usize, AppError> {
         let res = diesel::delete(users::table.filter(users::user_id.eq(user_id))).execute(conn)?;
         Ok(res)
     }
 
-    pub fn hash_password(plain: &str) -> Result<String, CustomError> {
+    pub fn hash_password(plain: &str) -> Result<String, AppError> {
         Ok(hash(plain, DEFAULT_COST)?)
     }
 
-    pub fn find_any(conn: &mut DbConnection) -> Result<bool, CustomError> {
+    pub fn find_any(conn: &mut DbConnection) -> Result<bool, AppError> {
         let res = dsl::select(dsl::exists(users::table.select(users::user_id).limit(1)))
             .get_result(conn)?;
         Ok(res)
@@ -264,25 +259,24 @@ pub struct AuthUser {
 }
 
 impl AuthUser {
-    pub fn login(&self, conn: &mut DbConnection) -> Result<User, AuthError> {
+    pub fn login(&self, conn: &mut DbConnection) -> Result<User, AppError> {
         let user: User = users::table
             .filter(users::email.eq(&self.email))
+            .filter(users::permission_level.ge::<i16>(PermissionLevel::GeneralUser.into()))
             .first(conn)?;
 
         let Some(password) = &user.password else {
-            return Err(AuthError::WrongPassword("Invalid account".to_string()));
+            return Err(AppError::external(401, "Invalid email or password"));
         };
 
-        let verify_password = verify(&self.password, password).map_err(|_error| {
-            AuthError::WrongPassword("Wrong password, check again please".to_string())
-        })?;
+        let Ok(verify_password) = verify(&self.password, password) else {
+            return Err(AppError::external(401, "Invalid email or password"));
+        };
 
         if verify_password {
             Ok(user)
         } else {
-            Err(AuthError::WrongPassword(
-                "Wrong password, check again please".to_string(),
-            ))
+            Err(AppError::external(401, "Invalid email or password"))
         }
     }
 }

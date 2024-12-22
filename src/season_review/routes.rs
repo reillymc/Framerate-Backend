@@ -1,14 +1,12 @@
 use super::SeasonReviewReadResponse;
 
 use crate::db::DbPool;
-use crate::error_handler::CustomError;
 use crate::review::Review;
 use crate::review_company::{ReviewCompany, ReviewCompanyDetails, ReviewCompanySummary};
 use crate::season::Season;
 use crate::season_review::SeasonReview;
 use crate::tmdb::TmdbClient;
-use crate::utils::jwt::Auth;
-use crate::utils::response_body::Success;
+use crate::utils::{jwt::Auth, response_body::Success, AppError};
 use actix_web::{get, post, web};
 use actix_web::{put, Responder};
 use chrono::NaiveDate;
@@ -111,7 +109,7 @@ async fn find_by_review_id(
             SeasonReview::find_by_review_id(&mut conn, auth.user_id, review_id.into_inner())?;
         let company = ReviewCompany::find_by_review(&mut conn, review.review_id)?;
 
-        Ok::<SeasonReviewResponse, CustomError>(SeasonReviewResponse::from(review).company(company))
+        Ok::<SeasonReviewResponse, AppError>(SeasonReviewResponse::from(review).company(company))
     })
     .await??;
 
@@ -156,7 +154,7 @@ async fn create(
     let review = web::block(move || {
         let mut conn = pool.get()?;
 
-        conn.transaction::<SeasonReviewResponse, CustomError, _>(|conn| {
+        conn.transaction::<SeasonReviewResponse, AppError, _>(|conn| {
             let created_review = Review::create(conn, review_to_save)?;
             let created_season_review = SeasonReview::create(conn, season_review_to_save)?;
 
@@ -190,6 +188,7 @@ async fn update(
     review: web::Json<SaveSeasonReviewRequest>,
     path: web::Path<(i32, i32, Uuid)>,
 ) -> actix_web::Result<impl Responder> {
+    let review = review.into_inner();
     let (show_id, season_number, review_id) = path.into_inner();
 
     let season = Season::find(&client, &show_id, &season_number).await?;
@@ -202,7 +201,7 @@ async fn update(
         if show_id != existing_review.season.show_id
             || season_number != existing_review.season.season_number
         {
-            return Err(CustomError::new(
+            return Err(AppError::external(
                 400,
                 "Review show and season cannot be changed",
             ));
@@ -228,13 +227,12 @@ async fn update(
             air_date: season.air_date,
         };
 
-        conn.transaction::<SeasonReviewResponse, CustomError, _>(|conn| {
+        conn.transaction(|conn| {
             let updated_review = Review::update(conn, review_to_save)?;
 
             let updated_season_review = SeasonReview::update(conn, season_review_to_save)?;
 
-            let company =
-                ReviewCompany::replace(conn, updated_review.review_id, review.company.clone())?;
+            let company = ReviewCompany::replace(conn, updated_review.review_id, review.company)?;
 
             let review_response = SeasonReviewResponse {
                 review_id: updated_review.review_id,

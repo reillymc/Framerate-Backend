@@ -1,8 +1,7 @@
 use crate::{
-    error_handler::CustomError,
     season::{EpisodeResponse, Season, SeasonResponse},
     tmdb::{generate_endpoint, TmdbClient},
-    utils::serialization::empty_string_as_none,
+    utils::{serialization::empty_string_as_none, AppError},
 };
 
 use chrono::NaiveDate;
@@ -114,7 +113,7 @@ struct ShowSearchResults {
 }
 
 impl Show {
-    pub async fn find(client: &TmdbClient, id: &i32) -> Result<Show, CustomError> {
+    pub async fn find(client: &TmdbClient, id: &i32) -> Result<Show, AppError> {
         let request_url = generate_endpoint(
             format!("tv/{id}"),
             Some(HashMap::from([("append_to_response", "external_ids")])),
@@ -123,7 +122,7 @@ impl Show {
         let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
-            return Err(CustomError::new(
+            return Err(AppError::tmdb_error(
                 response.status().as_u16(),
                 response.text().await?.as_str(),
             ));
@@ -181,7 +180,7 @@ impl Show {
         Ok(show)
     }
 
-    pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Show>, CustomError> {
+    pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Show>, AppError> {
         let request_url = generate_endpoint(
             "search/tv".to_string(),
             Some(HashMap::from([("query", query), ("page", "1")])),
@@ -190,7 +189,7 @@ impl Show {
         let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
-            return Err(CustomError::new(
+            return Err(AppError::tmdb_error(
                 response.status().as_u16(),
                 response.text().await?.as_str(),
             ));
@@ -204,7 +203,7 @@ impl Show {
             .collect())
     }
 
-    pub async fn popular(client: &TmdbClient) -> Result<Vec<Show>, CustomError> {
+    pub async fn popular(client: &TmdbClient) -> Result<Vec<Show>, AppError> {
         let max_date = (chrono::Utc::now().date_naive() + chrono::Duration::weeks(26)).to_string();
 
         let request_url = generate_endpoint(
@@ -224,7 +223,7 @@ impl Show {
         let response = client.get(&request_url).send().await?;
 
         if !response.status().is_success() {
-            return Err(CustomError::new(
+            return Err(AppError::tmdb_error(
                 response.status().as_u16(),
                 response.text().await?.as_str(),
             ));

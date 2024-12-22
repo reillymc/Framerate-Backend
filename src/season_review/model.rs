@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     db::DbConnection,
-    error_handler::CustomError,
+    utils::AppError,
     review::{self, Review},
     schema::{reviews, season_reviews},
     season::Season,
@@ -57,7 +57,7 @@ impl SeasonReview {
         conn: &mut DbConnection,
         user_id: Uuid,
         review_id: Uuid,
-    ) -> Result<SeasonReviewReadResponse, CustomError> {
+    ) -> Result<SeasonReviewReadResponse, AppError> {
         let (season_review, review_details) = season_reviews::table
             .filter(season_reviews::review_id.eq(review_id))
             .filter(season_reviews::user_id.eq(user_id))
@@ -84,7 +84,7 @@ impl SeasonReview {
         user_id: Uuid,
         show_id: i32,
         season_number: i32,
-    ) -> Result<Vec<SeasonReviewReadResponse>, CustomError> {
+    ) -> Result<Vec<SeasonReviewReadResponse>, AppError> {
         let reviews = season_reviews::table
             .filter(season_reviews::show_id.eq(show_id))
             .filter(season_reviews::season_number.eq(season_number))
@@ -110,14 +110,14 @@ impl SeasonReview {
         Ok(season_reviews)
     }
 
-    pub fn create(conn: &mut DbConnection, review: SeasonReview) -> Result<Self, CustomError> {
+    pub fn create(conn: &mut DbConnection, review: SeasonReview) -> Result<Self, AppError> {
         let new_review = diesel::insert_into(season_reviews::table)
             .values(review)
             .get_result(conn)?;
         Ok(new_review)
     }
 
-    pub fn update(conn: &mut DbConnection, review: SeasonReview) -> Result<Self, CustomError> {
+    pub fn update(conn: &mut DbConnection, review: SeasonReview) -> Result<Self, AppError> {
         let updated_review = diesel::update(season_reviews::table)
             .filter(season_reviews::review_id.eq(review.review_id))
             .set(review)

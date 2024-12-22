@@ -1,11 +1,9 @@
 use super::MovieEntry;
 
 use crate::db::DbPool;
-use crate::error_handler::CustomError;
 use crate::movie::Movie;
 use crate::tmdb::TmdbClient;
-use crate::utils::jwt::Auth;
-use crate::utils::response_body::Success;
+use crate::utils::{jwt::Auth, response_body::Success, AppError};
 use crate::watchlist::Watchlist;
 use actix_web::{delete, Responder};
 use actix_web::{get, post, web};
@@ -104,10 +102,7 @@ async fn delete(
     .await??;
 
     if count == 0 {
-        return Err(CustomError {
-            status_code: 404,
-            message: "Watchlist entry not found".to_string(),
-        })?;
+        return Err(AppError::external(404, "Watchlist entry not found"))?;
     }
 
     Ok(Success::new(DeleteResponse { count }))

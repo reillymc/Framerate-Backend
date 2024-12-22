@@ -4,11 +4,11 @@ use uuid::Uuid;
 
 use crate::{
     db::{DbConnection, DEFAULT_PAGE_SIZE},
-    error_handler::CustomError,
     movie::Movie,
     review::{self, Order, Review, ReviewFindParameters, Sort},
     schema::{movie_reviews, review_company, reviews},
     user,
+    utils::AppError,
 };
 
 #[derive(AsChangeset, Insertable, Associations, Selectable, Queryable)]
@@ -59,7 +59,7 @@ impl MovieReview {
         conn: &mut DbConnection,
         user_id: Uuid,
         review_id: Uuid,
-    ) -> Result<MovieReviewReadResponse, CustomError> {
+    ) -> Result<MovieReviewReadResponse, AppError> {
         let (movie_review, review_details) = movie_reviews::table
             .filter(movie_reviews::review_id.eq(review_id))
             .filter(movie_reviews::user_id.eq(user_id))
@@ -85,7 +85,7 @@ impl MovieReview {
         conn: &mut DbConnection,
         user_id: Uuid,
         params: ReviewFindParameters,
-    ) -> Result<Vec<MovieReviewReadResponse>, CustomError> {
+    ) -> Result<Vec<MovieReviewReadResponse>, AppError> {
         let mut query = movie_reviews::table
             .filter(movie_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
@@ -166,7 +166,7 @@ impl MovieReview {
         conn: &mut DbConnection,
         user_id: Uuid,
         movie_id: i32,
-    ) -> Result<Vec<MovieReviewReadResponse>, CustomError> {
+    ) -> Result<Vec<MovieReviewReadResponse>, AppError> {
         let reviews = movie_reviews::table
             .filter(movie_reviews::movie_id.eq(movie_id))
             .filter(movie_reviews::user_id.eq(user_id))
@@ -191,14 +191,14 @@ impl MovieReview {
         Ok(movie_reviews)
     }
 
-    pub fn create(conn: &mut DbConnection, review: MovieReview) -> Result<Self, CustomError> {
+    pub fn create(conn: &mut DbConnection, review: MovieReview) -> Result<Self, AppError> {
         let new_review = diesel::insert_into(movie_reviews::table)
             .values(review)
             .get_result(conn)?;
         Ok(new_review)
     }
 
-    pub fn update(conn: &mut DbConnection, review: MovieReview) -> Result<Self, CustomError> {
+    pub fn update(conn: &mut DbConnection, review: MovieReview) -> Result<Self, AppError> {
         let updated_review = diesel::update(movie_reviews::table)
             .filter(movie_reviews::review_id.eq(review.review_id))
             .set(review)

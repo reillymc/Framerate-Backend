@@ -1,4 +1,4 @@
-use crate::{error_handler::CustomError, user::PermissionLevel};
+use crate::{user::PermissionLevel, utils::AppError};
 use chrono::{Duration, Local};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -40,14 +40,14 @@ impl UserSession {
     fn new(id: Uuid, permission_level: PermissionLevel) -> Self {
         UserSession {
             id,
-            permission_level: permission_level,
+            permission_level,
             // TODO: investigate refresh tokens
             exp: (Local::now() + Duration::weeks(52)).timestamp() as usize,
         }
     }
 }
 
-pub fn create_token(id: Uuid, permission_level: PermissionLevel) -> Result<String, CustomError> {
+pub fn create_token(id: Uuid, permission_level: PermissionLevel) -> Result<String, AppError> {
     let claims = UserSession::new(id, permission_level);
     let encoded = encode(
         &Header::default(),
@@ -58,7 +58,7 @@ pub fn create_token(id: Uuid, permission_level: PermissionLevel) -> Result<Strin
     Ok(encoded)
 }
 
-pub fn decode_token(token: &str) -> Result<Auth, CustomError> {
+pub fn decode_token(token: &str) -> Result<Auth, AppError> {
     let decoded = decode::<UserSession>(
         token,
         &DecodingKey::from_secret(get_secret().as_ref()),

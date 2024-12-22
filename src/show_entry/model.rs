@@ -1,8 +1,8 @@
 use crate::db::DbConnection;
-use crate::error_handler::CustomError;
 use crate::schema::show_entries;
 use crate::show::{Show, SHOW_ACTIVE_STATUSES};
 use crate::tmdb::TmdbClient;
+use crate::utils::AppError;
 use crate::{user, watchlist};
 use chrono::{Duration, NaiveDate, Utc};
 use diesel::prelude::*;
@@ -49,7 +49,7 @@ impl ShowEntry {
         conn: &mut DbConnection,
         user_id: Uuid,
         watchlist_id: Uuid,
-    ) -> Result<Vec<Self>, CustomError> {
+    ) -> Result<Vec<Self>, AppError> {
         let show_entries = show_entries::table
             .filter(show_entries::user_id.eq(user_id))
             .filter(show_entries::watchlist_id.eq(watchlist_id))
@@ -64,7 +64,7 @@ impl ShowEntry {
         user_id: Uuid,
         watchlist_id: Uuid,
         show_id: i32,
-    ) -> Result<Self, CustomError> {
+    ) -> Result<Self, AppError> {
         let show_entries = show_entries::table
             .filter(show_entries::user_id.eq(user_id))
             .filter(show_entries::watchlist_id.eq(watchlist_id))
@@ -75,10 +75,7 @@ impl ShowEntry {
         Ok(show_entries)
     }
 
-    pub fn create(
-        conn: &mut DbConnection,
-        watchlist_entry: ShowEntry,
-    ) -> Result<Self, CustomError> {
+    pub fn create(conn: &mut DbConnection, watchlist_entry: ShowEntry) -> Result<Self, AppError> {
         let new_watchlist = diesel::insert_into(show_entries::table)
             .values(watchlist_entry)
             .get_result(conn)?;
@@ -89,7 +86,7 @@ impl ShowEntry {
         conn: &mut DbConnection,
         watchlist_id: Uuid,
         show_id: i32,
-    ) -> Result<usize, CustomError> {
+    ) -> Result<usize, AppError> {
         let res = diesel::delete(
             show_entries::table.filter(
                 show_entries::watchlist_id
@@ -101,7 +98,7 @@ impl ShowEntry {
         Ok(res)
     }
 
-    pub fn internal_find_outdated(conn: &mut DbConnection) -> Result<Self, CustomError> {
+    pub fn internal_find_outdated(conn: &mut DbConnection) -> Result<Self, AppError> {
         let show_entries = show_entries::table
             .filter(show_entries::status.eq_any(SHOW_ACTIVE_STATUSES))
             .filter(
@@ -124,7 +121,7 @@ impl ShowEntry {
         mut self,
         conn: &mut DbConnection,
         client: &TmdbClient,
-    ) -> Result<Self, CustomError> {
+    ) -> Result<Self, AppError> {
         if let Ok(show) = Show::find(client, &self.show_id).await {
             self.last_air_date = show.last_air_date;
             self.next_air_date = show.next_air_date;

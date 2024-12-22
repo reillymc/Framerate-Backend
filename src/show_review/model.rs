@@ -4,11 +4,11 @@ use uuid::Uuid;
 
 use crate::{
     db::{DbConnection, DEFAULT_PAGE_SIZE},
-    error_handler::CustomError,
     review::{self, Order, Review, ReviewFindParameters, Sort},
     schema::{review_company, reviews, show_reviews},
     show::Show,
     user,
+    utils::AppError,
 };
 
 #[derive(AsChangeset, Insertable, Associations, Selectable, Queryable)]
@@ -62,7 +62,7 @@ impl ShowReview {
         conn: &mut DbConnection,
         user_id: Uuid,
         review_id: Uuid,
-    ) -> Result<ShowReviewReadResponse, CustomError> {
+    ) -> Result<ShowReviewReadResponse, AppError> {
         let (show_review, review_details) = show_reviews::table
             .filter(show_reviews::review_id.eq(review_id))
             .filter(show_reviews::user_id.eq(user_id))
@@ -88,7 +88,7 @@ impl ShowReview {
         conn: &mut DbConnection,
         user_id: Uuid,
         params: ReviewFindParameters,
-    ) -> Result<Vec<ShowReviewReadResponse>, CustomError> {
+    ) -> Result<Vec<ShowReviewReadResponse>, AppError> {
         let mut query = show_reviews::table
             .filter(show_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
@@ -169,7 +169,7 @@ impl ShowReview {
         conn: &mut DbConnection,
         user_id: Uuid,
         show_id: i32,
-    ) -> Result<Vec<ShowReviewReadResponse>, CustomError> {
+    ) -> Result<Vec<ShowReviewReadResponse>, AppError> {
         let reviews = show_reviews::table
             .filter(show_reviews::show_id.eq(show_id))
             .filter(show_reviews::user_id.eq(user_id))
@@ -194,14 +194,14 @@ impl ShowReview {
         Ok(show_reviews)
     }
 
-    pub fn create(conn: &mut DbConnection, review: ShowReview) -> Result<Self, CustomError> {
+    pub fn create(conn: &mut DbConnection, review: ShowReview) -> Result<Self, AppError> {
         let new_review = diesel::insert_into(show_reviews::table)
             .values(review)
             .get_result(conn)?;
         Ok(new_review)
     }
 
-    pub fn update(conn: &mut DbConnection, review: ShowReview) -> Result<Self, CustomError> {
+    pub fn update(conn: &mut DbConnection, review: ShowReview) -> Result<Self, AppError> {
         let updated_review = diesel::update(show_reviews::table)
             .filter(show_reviews::review_id.eq(review.review_id))
             .set(review)
