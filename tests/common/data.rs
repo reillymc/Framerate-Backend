@@ -14,7 +14,7 @@ use framerate::{
     show::{ExternalIds, Show},
     show_entry::{SaveShowEntryRequest, ShowEntry},
     show_review::{SaveShowReviewRequest, ShowReview},
-    user::{NewUser, User},
+    user::{NewUser, PermissionLevel, User},
     utils::jwt::create_token,
     watchlist::{NewWatchlist, Watchlist},
 };
@@ -22,21 +22,27 @@ use framerate::{
 pub fn create_authed_user(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
 ) -> (String, User) {
-    let new_user = NewUser {
-        first_name: Uuid::new_v4().to_string(),
-        last_name: Uuid::new_v4().to_string(),
-        avatar_uri: Some(Uuid::new_v4().to_string()),
-        email: Some(Uuid::new_v4().to_string()),
-        password: Some(Uuid::new_v4().to_string()),
-        configuration: None,
-        user_id: None,
-    };
+    let new_user = generate_save_new_user();
 
     let mut user = User::create(conn, new_user.clone()).unwrap();
 
-    user.password = new_user.password;
+    user.password = Some(new_user.password);
 
-    let token = create_token(user.user_id, &user.email.clone().unwrap()).unwrap();
+    let token = create_token(user.user_id, PermissionLevel::GeneralUser).unwrap();
+
+    (token, user)
+}
+
+pub fn create_authed_admin_user(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+) -> (String, User) {
+    let new_user = generate_save_new_user();
+
+    let mut user = User::create_admin(conn, new_user.clone()).unwrap();
+
+    user.password = Some(new_user.password);
+
+    let token = create_token(user.user_id, PermissionLevel::AdminUser).unwrap();
 
     (token, user)
 }
@@ -44,19 +50,7 @@ pub fn create_authed_user(
 // Create in DB
 
 pub fn create_user(conn: &mut PooledConnection<ConnectionManager<PgConnection>>) -> User {
-    User::create(
-        conn,
-        NewUser {
-            first_name: Uuid::new_v4().to_string(),
-            last_name: Uuid::new_v4().to_string(),
-            avatar_uri: Some(Uuid::new_v4().to_string()),
-            email: Some(Uuid::new_v4().to_string()),
-            password: Some(Uuid::new_v4().to_string()),
-            configuration: None,
-            user_id: None,
-        },
-    )
-    .unwrap()
+    User::create(conn, generate_save_new_user()).unwrap()
 }
 
 pub fn create_watchlist(
@@ -147,6 +141,17 @@ pub fn generate_save_movie_review() -> SaveMovieReviewRequest {
         description: Some(Uuid::new_v4().to_string()),
         venue: Some(Uuid::new_v4().to_string()),
         company: None,
+    }
+}
+
+pub fn generate_save_new_user() -> NewUser {
+    NewUser {
+        avatar_uri: Some(Uuid::new_v4().to_string()),
+        configuration: None,
+        email: Uuid::new_v4().to_string(),
+        first_name: Uuid::new_v4().to_string(),
+        last_name: Uuid::new_v4().to_string(),
+        password: Uuid::new_v4().to_string(),
     }
 }
 

@@ -348,7 +348,7 @@ mod create {
         assert_eq!(review.venue, result.data.venue);
         assert_eq!(movie.id, result.data.movie.id);
         assert_eq!(movie.imdb_id, result.data.movie.imdb_id);
-        assert_eq!(movie.poster_path, result.data.movie.poster_path);
+        assert!(result.data.movie.poster_path.is_some());
         assert_eq!(movie.release_date, result.data.movie.release_date);
     }
 

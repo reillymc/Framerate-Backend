@@ -15,3 +15,7 @@ Environment variables must be exported before running the program. Variables are
 Diesel allows SQL migrations to be generated from rust schema files or rust schema from a new SQL migration.
 
 To run migrations, use `diesel migration run`
+
+## Testing
+
+The test database can be set up / updated by running `DATABASE_URL=postgres://${TEST_POSTGRES_USER}:${TEST_POSTGRES_PASSWORD}@${TEST_POSTGRES_HOST}/${POSTGRES_DB} && diesel migration run`

@@ -18,7 +18,11 @@ enum UserRead {
 }
 
 #[get("/users")]
-async fn find_all(pool: web::Data<DbPool>, _: Auth) -> actix_web::Result<impl Responder> {
+async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Responder> {
+    if !auth.is_at_least_admin() {
+        return Err(CustomError::new(401, "Unauthorized to list users"))?;
+    }
+
     let users = web::block(move || {
         let mut conn = pool.get()?;
         User::find_all(&mut conn)
@@ -51,23 +55,15 @@ async fn find(
 #[post("/users")]
 async fn create(
     pool: web::Data<DbPool>,
-    _: Auth,
+    auth: Auth,
     user: web::Json<NewUser>,
 ) -> actix_web::Result<impl Responder> {
-    if let Some(email) = &user.email {
-        if email.is_empty() {
-            return Err(CustomError::new(400, "Invalid email"))?;
-        }
+    if !auth.is_at_least_admin() {
+        return Err(CustomError::new(401, "Unauthorized to create users"))?;
+    }
 
-        if let Some(password) = &user.password {
-            if password.is_empty() {
-                return Err(CustomError::new(400, "Invalid password"))?;
-            }
-        } else {
-            return Err(CustomError::new(400, "Invalid password"))?;
-        }
-    } else if user.password.is_none() {
-        return Err(CustomError::new(400, "Invalid email or password"))?;
+    if user.email.is_empty() || user.password.is_empty() {
+        return Err(CustomError::new(400, "Email and password are mandatory"))?;
     }
 
     let user = web::block(move || {
@@ -87,7 +83,7 @@ async fn update(
     user: web::Json<UpdatedUser>,
 ) -> actix_web::Result<impl Responder> {
     if auth.user_id != *user_id {
-        return Err(CustomError::new(401, "Missing permissions for this user"))?;
+        return Err(CustomError::new(404, "User not found"))?;
     }
 
     let user = web::block(move || {

@@ -1,4 +1,4 @@
-use crate::error_handler::CustomError;
+use crate::{error_handler::CustomError, user::PermissionLevel};
 use chrono::{Duration, Local};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -8,35 +8,47 @@ use uuid::Uuid;
 #[derive(Debug, Serialize, Deserialize)]
 struct UserSession {
     id: Uuid,
-    email: String,
+    permission_level: PermissionLevel,
     exp: usize,
 }
 
 pub struct Auth {
     pub user_id: Uuid,
+    pub permission_level: PermissionLevel,
+}
+
+impl Auth {
+    pub fn is_at_least_registered(&self) -> bool {
+        self.permission_level >= PermissionLevel::Registered
+    }
+
+    pub fn is_at_least_admin(&self) -> bool {
+        self.permission_level >= PermissionLevel::AdminUser
+    }
 }
 
 impl From<UserSession> for Auth {
     fn from(user_session: UserSession) -> Self {
         Auth {
             user_id: user_session.id,
+            permission_level: user_session.permission_level,
         }
     }
 }
 
 impl UserSession {
-    fn with_email(id: Uuid, email: &str) -> Self {
+    fn new(id: Uuid, permission_level: PermissionLevel) -> Self {
         UserSession {
             id,
-            email: email.into(),
+            permission_level: permission_level,
             // TODO: investigate refresh tokens
             exp: (Local::now() + Duration::weeks(52)).timestamp() as usize,
         }
     }
 }
 
-pub fn create_token(id: Uuid, email: &str) -> Result<String, CustomError> {
-    let claims = UserSession::with_email(id, email);
+pub fn create_token(id: Uuid, permission_level: PermissionLevel) -> Result<String, CustomError> {
+    let claims = UserSession::new(id, permission_level);
     let encoded = encode(
         &Header::default(),
         &claims,

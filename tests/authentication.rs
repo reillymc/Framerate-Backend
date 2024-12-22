@@ -27,7 +27,7 @@ mod login {
     #[actix_web::test]
     async fn should_require_email_and_password() {
         let (app, pool) = setup::create_app(login).await;
-        let _ = {
+        let user = {
             let mut conn = pool.get().unwrap();
             data::create_user(&mut conn)
         };
@@ -39,7 +39,17 @@ mod login {
         let request = test::TestRequest::post()
             .uri("/auth/login")
             .set_json(LoginBody {
-                email: Some(Uuid::new_v4().to_string()),
+                email: None,
+                password: None,
+            })
+            .to_request();
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status().as_u16(), 400);
+
+        let request = test::TestRequest::post()
+            .uri("/auth/login")
+            .set_json(LoginBody {
+                email: user.email.clone(),
                 password: None,
             })
             .to_request();
@@ -50,7 +60,37 @@ mod login {
             .uri("/auth/login")
             .set_json(LoginBody {
                 email: None,
-                password: Some(Uuid::new_v4().to_string()),
+                password: user.password.clone(),
+            })
+            .to_request();
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status().as_u16(), 400);
+
+        let request = test::TestRequest::post()
+            .uri("/auth/login")
+            .set_json(LoginBody {
+                email: Some("".to_string()),
+                password: Some("".to_string()),
+            })
+            .to_request();
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status().as_u16(), 400);
+
+        let request = test::TestRequest::post()
+            .uri("/auth/login")
+            .set_json(LoginBody {
+                email: user.email,
+                password: Some("".to_string()),
+            })
+            .to_request();
+        let response = test::call_service(&app, request).await;
+        assert_eq!(response.status().as_u16(), 400);
+
+        let request = test::TestRequest::post()
+            .uri("/auth/login")
+            .set_json(LoginBody {
+                email: Some("".to_string()),
+                password: user.password,
             })
             .to_request();
         let response = test::call_service(&app, request).await;

@@ -95,6 +95,7 @@ diesel::table! {
         permission_level -> Int2,
         public -> Bool,
         configuration -> Jsonb,
+        created_by -> Nullable<Uuid>,
     }
 }
 

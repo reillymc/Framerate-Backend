@@ -1,13 +1,60 @@
 use crate::{
     db::DbConnection,
     error_handler::{AuthError, CustomError},
-    schema::users,
+    schema::users::{self},
 };
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::NaiveDateTime;
 use diesel::{dsl, prelude::*};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+#[derive(PartialEq, PartialOrd, Serialize, Deserialize, Debug)]
+pub enum PermissionLevel {
+    Unknown = -100,
+    NonAuthenticatable = -20,
+    Registered = -10,
+    GeneralUser = 10,
+    AdminUser = 20,
+}
+
+impl From<i16> for PermissionLevel {
+    fn from(permission_level: i16) -> Self {
+        match permission_level {
+            -20 => PermissionLevel::NonAuthenticatable,
+            -10 => PermissionLevel::Registered,
+            10 => PermissionLevel::GeneralUser,
+            20 => PermissionLevel::AdminUser,
+            _ => PermissionLevel::Unknown,
+        }
+    }
+}
+
+impl From<PermissionLevel> for i16 {
+    fn from(permission_level: PermissionLevel) -> Self {
+        match permission_level {
+            PermissionLevel::NonAuthenticatable => -20,
+            PermissionLevel::Registered => -10,
+            PermissionLevel::GeneralUser => 10,
+            PermissionLevel::AdminUser => 20,
+            PermissionLevel::Unknown => -100,
+        }
+    }
+}
+
+impl PermissionLevel {
+    pub fn is_at_least_registered(&self) -> bool {
+        self >= &PermissionLevel::Registered
+    }
+
+    pub fn is_at_least_general(&self) -> bool {
+        self >= &PermissionLevel::GeneralUser
+    }
+
+    pub fn is_at_least_admin(&self) -> bool {
+        self >= &PermissionLevel::AdminUser
+    }
+}
 
 #[derive(Serialize, Deserialize, Queryable, Selectable, AsChangeset, Insertable)]
 #[diesel(table_name = users)]
@@ -23,17 +70,23 @@ pub struct User {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
     pub date_created: NaiveDateTime,
+    /**
+     * -20: Non-authenticatable user (review company without actual account)
+     * -10: Registered, but not approved (if approvals required)
+     * 10: Regular user
+     * 20: Admin user
+     */
     pub permission_level: i16,
     pub public: bool,
     pub configuration: serde_json::Value,
+    pub created_by: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewUser {
-    pub user_id: Option<Uuid>,
-    pub email: Option<String>,
-    pub password: Option<String>,
+    pub email: String,
+    pub password: String,
     pub first_name: String,
     pub last_name: String,
     pub avatar_uri: Option<String>,
@@ -44,11 +97,14 @@ pub struct NewUser {
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatedUser {
-    pub configuration: serde_json::Value,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub configuration: Option<serde_json::Value>,
 }
 
-#[derive(Serialize, Debug, Clone, Queryable, Deserialize, AsChangeset)]
+#[derive(Serialize, Debug, Clone, Queryable, AsChangeset)]
 #[diesel(table_name = users)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase")]
 pub struct UserResponse {
     pub user_id: Uuid,
@@ -58,7 +114,7 @@ pub struct UserResponse {
     pub avatar_uri: Option<String>,
 }
 
-#[derive(Serialize, Debug, Clone, Queryable, Deserialize, AsChangeset)]
+#[derive(Serialize, Debug, Clone, Queryable, AsChangeset)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UserFindResponse {
@@ -70,6 +126,39 @@ pub struct UserFindResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
     pub configuration: serde_json::Value,
+}
+
+impl From<NewUser> for User {
+    fn from(user: NewUser) -> Self {
+        User {
+            user_id: Uuid::new_v4(),
+            email: Some(user.email),
+            password: None,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            date_created: chrono::Local::now().naive_local(),
+            permission_level: i16::from(PermissionLevel::GeneralUser),
+            public: false,
+            avatar_uri: user.avatar_uri,
+            configuration: serde_json::json!({
+                "people": [],
+                "venues": [],
+            }),
+            created_by: None,
+        }
+    }
+}
+
+impl User {
+    fn password(mut self, password: String) -> Self {
+        self.password = Some(password);
+        self
+    }
+
+    fn permission_level(mut self, permission_level: PermissionLevel) -> Self {
+        self.permission_level = i16::from(permission_level);
+        self
+    }
 }
 
 impl User {
@@ -117,27 +206,22 @@ impl User {
     }
 
     pub fn create(conn: &mut DbConnection, user: NewUser) -> Result<Self, CustomError> {
-        let password = if let Some(pwd) = user.password {
-            Some(Self::hash_password(pwd)?)
-        } else {
-            None
-        };
+        let password = Self::hash_password(&user.password)?;
 
-        let user_to_save = User {
-            user_id: user.user_id.unwrap_or(Uuid::new_v4()),
-            email: user.email,
-            password,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            date_created: chrono::Local::now().naive_local(),
-            permission_level: 0,
-            public: false,
-            avatar_uri: None,
-            configuration: serde_json::json!({
-                "people": [],
-                "venues": [],
-            }),
-        };
+        let user_to_save = User::from(user).password(password);
+
+        let new_user = diesel::insert_into(users::table)
+            .values(user_to_save)
+            .get_result(conn)?;
+        Ok(new_user)
+    }
+
+    pub fn create_admin(conn: &mut DbConnection, user: NewUser) -> Result<Self, CustomError> {
+        let password = Self::hash_password(&user.password)?;
+
+        let user_to_save = User::from(user)
+            .password(password)
+            .permission_level(PermissionLevel::AdminUser);
 
         let new_user = diesel::insert_into(users::table)
             .values(user_to_save)
@@ -147,11 +231,11 @@ impl User {
 
     pub fn update(
         conn: &mut DbConnection,
-        id: Uuid,
+        user_id: Uuid,
         user: UpdatedUser,
     ) -> Result<Self, CustomError> {
         let updated_user = diesel::update(users::table)
-            .filter(users::user_id.eq(id))
+            .filter(users::user_id.eq(user_id))
             .set(user)
             .get_result(conn)?;
         Ok(updated_user)
@@ -162,7 +246,7 @@ impl User {
         Ok(res)
     }
 
-    pub fn hash_password(plain: String) -> Result<String, CustomError> {
+    pub fn hash_password(plain: &str) -> Result<String, CustomError> {
         Ok(hash(plain, DEFAULT_COST)?)
     }
 

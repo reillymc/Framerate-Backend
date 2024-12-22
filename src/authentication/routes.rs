@@ -3,7 +3,7 @@ use std::env;
 use crate::{
     db::DbPool,
     error_handler::CustomError,
-    user::{AuthUser, User},
+    user::{AuthUser, PermissionLevel, User},
     utils::{jwt::create_token, response_body::Success},
 };
 use actix_web::{post, web, Responder};
@@ -39,11 +39,13 @@ pub async fn login(
     })
     .await??;
 
-    let Some(email) = &user_details.email else {
-        return Err(CustomError::new(401, "Invalid user account"))?;
+    let permission_level = PermissionLevel::from(user_details.permission_level);
+
+    if !permission_level.is_at_least_general() || user_details.email.is_none() {
+        return Err(CustomError::new(401, "Invalid account"))?;
     };
 
-    let token = create_token(user_details.user_id, email)?;
+    let token = create_token(user_details.user_id, permission_level)?;
 
     Ok(Success::new(LoginResponse {
         user_id: user_details.user_id,
@@ -74,7 +76,7 @@ pub async fn setup(
         return Err(CustomError::new(401, "Setup procedure already run"))?;
     };
 
-    let token = create_token(Uuid::default(), "");
+    let token = create_token(Uuid::default(), PermissionLevel::AdminUser);
 
     let Ok(token_string) = token else {
         return Err(CustomError::new(500, "Unable to create token"))?;
