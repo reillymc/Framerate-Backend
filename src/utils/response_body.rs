@@ -38,3 +38,9 @@ impl<T: Serialize> Responder for Success<T> {
             .body(body)
     }
 }
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteResponse {
+    pub count: usize,
+}

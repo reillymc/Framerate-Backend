@@ -248,7 +248,7 @@ mod create {
 mod delete {
     use crate::common::{data, process, setup};
     use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::movie_entry::{delete, DeleteResponse};
+    use framerate::{movie_entry::delete, utils::response_body::DeleteResponse};
 
     #[actix_web::test]
     async fn should_require_authentication() {

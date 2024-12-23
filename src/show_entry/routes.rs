@@ -3,7 +3,8 @@ use super::ShowEntry;
 use crate::db::DbPool;
 use crate::show::Show;
 use crate::tmdb::TmdbClient;
-use crate::utils::{jwt::Auth, response_body::Success, AppError};
+use crate::utils::response_body::{DeleteResponse, Success};
+use crate::utils::{jwt::Auth, AppError};
 use crate::watchlist::Watchlist;
 use actix_web::{delete, Responder};
 use actix_web::{get, post, web};
@@ -14,12 +15,6 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct SaveShowEntryRequest {
     pub show_id: i32,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DeleteResponse {
-    pub count: usize,
 }
 
 #[get("/shows/entries/{watchlist_id}/{show_id}")]

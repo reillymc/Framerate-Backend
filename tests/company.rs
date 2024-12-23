@@ -196,3 +196,73 @@ mod update {
         assert_eq!(company.last_name, result.data.last_name);
     }
 }
+
+mod delete {
+    use crate::common::{data, process, setup};
+    use actix_web::{http::header::AUTHORIZATION, test};
+    use framerate::{company::delete, utils::response_body::DeleteResponse};
+
+    #[actix_web::test]
+    async fn should_require_authentication() {
+        let (app, pool) = setup::create_app(delete).await;
+
+        let company = {
+            let mut conn = pool.get().unwrap();
+            let (_, user) = data::create_authed_user(&mut conn);
+            data::create_company(&mut conn, &user)
+        };
+
+        let request = test::TestRequest::delete()
+            .uri(&format!("/company/{}", company.user_id))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(401, response.status());
+    }
+
+    #[actix_web::test]
+    async fn should_not_delete_other_users_company() {
+        let (app, pool) = setup::create_app(delete).await;
+
+        let (token, company) = {
+            let mut conn = pool.get().unwrap();
+            let (token, _) = data::create_authed_user(&mut conn);
+            let other_user = data::create_user(&mut conn);
+            let company = data::create_company(&mut conn, &other_user);
+
+            (token, company)
+        };
+
+        let request = test::TestRequest::delete()
+            .uri(&format!("/company/{}", company.user_id))
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(404, response.status());
+    }
+
+    #[actix_web::test]
+    async fn should_delete_company() {
+        let (app, pool) = setup::create_app(delete).await;
+
+        let (token, company) = {
+            let mut conn = pool.get().unwrap();
+            let (token, user) = data::create_authed_user(&mut conn);
+            let company = data::create_company(&mut conn, &user);
+
+            (token, company)
+        };
+
+        let request = test::TestRequest::delete()
+            .uri(&format!("/company/{}", company.user_id))
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_success());
+
+        let result = process::parse_body::<DeleteResponse>(response).await;
+        assert_eq!(1, result.data.count);
+    }
+}

@@ -68,9 +68,9 @@ pub struct Movie {
     pub runtime: Option<i32>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 pub struct MovieSearchResults {
-    pub results: Vec<Movie>,
+    pub results: Vec<MovieResponse>,
 }
 
 impl From<MovieResponse> for Movie {
@@ -130,7 +130,7 @@ impl Movie {
         }
 
         let movie = response.json::<MovieResponse>().await?;
-        Ok(movie.into())
+        Ok(Movie::from(movie))
     }
 
     pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Movie>, AppError> {
@@ -154,7 +154,12 @@ impl Movie {
         }
 
         let search_results = response.json::<MovieSearchResults>().await?;
-        Ok(search_results.results)
+
+        Ok(search_results
+            .results
+            .into_iter()
+            .map(Movie::from)
+            .collect())
     }
 
     pub async fn popular(client: &TmdbClient) -> Result<Vec<Movie>, AppError> {
@@ -184,6 +189,11 @@ impl Movie {
         }
 
         let search_results = response.json::<MovieSearchResults>().await?;
-        Ok(search_results.results)
+
+        Ok(search_results
+            .results
+            .into_iter()
+            .map(Movie::from)
+            .collect())
     }
 }

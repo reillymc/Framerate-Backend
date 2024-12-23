@@ -32,6 +32,7 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(company::find_all);
     config.service(company::create);
     config.service(company::update);
+    config.service(company::delete);
 
     config.service(user::find);
     config.service(user::find_all);

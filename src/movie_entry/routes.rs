@@ -3,7 +3,8 @@ use super::MovieEntry;
 use crate::db::DbPool;
 use crate::movie::Movie;
 use crate::tmdb::TmdbClient;
-use crate::utils::{jwt::Auth, response_body::Success, AppError};
+use crate::utils::response_body::{DeleteResponse, Success};
+use crate::utils::{jwt::Auth, AppError};
 use crate::watchlist::Watchlist;
 use actix_web::{delete, Responder};
 use actix_web::{get, post, web};
@@ -13,12 +14,6 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct SaveMovieEntryRequest {
     pub movie_id: i32,
-}
-
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DeleteResponse {
-    pub count: usize,
 }
 
 #[get("/movies/entries/{watchlist_id}/{movie_id}")]
