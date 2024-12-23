@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install libpq5 -y
 
 WORKDIR /app
 
+RUN mkdir /app/logs
+RUN chown -R 1001:1001 /app/logs
+
 COPY --from=builder /app/target/release/ .
 
 # set user to non-root unless root is required for app
@@ -28,4 +31,4 @@ USER 1001
 EXPOSE 3000
 
 # run server
-CMD [ "/app/framerate" ]
+CMD [ "./framerate" ]
