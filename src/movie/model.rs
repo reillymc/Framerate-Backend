@@ -135,7 +135,7 @@ impl Movie {
 
     pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Movie>, AppError> {
         let request_url = generate_endpoint(
-            "discover/movie".to_string(),
+            "search/movie".to_string(),
             Some(HashMap::from([
                 ("query", query),
                 ("region", "AU"),
