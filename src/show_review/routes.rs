@@ -142,8 +142,8 @@ async fn create(
     review: web::Json<SaveShowReviewRequest>,
     show_id: web::Path<i32>,
 ) -> actix_web::Result<impl Responder> {
-    let review = review.into_inner();
     let show_id = show_id.into_inner();
+    let review = review.into_inner();
 
     let show = Show::find(&client, &show_id).await?;
 
@@ -182,7 +182,8 @@ async fn create(
             let created_review = Review::create(conn, review_to_save)?;
             let created_show_review = ShowReview::create(conn, show_review_to_save)?;
 
-            let company = ReviewCompany::replace(conn, created_review.review_id, review.company)?;
+            let company =
+                ReviewCompany::replace(conn, created_review.review_id, review.company.as_ref())?;
 
             let review_response = ShowReviewResponse {
                 review_id: created_review.review_id,
@@ -213,6 +214,7 @@ async fn update(
     path: web::Path<(i32, Uuid)>,
 ) -> actix_web::Result<impl Responder> {
     let (show_id, review_id) = path.into_inner();
+    let review = review.into_inner();
 
     let show = Show::find(&client, &show_id).await?;
 
@@ -230,9 +232,9 @@ async fn update(
             user_id: existing_review.user_id,
             date: review.date,
             rating: review.rating,
-            title: review.title.clone(),
-            description: review.description.clone(),
-            venue: review.venue.clone(),
+            title: review.title,
+            description: review.description,
+            venue: review.venue,
         };
 
         let imdb_id = if let Some(external_ids) = show.external_ids {
@@ -257,7 +259,7 @@ async fn update(
             let updated_show_review = ShowReview::update(conn, show_review_to_save)?;
 
             let company =
-                ReviewCompany::replace(conn, updated_review.review_id, review.company.clone())?;
+                ReviewCompany::replace(conn, updated_review.review_id, review.company.as_ref())?;
 
             let review_response = ShowReviewResponse {
                 review_id: updated_review.review_id,

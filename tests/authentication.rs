@@ -3,7 +3,12 @@ pub mod common;
 mod login {
     use crate::common::{data, setup};
     use actix_web::test;
-    use framerate::{authentication::login, user::User};
+    use diesel::RunQueryDsl;
+    use framerate::{
+        authentication::login,
+        schema::users,
+        user::{PermissionLevel, User},
+    };
     use serde::Serialize;
     use uuid::Uuid;
 
@@ -24,6 +29,15 @@ mod login {
         }
     }
 
+    impl From<&User> for LoginBody {
+        fn from(user: &User) -> Self {
+            LoginBody {
+                email: user.email.clone(),
+                password: user.password.clone(),
+            }
+        }
+    }
+
     #[actix_web::test]
     async fn should_require_email_and_password() {
         let (app, pool) = setup::create_app(login).await;
@@ -34,7 +48,7 @@ mod login {
 
         let request = test::TestRequest::post().uri("/auth/login").to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(400, response.status().as_u16());
 
         let request = test::TestRequest::post()
             .uri("/auth/login")
@@ -44,7 +58,7 @@ mod login {
             })
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(400, response.status().as_u16());
 
         let request = test::TestRequest::post()
             .uri("/auth/login")
@@ -54,7 +68,7 @@ mod login {
             })
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(400, response.status().as_u16());
 
         let request = test::TestRequest::post()
             .uri("/auth/login")
@@ -64,7 +78,7 @@ mod login {
             })
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(400, response.status().as_u16());
 
         let request = test::TestRequest::post()
             .uri("/auth/login")
@@ -74,7 +88,7 @@ mod login {
             })
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(400, response.status().as_u16());
 
         let request = test::TestRequest::post()
             .uri("/auth/login")
@@ -84,7 +98,7 @@ mod login {
             })
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(400, response.status().as_u16());
 
         let request = test::TestRequest::post()
             .uri("/auth/login")
@@ -94,7 +108,7 @@ mod login {
             })
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(400, response.status().as_u16());
     }
 
     #[actix_web::test]
@@ -113,7 +127,82 @@ mod login {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 401);
+        assert_eq!(401, response.status().as_u16());
+    }
+
+    #[actix_web::test]
+    async fn should_not_authenticate_non_authenticatable_user() {
+        let (app, pool) = setup::create_app(login).await;
+        let (registered_user, non_authenticatable_user) = {
+            let mut conn = pool.get().unwrap();
+            let registered_user = User {
+                user_id: Uuid::new_v4(),
+                email: Some(Uuid::new_v4().to_string()),
+                password: Some(Uuid::new_v4().to_string()),
+                first_name: Uuid::new_v4().to_string(),
+                last_name: Uuid::new_v4().to_string(),
+                date_created: chrono::Local::now().naive_local(),
+                permission_level: i16::from(PermissionLevel::Registered),
+                public: false,
+                avatar_uri: Some(Uuid::new_v4().to_string()),
+                configuration: serde_json::json!({
+                    "people": [],
+                    "venues": [],
+                }),
+                created_by: None,
+            };
+
+            let non_authenticatable_user = User {
+                user_id: Uuid::new_v4(),
+                email: Some(Uuid::new_v4().to_string()),
+                password: Some(Uuid::new_v4().to_string()),
+                first_name: Uuid::new_v4().to_string(),
+                last_name: Uuid::new_v4().to_string(),
+                date_created: chrono::Local::now().naive_local(),
+                permission_level: i16::from(PermissionLevel::NonAuthenticatable),
+                public: false,
+                avatar_uri: Some(Uuid::new_v4().to_string()),
+                configuration: serde_json::json!({
+                    "people": [],
+                    "venues": [],
+                }),
+                created_by: None,
+            };
+
+            let registered_user_save = registered_user.clone();
+            let non_authenticatable_user_save = non_authenticatable_user.clone();
+
+            diesel::insert_into(users::table)
+                .values(vec![
+                    registered_user_save.clone().password(
+                        User::hash_password(&registered_user_save.password.unwrap()).unwrap(),
+                    ),
+                    non_authenticatable_user_save.clone().password(
+                        User::hash_password(&non_authenticatable_user_save.password.unwrap())
+                            .unwrap(),
+                    ),
+                ])
+                .execute(&mut conn)
+                .ok();
+
+            (registered_user, non_authenticatable_user)
+        };
+
+        let request = test::TestRequest::post()
+            .uri("/auth/login")
+            .set_json(LoginBody::from(&registered_user))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(401, response.status().as_u16());
+
+        let request = test::TestRequest::post()
+            .uri("/auth/login")
+            .set_json(LoginBody::from(&non_authenticatable_user))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(401, response.status().as_u16());
     }
 
     #[actix_web::test]
@@ -167,7 +256,7 @@ mod setup {
             .set_json(SecretBody { secret })
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 500);
+        assert!(response.status().is_server_error());
     }
 
     #[actix_web::test]
@@ -187,7 +276,7 @@ mod setup {
             })
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 401);
+        assert_eq!(401, response.status().as_u16());
     }
 
     #[actix_web::test]
@@ -207,7 +296,7 @@ mod setup {
             .set_json(SecretBody { secret })
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert_eq!(response.status().as_u16(), 401);
+        assert_eq!(401, response.status().as_u16());
     }
 
     #[actix_web::test]

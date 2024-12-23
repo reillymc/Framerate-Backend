@@ -17,7 +17,7 @@ pub struct Watchlist {
     pub media_type: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewWatchlist {
     pub name: String,

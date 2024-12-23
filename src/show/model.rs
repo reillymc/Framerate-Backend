@@ -130,25 +130,21 @@ impl Show {
 
         let show = response.json::<ShowResponse>().await?;
 
-        let seasons = if let Some(seasons) = &show.seasons {
-            Some(
-                seasons
-                    .iter()
-                    .map(|season| Season {
-                        show_id: show.id,
-                        season_number: season.season_number,
-                        name: season.name.clone(),
-                        overview: season.overview.clone(),
-                        poster_path: season.poster_path.clone(),
-                        air_date: season.air_date,
-                        episode_count: season.episode_count,
-                        episodes: None,
-                    })
-                    .collect(),
-            )
-        } else {
-            None
-        };
+        let seasons = show.seasons.map(|seasons| {
+            seasons
+                .into_iter()
+                .map(|season| Season {
+                    show_id: show.id,
+                    season_number: season.season_number,
+                    name: season.name,
+                    overview: season.overview,
+                    poster_path: season.poster_path,
+                    air_date: season.air_date,
+                    episode_count: season.episode_count,
+                    episodes: None,
+                })
+                .collect()
+        });
 
         let next_air_date = if let Some(next_episode) = &show.next_episode_to_air {
             next_episode.air_date

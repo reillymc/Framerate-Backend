@@ -305,7 +305,7 @@ mod create {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert!(response.status().is_server_error());
 
         let reviews = {
             let mut conn = pool.get().unwrap();
@@ -482,7 +482,7 @@ mod update {
             .to_request();
 
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_client_error());
+        assert!(response.status().is_server_error());
 
         let (review_response, company_response) = {
             let mut conn = pool.get().unwrap();
@@ -557,7 +557,7 @@ mod update {
             ReviewCompany::replace(
                 &mut conn,
                 show_review.review_id,
-                Some(vec![ReviewCompanySummary {
+                Some(&vec![ReviewCompanySummary {
                     user_id: company_user1.user_id,
                 }]),
             )

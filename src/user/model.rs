@@ -54,7 +54,7 @@ impl PermissionLevel {
     }
 }
 
-#[derive(Serialize, Deserialize, Queryable, Selectable, AsChangeset, Insertable)]
+#[derive(Serialize, Deserialize, Clone, Queryable, Selectable, Insertable)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
@@ -91,7 +91,7 @@ pub struct NewUser {
     pub configuration: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Deserialize, AsChangeset)]
+#[derive(Debug, Deserialize, AsChangeset)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatedUser {
@@ -100,7 +100,7 @@ pub struct UpdatedUser {
     pub configuration: Option<serde_json::Value>,
 }
 
-#[derive(Serialize, Debug, Clone, Queryable, AsChangeset)]
+#[derive(Serialize, Debug, Queryable)]
 #[diesel(table_name = users)]
 #[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase")]
@@ -112,7 +112,7 @@ pub struct UserResponse {
     pub avatar_uri: Option<String>,
 }
 
-#[derive(Serialize, Debug, Clone, Queryable, AsChangeset)]
+#[derive(Serialize, Debug, Queryable)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UserFindResponse {
@@ -148,12 +148,12 @@ impl From<NewUser> for User {
 }
 
 impl User {
-    fn password(mut self, password: String) -> Self {
+    pub fn password(mut self, password: String) -> Self {
         self.password = Some(password);
         self
     }
 
-    fn permission_level(mut self, permission_level: PermissionLevel) -> Self {
+    pub fn permission_level(mut self, permission_level: PermissionLevel) -> Self {
         self.permission_level = i16::from(permission_level);
         self
     }
@@ -260,10 +260,21 @@ pub struct AuthUser {
 
 impl AuthUser {
     pub fn login(&self, conn: &mut DbConnection) -> Result<User, AppError> {
-        let user: User = users::table
+        let user: Result<User, diesel::result::Error> = users::table
             .filter(users::email.eq(&self.email))
             .filter(users::permission_level.ge::<i16>(PermissionLevel::GeneralUser.into()))
-            .first(conn)?;
+            .first(conn);
+
+        // Map 404 to 401 to avoid leaking emails in database
+        let user = match user {
+            Ok(user) => Ok(user),
+            Err(err) => match err {
+                diesel::result::Error::NotFound => {
+                    Err(AppError::external(401, "Invalid email or password"))
+                }
+                _ => Err(AppError::DieselError(err)),
+            },
+        }?;
 
         let Some(password) = &user.password else {
             return Err(AppError::external(401, "Invalid email or password"));

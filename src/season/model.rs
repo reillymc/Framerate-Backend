@@ -15,7 +15,7 @@ pub struct EpisodeResponse {
     pub air_date: Option<NaiveDate>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Episode {
     pub episode_number: i32,
@@ -92,11 +92,9 @@ impl Season {
 
         let season = response.json::<SeasonResponse>().await?;
 
-        let episodes = if let Some(episodes) = season.episodes {
-            Some(episodes.into_iter().map(Episode::from).collect())
-        } else {
-            None
-        };
+        let episodes = season
+            .episodes
+            .map(|episodes| episodes.into_iter().map(Episode::from).collect());
 
         let season = Season {
             name: season.name,

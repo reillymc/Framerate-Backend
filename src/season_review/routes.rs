@@ -124,8 +124,8 @@ async fn create(
     review: web::Json<SaveSeasonReviewRequest>,
     path: web::Path<(i32, i32)>,
 ) -> actix_web::Result<impl Responder> {
-    let review = review.into_inner();
     let (show_id, season_number) = path.into_inner();
+    let review = review.into_inner();
 
     let season = Season::find(&client, &show_id, &season_number).await?;
 
@@ -158,7 +158,8 @@ async fn create(
             let created_review = Review::create(conn, review_to_save)?;
             let created_season_review = SeasonReview::create(conn, season_review_to_save)?;
 
-            let company = ReviewCompany::replace(conn, created_review.review_id, review.company)?;
+            let company =
+                ReviewCompany::replace(conn, created_review.review_id, review.company.as_ref())?;
 
             let review_response = SeasonReviewResponse {
                 review_id: created_review.review_id,
@@ -188,8 +189,8 @@ async fn update(
     review: web::Json<SaveSeasonReviewRequest>,
     path: web::Path<(i32, i32, Uuid)>,
 ) -> actix_web::Result<impl Responder> {
-    let review = review.into_inner();
     let (show_id, season_number, review_id) = path.into_inner();
+    let review = review.into_inner();
 
     let season = Season::find(&client, &show_id, &season_number).await?;
 
@@ -212,9 +213,9 @@ async fn update(
             user_id: existing_review.user_id,
             date: review.date,
             rating: review.rating,
-            title: review.title.clone(),
-            description: review.description.clone(),
-            venue: review.venue.clone(),
+            title: review.title,
+            description: review.description,
+            venue: review.venue,
         };
 
         let season_review_to_save = SeasonReview {
@@ -232,7 +233,8 @@ async fn update(
 
             let updated_season_review = SeasonReview::update(conn, season_review_to_save)?;
 
-            let company = ReviewCompany::replace(conn, updated_review.review_id, review.company)?;
+            let company =
+                ReviewCompany::replace(conn, updated_review.review_id, review.company.as_ref())?;
 
             let review_response = SeasonReviewResponse {
                 review_id: updated_review.review_id,

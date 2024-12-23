@@ -10,7 +10,7 @@ use framerate::{db::DbConnection, tmdb};
 use r2d2::{CustomizeConnection, Pool};
 use std::env;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 struct TestConnectionCustomizer;
 
 impl<C, E> CustomizeConnection<C, E> for TestConnectionCustomizer

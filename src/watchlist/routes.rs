@@ -43,11 +43,13 @@ async fn create(
     auth: Auth,
     params: web::Json<NewWatchlist>,
 ) -> actix_web::Result<impl Responder> {
+    let params = params.into_inner();
+
     let watchlist = Watchlist {
         watchlist_id: Uuid::new_v4(),
         user_id: auth.user_id,
-        name: params.name.clone(),
-        media_type: params.media_type.clone(),
+        name: params.name,
+        media_type: params.media_type,
     };
 
     let watchlist = web::block(move || {

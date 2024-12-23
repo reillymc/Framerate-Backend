@@ -4,7 +4,7 @@
     "dockerComposeFile": "compose.yml",
     "service": "app",
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-    "postCreateCommand": "cargo install cargo-watch && cargo install diesel_cli --no-default-features --features postgres && rustc --version",
+    "postCreateCommand": "cargo install cargo-watch && cargo install diesel_cli --no-default-features --features postgres && cargo install cargo-pretty-test && rustc --version",
     "customizations": {
         "vscode": {
             "extensions": ["mtxr.sqltools", "mtxr.sqltools-driver-pg", "bradymholt.pgformatter"]

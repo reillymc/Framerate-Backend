@@ -18,7 +18,7 @@ pub struct ReviewCompany {
     pub user_id: Uuid,
 }
 
-#[derive(Serialize, Deserialize, AsChangeset, Associations, Selectable, Queryable, Clone)]
+#[derive(Serialize, Deserialize, AsChangeset, Associations, Selectable, Queryable)]
 #[diesel(belongs_to(user::User))]
 #[diesel(table_name = review_company)]
 #[serde(rename_all = "camelCase")]
@@ -67,7 +67,7 @@ impl ReviewCompany {
     pub fn replace(
         conn: &mut DbConnection,
         review_id: Uuid,
-        review_company: Option<Vec<ReviewCompanySummary>>,
+        review_company: Option<&Vec<ReviewCompanySummary>>,
     ) -> Result<Vec<ReviewCompanyDetails>, AppError> {
         conn.transaction::<_, diesel::result::Error, _>(|conn| {
             diesel::delete(review_company::table.filter(review_company::review_id.eq(review_id)))
@@ -78,7 +78,7 @@ impl ReviewCompany {
             };
 
             let review_company_items: Vec<ReviewCompany> = review_company
-                .into_iter()
+                .iter()
                 .map(|review_company_summary| ReviewCompany {
                     review_id,
                     user_id: review_company_summary.user_id,
