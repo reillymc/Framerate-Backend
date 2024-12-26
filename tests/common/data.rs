@@ -160,6 +160,7 @@ pub fn generate_save_new_user() -> NewUser {
         first_name: Uuid::new_v4().to_string(),
         last_name: Uuid::new_v4().to_string(),
         password: Uuid::new_v4().to_string(),
+        is_admin: Some(false),
     }
 }
 

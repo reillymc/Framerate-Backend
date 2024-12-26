@@ -88,6 +88,7 @@ pub struct NewUser {
     pub first_name: String,
     pub last_name: String,
     pub avatar_uri: Option<String>,
+    pub is_admin: Option<bool>,
     pub configuration: Option<serde_json::Value>,
 }
 
@@ -135,7 +136,11 @@ impl From<NewUser> for User {
             first_name: user.first_name,
             last_name: user.last_name,
             date_created: chrono::Local::now().naive_local(),
-            permission_level: i16::from(PermissionLevel::GeneralUser),
+            permission_level: if user.is_admin.unwrap_or(false) {
+                i16::from(PermissionLevel::AdminUser)
+            } else {
+                i16::from(PermissionLevel::GeneralUser)
+            },
             public: false,
             avatar_uri: user.avatar_uri,
             configuration: serde_json::json!({

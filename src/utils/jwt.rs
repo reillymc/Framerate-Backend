@@ -37,18 +37,33 @@ impl From<UserSession> for Auth {
 }
 
 impl UserSession {
-    fn new(id: Uuid, permission_level: PermissionLevel) -> Self {
+    fn new(
+        id: Uuid,
+        permission_level: PermissionLevel,
+        expiry_time: chrono::DateTime<Local>,
+    ) -> Self {
         UserSession {
             id,
             permission_level,
             // TODO: investigate refresh tokens
-            exp: (Local::now() + Duration::weeks(52)).timestamp() as usize,
+            exp: expiry_time.timestamp() as usize,
         }
     }
 }
 
 pub fn create_token(id: Uuid, permission_level: PermissionLevel) -> Result<String, AppError> {
-    let claims = UserSession::new(id, permission_level);
+    let claims = UserSession::new(id, permission_level, Local::now() + Duration::weeks(52));
+    let encoded = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(get_secret().as_ref()),
+    )?;
+
+    Ok(encoded)
+}
+
+pub fn create_temp_token(id: Uuid, permission_level: PermissionLevel) -> Result<String, AppError> {
+    let claims = UserSession::new(id, permission_level, Local::now() + Duration::hours(1));
     let encoded = encode(
         &Header::default(),
         &claims,

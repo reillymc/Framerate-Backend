@@ -3,7 +3,11 @@ use std::env;
 use crate::{
     db::DbPool,
     user::{AuthUser, PermissionLevel, User},
-    utils::{jwt::create_token, response_body::Success, AppError},
+    utils::{
+        jwt::{create_temp_token, create_token},
+        response_body::Success,
+        AppError,
+    },
 };
 use actix_web::{post, web, Responder};
 use serde::{Deserialize, Serialize};
@@ -76,7 +80,7 @@ pub async fn setup(
         return Err(AppError::external(401, "Setup procedure already run"))?;
     };
 
-    let token = create_token(Uuid::default(), PermissionLevel::AdminUser);
+    let token = create_temp_token(Uuid::default(), PermissionLevel::AdminUser);
 
     let Ok(token_string) = token else {
         return Err(AppError::external(500, "Unable to create token"))?;
