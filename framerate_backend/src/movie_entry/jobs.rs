@@ -10,11 +10,11 @@ pub fn create_movie_entry_metadata_updater(pool: DbPool, job_client: TmdbClient)
         .unwrap_or(0);
 
     if job_interval == 0 {
-        info!(target: "Entry Updater (Movie)", "Skipping setup");
+        warn!(target: "Entry Updater (Movie)", "Skipping setup");
         return;
     }
 
-    warn!(target: "Entry Updater (Movie)", "Creating entry updater job with interval of {job_interval:?} seconds");
+    info!(target: "Entry Updater (Movie)", "Creating entry updater job with interval of {job_interval:?} seconds");
 
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(job_interval));

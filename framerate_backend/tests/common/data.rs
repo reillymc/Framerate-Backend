@@ -230,7 +230,8 @@ pub fn generate_sample_movie() -> Movie {
         tagline: Some("Big cops. Small town. Moderate violence.".to_string()),
         popularity: Some(26.13),
         runtime: Some(121),
-        status: Some("Released".to_string())
+        status: Some("Released".to_string()),
+        credits: None
     }
 }
 
