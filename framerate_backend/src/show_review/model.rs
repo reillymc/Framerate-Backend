@@ -53,6 +53,7 @@ impl From<ShowReview> for Show {
             external_ids: None,
             seasons: None,
             tagline: None,
+            credits: None,
         }
     }
 }

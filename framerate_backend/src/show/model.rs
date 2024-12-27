@@ -8,6 +8,117 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tmdb_api::{show, utils::serialization::empty_string_as_none};
 
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Role {
+    pub character: Option<String>,
+    pub episode_count: i64,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Job {
+    pub job: String,
+    pub episode_count: i64,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Cast {
+    pub id: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub known_for_department: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub popularity: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile_path: Option<String>,
+    pub roles: Vec<Role>,
+    pub total_episode_count: i64,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Crew {
+    pub id: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub known_for_department: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub popularity: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub department: Option<String>,
+    pub jobs: Vec<Job>,
+    pub total_episode_count: i64,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Credits {
+    pub cast: Vec<Cast>,
+    pub crew: Vec<Crew>,
+}
+
+impl From<show::Crew> for Crew {
+    fn from(crew: show::Crew) -> Self {
+        Crew {
+            id: crew.id,
+            known_for_department: crew.known_for_department,
+            name: crew.name,
+            popularity: crew.popularity,
+            profile_path: crew.profile_path,
+            department: crew.department,
+            total_episode_count: crew.total_episode_count,
+            jobs: crew.jobs.into_iter().map(Job::from).collect(),
+        }
+    }
+}
+impl From<show::Cast> for Cast {
+    fn from(cast: show::Cast) -> Self {
+        Cast {
+            id: cast.id,
+            known_for_department: cast.known_for_department,
+            name: cast.name,
+            popularity: cast.popularity,
+            profile_path: cast.profile_path,
+            total_episode_count: cast.total_episode_count,
+            roles: cast.roles.into_iter().map(Role::from).collect(),
+        }
+    }
+}
+
+impl From<show::Job> for Job {
+    fn from(job: show::Job) -> Self {
+        Job {
+            episode_count: job.episode_count,
+            job: job.job,
+        }
+    }
+}
+
+impl From<show::Role> for Role {
+    fn from(role: show::Role) -> Self {
+        Role {
+            episode_count: role.episode_count,
+            character: role.character,
+        }
+    }
+}
+
+impl From<show::Credits> for Credits {
+    fn from(credits: show::Credits) -> Self {
+        let mut cast = credits.cast;
+        cast.sort_by(|a, b| a.order.cmp(&b.order));
+        let cast = cast.into_iter().take(20).map(Cast::from).collect();
+
+        let crew = credits.crew.into_iter().take(20).map(Crew::from).collect();
+
+        Credits { cast, crew }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct ExternalIds {
@@ -47,6 +158,8 @@ pub struct Show {
     pub external_ids: Option<ExternalIds>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub seasons: Option<Vec<Season>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credits: Option<Credits>,
 }
 
 pub const SHOW_ACTIVE_STATUSES: [&str; 4] =
@@ -68,34 +181,13 @@ impl From<show::ShowSearch> for Show {
             seasons: None,
             last_air_date: None,
             next_air_date: None,
+            credits: None,
         }
     }
 }
 
-#[derive(Deserialize, Debug)]
-struct ShowSearchResults {
-    pub results: Vec<show::ShowSearch>,
-}
-
-impl Show {
-    pub async fn find(client: &TmdbClient, id: &i32) -> Result<Show, AppError> {
-        let generate_endpoint = generate_endpoint(
-            format!("tv/{id}"),
-            Some(HashMap::from([("append_to_response", "external_ids")])),
-        );
-        let request_url = generate_endpoint;
-
-        let response = client.get(&request_url).send().await?;
-
-        if !response.status().is_success() {
-            return Err(AppError::tmdb_error(
-                response.status().as_u16(),
-                response.text().await?.as_str(),
-            ));
-        }
-
-        let show = response.json::<show::Show>().await?;
-
+impl From<show::Show> for Show {
+    fn from(show: show::Show) -> Self {
         let seasons = show.seasons.map(|seasons| {
             seasons
                 .into_iter()
@@ -133,7 +225,13 @@ impl Show {
             None
         };
 
-        let show = Show {
+        let credits = if let Some(credits) = show.aggregate_credits {
+            Some(Credits::from(credits))
+        } else {
+            None
+        };
+
+        Show {
             id: show.id,
             name: show.name,
             overview: show.overview,
@@ -147,8 +245,39 @@ impl Show {
             status: show.status,
             poster_path: show.poster_path,
             seasons,
-        };
-        Ok(show)
+            credits,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+struct ShowSearchResults {
+    pub results: Vec<show::ShowSearch>,
+}
+
+impl Show {
+    pub async fn find(client: &TmdbClient, id: &i32) -> Result<Show, AppError> {
+        let generate_endpoint = generate_endpoint(
+            format!("tv/{id}"),
+            Some(HashMap::from([(
+                "append_to_response",
+                "external_ids,aggregate_credits",
+            )])),
+        );
+        let request_url = generate_endpoint;
+
+        let response = client.get(&request_url).send().await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::tmdb_error(
+                response.status().as_u16(),
+                response.text().await?.as_str(),
+            ));
+        }
+
+        let show = response.json::<show::Show>().await?;
+
+        Ok(Show::from(show))
     }
 
     pub async fn search(client: &TmdbClient, query: &str) -> Result<Vec<Show>, AppError> {

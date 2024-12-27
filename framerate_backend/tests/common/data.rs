@@ -256,6 +256,7 @@ pub fn generate_sample_show() -> Show {
         }),
         next_air_date: None,
         seasons: None,
+        credits: None,
     }
 }
 

@@ -4,7 +4,7 @@ use crate::utils::AppError;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tmdb_api::{credits, movie, utils::serialization::empty_string_as_none};
+use tmdb_api::{movie, utils::serialization::empty_string_as_none};
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -50,6 +50,47 @@ pub struct Credits {
     pub crew: Vec<Crew>,
 }
 
+impl From<movie::Crew> for Crew {
+    fn from(crew: movie::Crew) -> Self {
+        Crew {
+            credit_id: crew.credit_id,
+            id: crew.id,
+            known_for_department: crew.known_for_department,
+            name: crew.name,
+            popularity: crew.popularity,
+            profile_path: crew.profile_path,
+            department: crew.department,
+            job: crew.job,
+        }
+    }
+}
+impl From<movie::Cast> for Cast {
+    fn from(cast: movie::Cast) -> Self {
+        Cast {
+            cast_id: cast.cast_id,
+            character: cast.character,
+            credit_id: cast.credit_id,
+            id: cast.id,
+            known_for_department: cast.known_for_department,
+            name: cast.name,
+            popularity: cast.popularity,
+            profile_path: cast.profile_path,
+        }
+    }
+}
+
+impl From<movie::Credits> for Credits {
+    fn from(credits: movie::Credits) -> Self {
+        let mut cast = credits.cast;
+        cast.sort_by(|a, b| a.order.cmp(&b.order));
+        let cast = cast.into_iter().take(20).map(Cast::from).collect();
+
+        let crew = credits.crew.into_iter().take(20).map(Crew::from).collect();
+
+        Credits { cast, crew }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Movie {
@@ -80,47 +121,6 @@ pub struct Movie {
 
 pub const MOVIE_ACTIVE_STATUSES: [&str; 4] =
     ["Rumored", "Planned", "In Production", "Post Production"];
-
-impl From<credits::Crew> for Crew {
-    fn from(cast: credits::Crew) -> Self {
-        Crew {
-            credit_id: cast.credit_id,
-            id: cast.id,
-            known_for_department: cast.known_for_department,
-            name: cast.name,
-            popularity: cast.popularity,
-            profile_path: cast.profile_path,
-            department: cast.department,
-            job: cast.job,
-        }
-    }
-}
-impl From<credits::Cast> for Cast {
-    fn from(cast: credits::Cast) -> Self {
-        Cast {
-            cast_id: cast.cast_id,
-            character: cast.character,
-            credit_id: cast.credit_id,
-            id: cast.id,
-            known_for_department: cast.known_for_department,
-            name: cast.name,
-            popularity: cast.popularity,
-            profile_path: cast.profile_path,
-        }
-    }
-}
-
-impl From<credits::Credits> for Credits {
-    fn from(credits: credits::Credits) -> Self {
-        let mut cast = credits.cast;
-        cast.sort_by(|a, b| a.order.cmp(&b.order));
-        let cast = cast.into_iter().map(Cast::from).collect();
-
-        let crew = credits.crew.into_iter().map(Crew::from).collect();
-
-        Credits { cast, crew }
-    }
-}
 
 impl From<movie::Movie> for Movie {
     fn from(movie: movie::Movie) -> Self {
