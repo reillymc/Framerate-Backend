@@ -45,6 +45,7 @@ impl From<MovieReview> for Movie {
             title: movie_review.title,
             poster_path: movie_review.poster_path,
             release_date: movie_review.release_date,
+            status: None,
             backdrop_path: None,
             overview: None,
             popularity: None,

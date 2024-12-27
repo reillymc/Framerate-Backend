@@ -229,7 +229,8 @@ pub fn generate_sample_movie() -> Movie {
         overview: Some("Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in...".to_string()),
         tagline: Some("Big cops. Small town. Moderate violence.".to_string()),
         popularity: Some(26.13),
-        runtime: Some(121)
+        runtime: Some(121),
+        status: Some("Released".to_string())
     }
 }
 
@@ -352,6 +353,8 @@ fn generate_movie_entry(user_id: Uuid, watchlist_id: Uuid) -> MovieEntry {
         title: movie.title,
         poster_path: movie.poster_path,
         release_date: movie.release_date,
+        status: movie.status,
+        updated_at: Utc::now().naive_utc().date(),
     }
 }
 

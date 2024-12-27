@@ -1,3 +1,4 @@
+pub mod jobs;
 pub mod model;
 pub mod routes;
 

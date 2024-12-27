@@ -1,7 +1,6 @@
 pub mod authentication;
 pub mod company;
 pub mod db;
-pub mod jobs;
 pub mod movie;
 pub mod movie_entry;
 pub mod movie_review;

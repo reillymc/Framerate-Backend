@@ -8,7 +8,7 @@ use std::env;
 use tracing::info;
 use tracing_log::LogTracer;
 
-use framerate::{db, jobs, routes, tmdb, utils};
+use framerate::{db, movie_entry, routes, show_entry, tmdb, utils};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -19,10 +19,11 @@ async fn main() -> std::io::Result<()> {
     let mut conn = pool.get().unwrap();
     db::run_db_migrations(&mut conn);
 
-    // Don't use caching until appropriate clean-up solution is implemented
+    // Don't use caching for production until appropriate clean-up solution is implemented
     let client = tmdb::get_client(false);
 
-    jobs::create_show_entry_updater(pool.clone(), client.clone());
+    show_entry::jobs::create_show_entry_metadata_updater(pool.clone(), client.clone());
+    movie_entry::jobs::create_movie_entry_metadata_updater(pool.clone(), client.clone());
 
     let host = env::var("HOST").unwrap_or("localhost".to_string());
     let port = env::var("PORT").unwrap_or("3000".to_string());

@@ -9,6 +9,8 @@ diesel::table! {
         imdb_id -> Nullable<Text>,
         poster_path -> Nullable<Text>,
         release_date -> Nullable<Date>,
+        status -> Nullable<Text>,
+        updated_at -> Date,
     }
 }
 

@@ -1,19 +1,20 @@
 use crate::{db::DbPool, show_entry, tmdb::TmdbClient};
 use actix_web::rt::{spawn, time};
 use std::{env, time::Duration};
-use tracing::info;
+use tracing::{info, warn};
 
-pub fn create_show_entry_updater(pool: DbPool, job_client: TmdbClient) {
-    let job_interval = env::var("JOB_INTERVAL")
+pub fn create_show_entry_metadata_updater(pool: DbPool, job_client: TmdbClient) {
+    let job_interval = env::var("ENTRY_METADATA_JOB_INTERVAL")
         .ok()
         .and_then(|port| port.parse::<u64>().ok())
         .unwrap_or(0);
 
     if job_interval == 0 {
+        warn!(target: "Entry Updater (Show)", "Skipping setup");
         return;
     }
 
-    info!(target: "Entry Updater", "Creating entry updater job with interval of {job_interval:?} seconds");
+    info!(target: "Entry Updater (Show)", "Creating entry updater job with interval of {job_interval:?} seconds");
 
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(job_interval));
@@ -32,7 +33,7 @@ pub fn create_show_entry_updater(pool: DbPool, job_client: TmdbClient) {
                 }
                 match entry.internal_update_status(&mut conn, &job_client).await {
                     Ok(updated) => {
-                        info!(target: "Entry Updater",
+                        info!(target: "Entry Updater (Show)",
                             "Updated status for entry {} ({})",
                             updated.show_id, updated.name
                         );
@@ -40,11 +41,11 @@ pub fn create_show_entry_updater(pool: DbPool, job_client: TmdbClient) {
                     Err(e) => {
                         // TODO: handle potential infinite loop if update fails
                         interval.reset_after(Duration::from_secs(86400));
-                        info!(target: "Entry Updater", "Error updating status: {}", e);
+                        warn!(target: "Entry Updater (Show)", "Error updating status: {}", e);
                     }
                 }
             } else {
-                info!(target: "Entry Updater", "No outdated entries found");
+                info!(target: "Entry Updater (Show)", "No outdated entries found");
                 interval.reset_after(Duration::from_secs(86400));
             }
         }

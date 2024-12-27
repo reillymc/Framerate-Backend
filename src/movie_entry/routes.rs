@@ -8,6 +8,7 @@ use crate::utils::{jwt::Auth, AppError};
 use crate::watchlist::Watchlist;
 use actix_web::{delete, Responder};
 use actix_web::{get, post, web};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -72,6 +73,8 @@ async fn create(
             title: movie.title,
             poster_path: movie.poster_path,
             release_date: movie.release_date,
+            status: movie.status,
+            updated_at: Utc::now().naive_utc().date(),
         };
 
         MovieEntry::create(&mut conn, watchlist_entry_to_save)

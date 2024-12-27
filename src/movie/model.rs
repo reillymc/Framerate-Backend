@@ -37,6 +37,7 @@ pub struct MovieResponse {
     pub backdrop_path: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub release_date: Option<NaiveDate>,
+    pub status: Option<String>,
     pub overview: Option<String>,
     pub tagline: Option<String>,
     pub popularity: Option<f32>,
@@ -59,6 +60,8 @@ pub struct Movie {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub release_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tagline: Option<String>,
@@ -72,6 +75,9 @@ pub struct Movie {
 pub struct MovieSearchResults {
     pub results: Vec<MovieResponse>,
 }
+
+pub const MOVIE_ACTIVE_STATUSES: [&str; 4] =
+    ["Rumored", "Planned", "In Production", "Post Production"];
 
 impl From<MovieResponse> for Movie {
     fn from(movie: MovieResponse) -> Self {
@@ -104,6 +110,7 @@ impl From<MovieResponse> for Movie {
             poster_path: movie.poster_path,
             backdrop_path: movie.backdrop_path,
             release_date,
+            status: movie.status,
             overview: movie.overview,
             tagline: movie.tagline,
             popularity: movie.popularity,

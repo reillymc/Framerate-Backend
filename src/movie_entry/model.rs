@@ -1,8 +1,10 @@
 use crate::db::DbConnection;
+use crate::movie::{Movie, MOVIE_ACTIVE_STATUSES};
 use crate::schema::movie_entries;
+use crate::tmdb::TmdbClient;
 use crate::utils::AppError;
 use crate::{user, watchlist};
-use chrono::NaiveDate;
+use chrono::{Duration, NaiveDate, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -33,6 +35,9 @@ pub struct MovieEntry {
     pub poster_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub release_date: Option<NaiveDate>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    pub updated_at: NaiveDate,
 }
 
 impl MovieEntry {
@@ -87,5 +92,36 @@ impl MovieEntry {
         )
         .execute(conn)?;
         Ok(res)
+    }
+
+    pub fn internal_find_outdated(conn: &mut DbConnection) -> Result<Self, AppError> {
+        let movie_entries = movie_entries::table
+            .filter(movie_entries::status.eq_any(MOVIE_ACTIVE_STATUSES))
+            .filter(movie_entries::updated_at.lt(Utc::now().date_naive() - Duration::weeks(8)))
+            .select(MovieEntry::as_select())
+            .first(conn)?;
+
+        Ok(movie_entries)
+    }
+
+    pub async fn internal_update_status(
+        mut self,
+        conn: &mut DbConnection,
+        client: &TmdbClient,
+    ) -> Result<Self, AppError> {
+        if let Ok(movie) = Movie::find(client, &self.movie_id).await {
+            self.release_date = movie.release_date;
+            self.poster_path = movie.poster_path;
+            self.status = movie.status;
+        };
+
+        self.updated_at = Utc::now().naive_utc().date();
+
+        let updated = diesel::update(movie_entries::table)
+            .filter(movie_entries::movie_id.eq(self.movie_id))
+            .set(self)
+            .get_result(conn)?;
+
+        Ok(updated)
     }
 }
