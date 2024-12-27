@@ -4,10 +4,11 @@ WORKDIR /app
 
 RUN USER=root cargo init
 COPY Cargo.toml Cargo.toml
-RUN cargo fetch
 
-COPY src src
-COPY migrations migrations
+COPY framerate_backend framerate_backend
+COPY tmdb_api tmdb_api
+
+RUN cargo fetch
 
 RUN cargo build --release
 
