@@ -51,6 +51,7 @@ impl From<MovieReview> for Movie {
             popularity: None,
             runtime: None,
             tagline: None,
+            credits: None,
         }
     }
 }
