@@ -1,12 +1,12 @@
 use chrono::NaiveDate;
 use serde::{de::IntoDeserializer, Deserialize};
 
-pub fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
+pub fn empty_string_as_none<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
 where
     D: serde::Deserializer<'de>,
     T: serde::Deserialize<'de>,
 {
-    let opt = Option::<String>::deserialize(de)?;
+    let opt = Option::<String>::deserialize(deserializer)?;
     let opt = opt.as_deref();
     match opt {
         None | Some("") => Ok(None),

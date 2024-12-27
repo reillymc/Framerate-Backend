@@ -1,19 +1,10 @@
 use crate::{
     tmdb::{generate_endpoint, TmdbClient},
-    utils::{serialization::empty_string_as_none, AppError},
+    utils::AppError,
 };
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
-
-#[derive(Deserialize, Debug)]
-pub struct EpisodeResponse {
-    pub episode_number: i32,
-    pub name: Option<String>,
-    pub still_path: Option<String>,
-    pub overview: Option<String>,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub air_date: Option<NaiveDate>,
-}
+use tmdb_api::{episode, season, utils::serialization::empty_string_as_none};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,18 +18,6 @@ pub struct Episode {
     pub overview: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub air_date: Option<NaiveDate>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct SeasonResponse {
-    pub season_number: i32,
-    pub name: Option<String>,
-    pub poster_path: Option<String>,
-    pub overview: Option<String>,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub air_date: Option<NaiveDate>,
-    pub episode_count: Option<i32>,
-    pub episodes: Option<Vec<EpisodeResponse>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -61,8 +40,8 @@ pub struct Season {
     pub episodes: Option<Vec<Episode>>,
 }
 
-impl From<EpisodeResponse> for Episode {
-    fn from(episode: EpisodeResponse) -> Self {
+impl From<episode::Episode> for Episode {
+    fn from(episode: episode::Episode) -> Self {
         Episode {
             episode_number: episode.episode_number,
             name: episode.name,
@@ -90,7 +69,7 @@ impl Season {
             ));
         }
 
-        let season = response.json::<SeasonResponse>().await?;
+        let season = response.json::<season::Season>().await?;
 
         let episodes = season
             .episodes
