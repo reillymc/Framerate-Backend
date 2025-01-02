@@ -1,4 +1,4 @@
-use crate::{db::DbPool, movie_entry, tmdb::TmdbClient};
+use crate::{db::DbPool, movie_entry, tmdb::TmdbClient, utils::env_vars};
 use actix_web::rt::{spawn, time};
 use std::{env, time::Duration};
 use tracing::{info, warn};
@@ -9,12 +9,17 @@ pub fn create_movie_entry_metadata_updater(pool: DbPool, job_client: TmdbClient)
         .and_then(|port| port.parse::<u64>().ok())
         .unwrap_or(0);
 
+    let outdated_delta = env::var("MOVIE_ENTRY_OUTDATED_DURATION")
+        .ok()
+        .and_then(|delta| env_vars::parse_time_delta_variable(&delta))
+        .unwrap_or(chrono::Duration::weeks(8));
+
     if job_interval == 0 {
         warn!(target: "Entry Updater (Movie)", "Skipping setup");
         return;
     }
 
-    info!(target: "Entry Updater (Movie)", "Creating entry updater job with interval of {job_interval:?} seconds");
+    info!(target: "Entry Updater (Movie)", "Creating entry updater job with interval of {job_interval:?} seconds and delta of {outdated_delta:?}");
 
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(job_interval));
@@ -24,7 +29,7 @@ pub fn create_movie_entry_metadata_updater(pool: DbPool, job_client: TmdbClient)
             interval.tick().await;
             let mut conn = pool.get().unwrap();
 
-            let entry = movie_entry::MovieEntry::internal_find_outdated(&mut conn);
+            let entry = movie_entry::MovieEntry::internal_find_outdated(&mut conn, outdated_delta);
             if let Ok(entry) = entry {
                 if previous_movie_id != entry.movie_id {
                     previous_movie_id = entry.movie_id;

@@ -1,7 +1,7 @@
 use crate::db::DbConnection;
-use crate::utils::AppError;
 use crate::schema::reviews;
 use crate::user;
+use crate::utils::AppError;
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -10,6 +10,7 @@ use uuid::Uuid;
 #[derive(AsChangeset, Insertable, Associations, Selectable, Queryable)]
 #[diesel(belongs_to(user::User))]
 #[diesel(table_name = reviews)]
+#[diesel(treat_none_as_null = true)]
 pub struct Review {
     pub review_id: Uuid,
     pub user_id: Uuid,

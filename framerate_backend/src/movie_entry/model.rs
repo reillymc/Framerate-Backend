@@ -4,7 +4,7 @@ use crate::schema::movie_entries;
 use crate::tmdb::TmdbClient;
 use crate::utils::AppError;
 use crate::{user, watchlist};
-use chrono::{Duration, NaiveDate, Utc};
+use chrono::{NaiveDate, TimeDelta, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -94,10 +94,13 @@ impl MovieEntry {
         Ok(res)
     }
 
-    pub fn internal_find_outdated(conn: &mut DbConnection) -> Result<Self, AppError> {
+    pub fn internal_find_outdated(
+        conn: &mut DbConnection,
+        outdated_delta: TimeDelta,
+    ) -> Result<Self, AppError> {
         let movie_entries = movie_entries::table
             .filter(movie_entries::status.eq_any(MOVIE_ACTIVE_STATUSES))
-            .filter(movie_entries::updated_at.lt(Utc::now().date_naive() - Duration::weeks(8)))
+            .filter(movie_entries::updated_at.lt(Utc::now().date_naive() - outdated_delta))
             .select(MovieEntry::as_select())
             .first(conn)?;
 

@@ -4,7 +4,7 @@ use crate::show::{Show, SHOW_ACTIVE_STATUSES};
 use crate::tmdb::TmdbClient;
 use crate::utils::AppError;
 use crate::{user, watchlist};
-use chrono::{Duration, NaiveDate, Utc};
+use chrono::{Duration, NaiveDate, TimeDelta, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -98,12 +98,15 @@ impl ShowEntry {
         Ok(res)
     }
 
-    pub fn internal_find_outdated(conn: &mut DbConnection) -> Result<Self, AppError> {
+    pub fn internal_find_outdated(
+        conn: &mut DbConnection,
+        outdated_delta: TimeDelta,
+    ) -> Result<Self, AppError> {
         let show_entries = show_entries::table
             .filter(show_entries::status.eq_any(SHOW_ACTIVE_STATUSES))
             .filter(
                 show_entries::updated_at
-                    .lt(Utc::now().date_naive() - Duration::weeks(6))
+                    .lt(Utc::now().date_naive() - outdated_delta)
                     .or(show_entries::next_air_date
                         .lt(Utc::now().date_naive() + Duration::days(1))
                         .and(
