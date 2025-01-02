@@ -99,7 +99,11 @@ impl MovieEntry {
         outdated_delta: TimeDelta,
     ) -> Result<Self, AppError> {
         let movie_entries = movie_entries::table
-            .filter(movie_entries::status.eq_any(MOVIE_ACTIVE_STATUSES))
+            .filter(
+                movie_entries::status
+                    .eq_any(MOVIE_ACTIVE_STATUSES)
+                    .or(movie_entries::status.is_null()),
+            )
             .filter(movie_entries::updated_at.lt(Utc::now().date_naive() - outdated_delta))
             .select(MovieEntry::as_select())
             .first(conn)?;

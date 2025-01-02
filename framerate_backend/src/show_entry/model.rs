@@ -103,7 +103,11 @@ impl ShowEntry {
         outdated_delta: TimeDelta,
     ) -> Result<Self, AppError> {
         let show_entries = show_entries::table
-            .filter(show_entries::status.eq_any(SHOW_ACTIVE_STATUSES))
+            .filter(
+                show_entries::status
+                    .eq_any(SHOW_ACTIVE_STATUSES)
+                    .or(show_entries::status.is_null()),
+            )
             .filter(
                 show_entries::updated_at
                     .lt(Utc::now().date_naive() - outdated_delta)
