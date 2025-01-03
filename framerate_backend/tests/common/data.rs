@@ -61,6 +61,13 @@ pub fn create_watchlist(
     Watchlist::create(conn, generate_watchlist(user.user_id)).unwrap()
 }
 
+pub fn create_default_watchlist(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+) -> Watchlist {
+    Watchlist::create(conn, generate_default_watchlist(user.user_id)).unwrap()
+}
+
 pub fn create_show_watchlist(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
     user: &User,
@@ -323,6 +330,17 @@ fn generate_watchlist(user_id: Uuid) -> Watchlist {
         user_id,
         name: Uuid::new_v4().to_string(),
         media_type: generate_sample_media_type(),
+        default_for: None,
+    }
+}
+
+fn generate_default_watchlist(user_id: Uuid) -> Watchlist {
+    Watchlist {
+        watchlist_id: Uuid::new_v4(),
+        user_id,
+        name: Uuid::new_v4().to_string(),
+        media_type: generate_sample_media_type(),
+        default_for: Some("watchlist".to_string()),
     }
 }
 
@@ -332,6 +350,7 @@ fn generate_movie_watchlist(user_id: Uuid) -> Watchlist {
         user_id,
         name: Uuid::new_v4().to_string(),
         media_type: "movie".to_string(),
+        default_for: None,
     }
 }
 
@@ -341,6 +360,7 @@ fn generate_show_watchlist(user_id: Uuid) -> Watchlist {
         user_id,
         name: Uuid::new_v4().to_string(),
         media_type: "show".to_string(),
+        default_for: None,
     }
 }
 

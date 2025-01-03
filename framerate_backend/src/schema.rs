@@ -107,6 +107,7 @@ diesel::table! {
         user_id -> Uuid,
         name -> Text,
         media_type -> Text,
+        default_for -> Nullable<Text>,
     }
 }
 

@@ -15,6 +15,7 @@ pub struct Watchlist {
     pub user_id: Uuid,
     pub name: String,
     pub media_type: String,
+    pub default_for: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -35,7 +36,8 @@ impl Watchlist {
             .filter(
                 watchlists::user_id
                     .eq(user_id)
-                    .and(watchlists::media_type.eq(media_type)),
+                    .and(watchlists::media_type.eq(media_type))
+                    .and(watchlists::default_for.eq("watchlist")),
             )
             .first(conn);
 
@@ -57,14 +59,33 @@ impl Watchlist {
                 media_type: media_type.to_string(),
                 user_id,
                 name,
+                default_for: Some("watchlist".to_string()),
             },
         )?;
         Ok(new_watchlist)
     }
 
-    pub fn find_by_user(conn: &mut DbConnection, user_id: Uuid) -> Result<Vec<Self>, AppError> {
+    pub fn find(
+        conn: &mut DbConnection,
+        user_id: Uuid,
+        watchlist_id: &Uuid,
+    ) -> Result<Self, AppError> {
         let watchlists = watchlists::table
             .filter(watchlists::user_id.eq(user_id))
+            .filter(watchlists::watchlist_id.eq(watchlist_id))
+            .select(Watchlist::as_select())
+            .first(conn)?;
+        Ok(watchlists)
+    }
+
+    pub fn find_by_media_type(
+        conn: &mut DbConnection,
+        user_id: Uuid,
+        media_type: &str,
+    ) -> Result<Vec<Self>, AppError> {
+        let watchlists = watchlists::table
+            .filter(watchlists::user_id.eq(user_id))
+            .filter(watchlists::media_type.eq(media_type))
             .order(watchlists::name.desc())
             .select(Watchlist::as_select())
             .load(conn)?;
