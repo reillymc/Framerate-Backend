@@ -1,0 +1,15 @@
+meta {
+  name: Delete Entry
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{host}}/{{endpoint}}/{{subpath}}/{{movieId}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  movieId: 4638
+}

@@ -5,19 +5,23 @@ use rand::Rng;
 use uuid::Uuid;
 
 use framerate::{
+    collection::{Collection, UpdatedCollection},
     company::{Company, SaveCompany},
-    movie::Movie,
-    movie_entry::{MovieEntry, SaveMovieEntryRequest},
+    movie::{Movie, MOVIE_MEDIA_TYPE},
+    movie_collection::{NewMovieCollection, SaveMovieCollectionEntryRequest},
+    movie_entry::MovieEntry,
     movie_review::{MovieReview, SaveMovieReviewRequest},
+    movie_watchlist::SaveMovieWatchlistEntryRequest,
     review::Review,
     season::Season,
     season_review::{SaveSeasonReviewRequest, SeasonReview},
-    show::{ExternalIds, Show},
-    show_entry::{SaveShowEntryRequest, ShowEntry},
+    show::{ExternalIds, Show, SHOW_MEDIA_TYPE},
+    show_collection::{NewShowCollection, SaveShowCollectionEntryRequest},
+    show_entry::ShowEntry,
     show_review::{SaveShowReviewRequest, ShowReview},
+    show_watchlist::SaveShowWatchlistEntryRequest,
     user::{NewUser, PermissionLevel, User},
     utils::jwt::create_token,
-    watchlist::{NewWatchlist, Watchlist},
 };
 
 pub fn create_authed_user(
@@ -54,54 +58,53 @@ pub fn create_user(conn: &mut PooledConnection<ConnectionManager<PgConnection>>)
     User::create(conn, generate_save_new_user()).unwrap()
 }
 
-pub fn create_watchlist(
+pub fn create_default_show_watchlist(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
     user: &User,
-) -> Watchlist {
-    Watchlist::create(conn, generate_watchlist(user.user_id)).unwrap()
+) -> Collection {
+    Collection::create(conn, generate_default_show_watchlist(user.user_id)).unwrap()
 }
 
-pub fn create_default_watchlist(
+pub fn create_default_movie_watchlist(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
     user: &User,
-) -> Watchlist {
-    Watchlist::create(conn, generate_default_watchlist(user.user_id)).unwrap()
-}
-
-pub fn create_show_watchlist(
-    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
-    user: &User,
-) -> Watchlist {
-    Watchlist::create(conn, generate_show_watchlist(user.user_id)).unwrap()
-}
-
-pub fn create_show_entry(
-    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
-    user: &User,
-    watchlist: &Watchlist,
-) -> ShowEntry {
-    ShowEntry::create(
-        conn,
-        generate_show_entry(user.user_id, watchlist.watchlist_id),
-    )
-    .unwrap()
-}
-
-pub fn create_movie_watchlist(
-    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
-    user: &User,
-) -> Watchlist {
-    Watchlist::create(conn, generate_movie_watchlist(user.user_id)).unwrap()
+) -> Collection {
+    Collection::create(conn, generate_default_movie_watchlist(user.user_id)).unwrap()
 }
 
 pub fn create_movie_entry(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
     user: &User,
-    watchlist: &Watchlist,
+    collection: &Collection,
 ) -> MovieEntry {
     MovieEntry::create(
         conn,
-        generate_movie_entry(user.user_id, watchlist.watchlist_id),
+        generate_movie_entry(user.user_id, collection.collection_id),
+    )
+    .unwrap()
+}
+
+pub fn create_movie_collection(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+) -> Collection {
+    Collection::create(conn, generate_movie_collection(user.user_id)).unwrap()
+}
+pub fn create_show_collection(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+) -> Collection {
+    Collection::create(conn, generate_show_collection(user.user_id)).unwrap()
+}
+
+pub fn create_show_entry(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+    collection: &Collection,
+) -> ShowEntry {
+    ShowEntry::create(
+        conn,
+        generate_show_entry(user.user_id, collection.collection_id),
     )
     .unwrap()
 }
@@ -197,23 +200,43 @@ pub fn generate_save_season_review() -> SaveSeasonReviewRequest {
     }
 }
 
-pub fn generate_save_watchlist() -> NewWatchlist {
-    NewWatchlist {
+pub fn generate_save_movie_collection() -> NewMovieCollection {
+    NewMovieCollection {
         name: Uuid::new_v4().to_string(),
-        media_type: generate_sample_media_type(),
     }
 }
 
-pub fn generate_save_movie_entry() -> SaveMovieEntryRequest {
-    let movie = generate_sample_movie();
-
-    SaveMovieEntryRequest { movie_id: movie.id }
+pub fn generate_save_show_collection() -> NewShowCollection {
+    NewShowCollection {
+        name: Uuid::new_v4().to_string(),
+    }
 }
 
-pub fn generate_save_show_entry() -> SaveShowEntryRequest {
-    let show = generate_sample_show();
+pub fn generate_update_movie_collection() -> UpdatedCollection {
+    UpdatedCollection {
+        name: Uuid::new_v4().to_string(),
+    }
+}
 
-    SaveShowEntryRequest { show_id: show.id }
+pub fn generate_update_show_collection() -> UpdatedCollection {
+    UpdatedCollection {
+        name: Uuid::new_v4().to_string(),
+    }
+}
+
+pub fn generate_save_movie_collection_entry() -> SaveMovieCollectionEntryRequest {
+    let movie = generate_sample_movie();
+    SaveMovieCollectionEntryRequest { movie_id: movie.id }
+}
+
+pub fn generate_save_show_collection_entry() -> SaveShowCollectionEntryRequest {
+    let show = generate_sample_show();
+    SaveShowCollectionEntryRequest { show_id: show.id }
+}
+
+pub fn generate_save_show_watchlist_entry() -> SaveShowWatchlistEntryRequest {
+    let show = generate_sample_show();
+    SaveShowWatchlistEntryRequest { show_id: show.id }
 }
 
 pub fn generate_save_company() -> SaveCompany {
@@ -221,6 +244,11 @@ pub fn generate_save_company() -> SaveCompany {
         first_name: Uuid::new_v4().to_string(),
         last_name: Uuid::new_v4().to_string(),
     }
+}
+
+pub fn generate_save_movie_watchlist_entry() -> SaveMovieWatchlistEntryRequest {
+    let movie = generate_sample_movie();
+    SaveMovieWatchlistEntryRequest { movie_id: movie.id }
 }
 
 // Generate sample data
@@ -286,9 +314,9 @@ pub fn generate_sample_season() -> Season {
 pub fn generate_sample_media_type() -> String {
     let mut rng = rand::thread_rng();
     let media_type = if rng.gen() {
-        "movie".to_string()
+        MOVIE_MEDIA_TYPE.to_string()
     } else {
-        "show".to_string()
+        SHOW_MEDIA_TYPE.to_string()
     };
 
     media_type
@@ -324,52 +352,52 @@ fn generate_movie_review(user_id: Uuid, review_id: Uuid) -> MovieReview {
     }
 }
 
-fn generate_watchlist(user_id: Uuid) -> Watchlist {
-    Watchlist {
-        watchlist_id: Uuid::new_v4(),
+fn generate_movie_collection(user_id: Uuid) -> Collection {
+    Collection {
+        collection_id: Uuid::new_v4(),
         user_id,
         name: Uuid::new_v4().to_string(),
-        media_type: generate_sample_media_type(),
+        media_type: MOVIE_MEDIA_TYPE.to_string(),
         default_for: None,
     }
 }
 
-fn generate_default_watchlist(user_id: Uuid) -> Watchlist {
-    Watchlist {
-        watchlist_id: Uuid::new_v4(),
+fn generate_show_collection(user_id: Uuid) -> Collection {
+    Collection {
+        collection_id: Uuid::new_v4(),
         user_id,
         name: Uuid::new_v4().to_string(),
-        media_type: generate_sample_media_type(),
+        media_type: SHOW_MEDIA_TYPE.to_string(),
+        default_for: None,
+    }
+}
+
+fn generate_default_show_watchlist(user_id: Uuid) -> Collection {
+    Collection {
+        collection_id: Uuid::new_v4(),
+        user_id,
+        name: Uuid::new_v4().to_string(),
+        media_type: SHOW_MEDIA_TYPE.to_string(),
         default_for: Some("watchlist".to_string()),
     }
 }
 
-fn generate_movie_watchlist(user_id: Uuid) -> Watchlist {
-    Watchlist {
-        watchlist_id: Uuid::new_v4(),
+fn generate_default_movie_watchlist(user_id: Uuid) -> Collection {
+    Collection {
+        collection_id: Uuid::new_v4(),
         user_id,
         name: Uuid::new_v4().to_string(),
-        media_type: "movie".to_string(),
-        default_for: None,
+        media_type: MOVIE_MEDIA_TYPE.to_string(),
+        default_for: Some("watchlist".to_string()),
     }
 }
 
-fn generate_show_watchlist(user_id: Uuid) -> Watchlist {
-    Watchlist {
-        watchlist_id: Uuid::new_v4(),
-        user_id,
-        name: Uuid::new_v4().to_string(),
-        media_type: "show".to_string(),
-        default_for: None,
-    }
-}
-
-fn generate_movie_entry(user_id: Uuid, watchlist_id: Uuid) -> MovieEntry {
+fn generate_movie_entry(user_id: Uuid, collection_id: Uuid) -> MovieEntry {
     let movie = generate_sample_movie();
 
     MovieEntry {
         user_id,
-        watchlist_id,
+        collection_id,
         imdb_id: movie.imdb_id,
         movie_id: movie.id,
         title: movie.title,
@@ -380,12 +408,12 @@ fn generate_movie_entry(user_id: Uuid, watchlist_id: Uuid) -> MovieEntry {
     }
 }
 
-fn generate_show_entry(user_id: Uuid, watchlist_id: Uuid) -> ShowEntry {
+fn generate_show_entry(user_id: Uuid, collection_id: Uuid) -> ShowEntry {
     let show = generate_sample_show();
 
     ShowEntry {
         user_id,
-        watchlist_id,
+        collection_id,
         imdb_id: show.external_ids.unwrap().imdb_id,
         show_id: show.id,
         name: show.name,

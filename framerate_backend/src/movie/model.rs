@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tmdb_api::{movie, utils::serialization::empty_string_as_none};
 
+pub const MOVIE_MEDIA_TYPE: &str = "movie";
+
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Cast {

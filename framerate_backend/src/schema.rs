@@ -1,8 +1,18 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    movie_entries (watchlist_id, movie_id) {
-        watchlist_id -> Uuid,
+    collections (collection_id) {
+        collection_id -> Uuid,
+        user_id -> Uuid,
+        name -> Text,
+        media_type -> Text,
+        default_for -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    movie_entries (collection_id, movie_id) {
+        collection_id -> Uuid,
         movie_id -> Int4,
         user_id -> Uuid,
         title -> Text,
@@ -58,8 +68,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    show_entries (watchlist_id, show_id) {
-        watchlist_id -> Uuid,
+    show_entries (collection_id, show_id) {
+        collection_id -> Uuid,
         show_id -> Int4,
         user_id -> Uuid,
         name -> Text,
@@ -101,18 +111,9 @@ diesel::table! {
     }
 }
 
-diesel::table! {
-    watchlists (watchlist_id) {
-        watchlist_id -> Uuid,
-        user_id -> Uuid,
-        name -> Text,
-        media_type -> Text,
-        default_for -> Nullable<Text>,
-    }
-}
-
+diesel::joinable!(collections -> users (user_id));
+diesel::joinable!(movie_entries -> collections (collection_id));
 diesel::joinable!(movie_entries -> users (user_id));
-diesel::joinable!(movie_entries -> watchlists (watchlist_id));
 diesel::joinable!(movie_reviews -> reviews (review_id));
 diesel::joinable!(movie_reviews -> users (user_id));
 diesel::joinable!(review_company -> reviews (review_id));
@@ -120,13 +121,13 @@ diesel::joinable!(review_company -> users (user_id));
 diesel::joinable!(reviews -> users (user_id));
 diesel::joinable!(season_reviews -> reviews (review_id));
 diesel::joinable!(season_reviews -> users (user_id));
+diesel::joinable!(show_entries -> collections (collection_id));
 diesel::joinable!(show_entries -> users (user_id));
-diesel::joinable!(show_entries -> watchlists (watchlist_id));
 diesel::joinable!(show_reviews -> reviews (review_id));
 diesel::joinable!(show_reviews -> users (user_id));
-diesel::joinable!(watchlists -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    collections,
     movie_entries,
     movie_reviews,
     review_company,
@@ -135,5 +136,4 @@ diesel::allow_tables_to_appear_in_same_query!(
     show_entries,
     show_reviews,
     users,
-    watchlists,
 );

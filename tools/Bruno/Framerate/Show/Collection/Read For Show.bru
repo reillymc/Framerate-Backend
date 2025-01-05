@@ -1,0 +1,15 @@
+meta {
+  name: Read For Show
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{host}}/{{endpoint}}/{{subpath}}/show/{{showId}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  showId: 125988
+}

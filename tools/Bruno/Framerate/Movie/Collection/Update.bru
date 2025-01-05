@@ -1,0 +1,21 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{host}}/{{endpoint}}/{{subpath}}/{{collectionId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "My Updated Movie Collection"
+  }
+}
+
+vars:pre-request {
+  collectionId: a6d8dcca-35ba-46d0-903a-1d76fe9430cb
+}

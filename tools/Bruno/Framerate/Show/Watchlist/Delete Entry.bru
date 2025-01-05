@@ -1,0 +1,15 @@
+meta {
+  name: Delete Entry
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{host}}/{{endpoint}}/{{subpath}}/{{showId}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  showId: 194764
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{host}}/{{endpoint}}/{{subpath}}/{{collectionId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "My Updated Show Collection"
+  }
+}
+
+vars:pre-request {
+  collectionId: e8cf81a6-bf85-4f9c-b21c-a20211760ef5
+}

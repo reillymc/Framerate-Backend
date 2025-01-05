@@ -3,7 +3,7 @@ use crate::schema::show_entries;
 use crate::show::{Show, SHOW_ACTIVE_STATUSES};
 use crate::tmdb::TmdbClient;
 use crate::utils::AppError;
-use crate::{user, watchlist};
+use crate::{collection, user};
 use chrono::{Duration, NaiveDate, TimeDelta, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -21,11 +21,11 @@ use uuid::Uuid;
     PartialEq,
 )]
 #[diesel(belongs_to(user::User))]
-#[diesel(belongs_to(watchlist::Watchlist))]
+#[diesel(belongs_to(collection::Collection))]
 #[diesel(table_name = show_entries)]
 #[serde(rename_all = "camelCase")]
 pub struct ShowEntry {
-    pub watchlist_id: Uuid,
+    pub collection_id: Uuid,
     pub show_id: i32,
     pub user_id: Uuid,
     pub name: String,
@@ -48,11 +48,11 @@ impl ShowEntry {
     pub fn find_all(
         conn: &mut DbConnection,
         user_id: Uuid,
-        watchlist_id: Uuid,
+        collection_id: Uuid,
     ) -> Result<Vec<Self>, AppError> {
         let show_entries = show_entries::table
             .filter(show_entries::user_id.eq(user_id))
-            .filter(show_entries::watchlist_id.eq(watchlist_id))
+            .filter(show_entries::collection_id.eq(collection_id))
             .order(show_entries::first_air_date.desc())
             .select(ShowEntry::as_select())
             .load(conn)?;
@@ -62,12 +62,12 @@ impl ShowEntry {
     pub fn find(
         conn: &mut DbConnection,
         user_id: Uuid,
-        watchlist_id: Uuid,
+        collection_id: Uuid,
         show_id: i32,
     ) -> Result<Self, AppError> {
         let show_entries = show_entries::table
             .filter(show_entries::user_id.eq(user_id))
-            .filter(show_entries::watchlist_id.eq(watchlist_id))
+            .filter(show_entries::collection_id.eq(collection_id))
             .filter(show_entries::show_id.eq(show_id))
             .order(show_entries::first_air_date.desc())
             .select(ShowEntry::as_select())
@@ -84,18 +84,32 @@ impl ShowEntry {
 
     pub fn delete(
         conn: &mut DbConnection,
-        watchlist_id: Uuid,
+        collection_id: Uuid,
         show_id: i32,
     ) -> Result<usize, AppError> {
         let res = diesel::delete(
             show_entries::table.filter(
-                show_entries::watchlist_id
-                    .eq(watchlist_id)
+                show_entries::collection_id
+                    .eq(collection_id)
                     .and(show_entries::show_id.eq(show_id)),
             ),
         )
         .execute(conn)?;
         Ok(res)
+    }
+
+    pub fn find_collections(
+        conn: &mut DbConnection,
+        user_id: Uuid,
+        show_id: &i32,
+    ) -> Result<Vec<Uuid>, AppError> {
+        let entries = show_entries::table
+            .filter(show_entries::user_id.eq(user_id))
+            .filter(show_entries::show_id.eq(show_id))
+            .select(show_entries::collection_id)
+            .load(conn)?;
+
+        Ok(entries)
     }
 
     pub fn internal_find_outdated(

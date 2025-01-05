@@ -1,0 +1,15 @@
+meta {
+  name: Read
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/{{endpoint}}/{{subpath}}/{{collectionId}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  collectionId: a6d8dcca-35ba-46d0-903a-1d76fe9430cb
+}

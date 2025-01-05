@@ -3,7 +3,7 @@ use crate::movie::{Movie, MOVIE_ACTIVE_STATUSES};
 use crate::schema::movie_entries;
 use crate::tmdb::TmdbClient;
 use crate::utils::AppError;
-use crate::{user, watchlist};
+use crate::{collection, user};
 use chrono::{NaiveDate, TimeDelta, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -21,11 +21,11 @@ use uuid::Uuid;
     PartialEq,
 )]
 #[diesel(belongs_to(user::User))]
-#[diesel(belongs_to(watchlist::Watchlist))]
+#[diesel(belongs_to(collection::Collection))]
 #[diesel(table_name = movie_entries)]
 #[serde(rename_all = "camelCase")]
 pub struct MovieEntry {
-    pub watchlist_id: Uuid,
+    pub collection_id: Uuid,
     pub movie_id: i32,
     pub user_id: Uuid,
     pub title: String,
@@ -44,11 +44,11 @@ impl MovieEntry {
     pub fn find_all(
         conn: &mut DbConnection,
         user_id: Uuid,
-        watchlist_id: Uuid,
+        collection_id: Uuid,
     ) -> Result<Vec<Self>, AppError> {
         let movie_entries = movie_entries::table
             .filter(movie_entries::user_id.eq(user_id))
-            .filter(movie_entries::watchlist_id.eq(watchlist_id))
+            .filter(movie_entries::collection_id.eq(collection_id))
             .order(movie_entries::release_date.desc())
             .select(MovieEntry::as_select())
             .load(conn)?;
@@ -58,12 +58,12 @@ impl MovieEntry {
     pub fn find(
         conn: &mut DbConnection,
         user_id: Uuid,
-        watchlist_id: Uuid,
+        collection_id: Uuid,
         movie_id: i32,
     ) -> Result<Self, AppError> {
         let movie_entries = movie_entries::table
             .filter(movie_entries::user_id.eq(user_id))
-            .filter(movie_entries::watchlist_id.eq(watchlist_id))
+            .filter(movie_entries::collection_id.eq(collection_id))
             .filter(movie_entries::movie_id.eq(movie_id))
             .order(movie_entries::release_date.desc())
             .select(MovieEntry::as_select())
@@ -80,18 +80,32 @@ impl MovieEntry {
 
     pub fn delete(
         conn: &mut DbConnection,
-        watchlist_id: Uuid,
+        collection_id: Uuid,
         movie_id: i32,
     ) -> Result<usize, AppError> {
         let res = diesel::delete(
             movie_entries::table.filter(
-                movie_entries::watchlist_id
-                    .eq(watchlist_id)
+                movie_entries::collection_id
+                    .eq(collection_id)
                     .and(movie_entries::movie_id.eq(movie_id)),
             ),
         )
         .execute(conn)?;
         Ok(res)
+    }
+
+    pub fn find_collections(
+        conn: &mut DbConnection,
+        user_id: Uuid,
+        movie_id: &i32,
+    ) -> Result<Vec<Uuid>, AppError> {
+        let entries = movie_entries::table
+            .filter(movie_entries::user_id.eq(user_id))
+            .filter(movie_entries::movie_id.eq(movie_id))
+            .select(movie_entries::collection_id)
+            .load(conn)?;
+
+        Ok(entries)
     }
 
     pub fn internal_find_outdated(

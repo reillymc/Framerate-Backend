@@ -1,0 +1,15 @@
+meta {
+  name: Delete
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{host}}/{{endpoint}}/{{subpath}}/{{collectionId}}
+  body: json
+  auth: inherit
+}
+
+vars:pre-request {
+  collectionId: 2adf6f21-7c0f-4d1f-9258-370395c74e41
+}

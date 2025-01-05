@@ -1,0 +1,21 @@
+meta {
+  name: Create Entry
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{host}}/{{endpoint}}/{{subpath}}/{{collectionId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "showId": 194764
+  }
+}
+
+vars:pre-request {
+  collectionId: ac439276-99c2-40c7-9483-f3919c5fd4f6
+}

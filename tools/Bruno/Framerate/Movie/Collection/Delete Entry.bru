@@ -1,0 +1,16 @@
+meta {
+  name: Delete Entry
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{host}}/{{endpoint}}/{{subpath}}/{{collectionId}}/{{movieId}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  movieId: 4638
+  collectionId: a6d8dcca-35ba-46d0-903a-1d76fe9430cb
+}

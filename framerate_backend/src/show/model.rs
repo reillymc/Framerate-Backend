@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tmdb_api::{show, utils::serialization::empty_string_as_none};
 
+pub const SHOW_MEDIA_TYPE: &str = "show";
+
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Role {
