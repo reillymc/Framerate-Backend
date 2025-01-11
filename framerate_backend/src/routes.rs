@@ -1,6 +1,7 @@
 use actix_web::get;
 use actix_web::web;
 use actix_web::HttpResponse;
+use utoipa_actix_web::service_config::ServiceConfig;
 
 use crate::authentication;
 use crate::company;
@@ -24,7 +25,14 @@ async fn health() -> HttpResponse {
         .finish()
 }
 
-pub fn init_routes(config: &mut web::ServiceConfig) {
+pub fn init_routes(config: &mut ServiceConfig) {
+    config
+        .service(movie::details)
+        .service(movie::popular)
+        .service(movie::search);
+}
+
+pub fn init_undocumented_routes(config: &mut web::ServiceConfig) {
     config.service(health);
 
     config.service(authentication::login);
@@ -34,10 +42,6 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(company::create);
     config.service(company::update);
     config.service(company::delete);
-
-    config.service(movie::details);
-    config.service(movie::popular);
-    config.service(movie::search);
 
     config.service(movie_collection::find_all);
     config.service(movie_collection::find);

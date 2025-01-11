@@ -1,6 +1,6 @@
 [package]
 name = "framerate"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -38,6 +38,9 @@ reqwest-middleware = "0.4.0"
 futures-util = "0.3.31"
 tracing-log = "0.2.0"
 tmdb_api = { path = "../tmdb_api" }
+utoipa = { version = "5.3.0", features = ["chrono", "actix_extras"] }
+utoipa-actix-web = "0.1.2"
+utoipa-swagger-ui = { version = "8.1.0", features = ["actix-web"] }
 
 [dev-dependencies]
 actix-http = "3.9.0"
