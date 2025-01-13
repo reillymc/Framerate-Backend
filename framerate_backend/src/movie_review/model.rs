@@ -134,7 +134,7 @@ impl MovieReview {
                 reviews::review_id.eq_any(
                     review_company::table
                         .select(review_company::review_id)
-                        .filter(review_company::user_id.eq(with_company)),
+                        .filter(review_company::company_id.eq(with_company)),
                 ),
             );
         }

@@ -1,85 +1,41 @@
-use crate::{
-    db::DbConnection,
-    schema::users::{self},
-    user::{PermissionLevel, User},
-    utils::AppError,
-};
+use crate::{db::DbConnection, schema::company, user, utils::AppError};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Selectable, Queryable, ToSchema)]
-#[diesel(table_name = users)]
+#[derive(Serialize, Deserialize, Selectable, Queryable, Associations, Insertable, ToSchema)]
+#[diesel(belongs_to(user::User))]
+#[diesel(table_name = company)]
 #[serde(rename_all = "camelCase")]
 pub struct Company {
-    pub user_id: Uuid,
+    pub company_id: Uuid,
     pub first_name: String,
     pub last_name: String,
     pub date_created: NaiveDateTime,
+    pub created_by: Uuid,
     #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by: Option<Uuid>,
+    pub user_id: Option<Uuid>,
 }
 
 #[derive(AsChangeset, Insertable, Serialize, Deserialize, ToSchema)]
-#[diesel(table_name = users)]
+#[diesel(table_name = company)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveCompany {
     pub first_name: String,
     pub last_name: String,
-}
-
-impl From<SaveCompany> for User {
-    fn from(user: SaveCompany) -> Self {
-        User {
-            user_id: Uuid::new_v4(),
-            email: None,
-            password: None,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            date_created: chrono::Local::now().naive_local(),
-            permission_level: PermissionLevel::NonAuthenticatable.into(),
-            public: false,
-            avatar_uri: None,
-            configuration: serde_json::json!({}),
-            created_by: None,
-        }
-    }
-}
-
-impl User {
-    fn created_by(mut self, created_by: Uuid) -> Self {
-        self.created_by = Some(created_by);
-        self
-    }
-}
-
-impl From<User> for Company {
-    fn from(user: User) -> Self {
-        Company {
-            user_id: user.user_id,
-            created_by: user.created_by,
-            date_created: user.date_created,
-            first_name: user.first_name,
-            last_name: user.last_name,
-        }
-    }
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<Uuid>,
 }
 
 impl Company {
     pub fn find_all(conn: &mut DbConnection, created_by: &Uuid) -> Result<Vec<Self>, AppError> {
-        let company = users::table
-            .select((
-                users::user_id,
-                users::first_name,
-                users::last_name,
-                users::date_created,
-                users::created_by,
-            ))
-            .filter(users::created_by.eq(created_by))
-            .filter(users::permission_level.eq::<i16>(PermissionLevel::NonAuthenticatable.into()))
+        let company = company::table
+            .select(Company::as_select())
+            .filter(company::created_by.eq(created_by))
             .load(conn)?;
         Ok(company)
     }
@@ -89,39 +45,44 @@ impl Company {
         company: SaveCompany,
         created_by: Uuid,
     ) -> Result<Self, AppError> {
-        let user_to_save = User::from(company).created_by(created_by);
+        let company_to_save = Company {
+            company_id: Uuid::new_v4(),
+            first_name: company.first_name,
+            last_name: company.last_name,
+            date_created: chrono::Local::now().naive_local(),
+            created_by,
+            user_id: company.user_id,
+        };
 
-        let new_user: User = diesel::insert_into(users::table)
-            .values(user_to_save)
+        let new_company: Company = diesel::insert_into(company::table)
+            .values(company_to_save)
             .get_result(conn)?;
 
-        Ok(new_user.into())
+        Ok(new_company.into())
     }
 
     pub fn update(
         conn: &mut DbConnection,
-        user_id: Uuid,
+        company_id: Uuid,
         company: SaveCompany,
         created_by: &Uuid,
     ) -> Result<Self, AppError> {
-        let updated_user: User = diesel::update(users::table)
-            .filter(users::created_by.eq(created_by))
-            .filter(users::user_id.eq(user_id))
-            .filter(users::permission_level.eq::<i16>(PermissionLevel::NonAuthenticatable.into()))
+        let updated_company: Company = diesel::update(company::table)
+            .filter(company::created_by.eq(created_by))
+            .filter(company::company_id.eq(company_id))
             .set(company)
             .get_result(conn)?;
-        Ok(updated_user.into())
+        Ok(updated_company.into())
     }
 
     pub fn delete(
         conn: &mut DbConnection,
-        user_id: Uuid,
+        company_id: Uuid,
         created_by: &Uuid,
     ) -> Result<usize, AppError> {
-        let res = diesel::delete(users::table)
-            .filter(users::created_by.eq(created_by))
-            .filter(users::user_id.eq(user_id))
-            .filter(users::permission_level.eq::<i16>(PermissionLevel::NonAuthenticatable.into()))
+        let res = diesel::delete(company::table)
+            .filter(company::created_by.eq(created_by))
+            .filter(company::company_id.eq(company_id))
             .execute(conn)?;
         Ok(res)
     }

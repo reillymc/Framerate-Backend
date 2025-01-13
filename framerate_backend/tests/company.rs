@@ -63,7 +63,7 @@ mod find_all {
 
         let company_response = result.data.first().unwrap();
 
-        assert_eq!(Some(user.user_id), company_response.created_by);
+        assert_eq!(user.user_id, company_response.created_by);
         assert_eq!(company.first_name, company_response.first_name);
         assert_eq!(company.last_name, company_response.last_name);
     }
@@ -111,7 +111,7 @@ mod create {
 
         let result = process::parse_body::<Company>(response).await;
 
-        assert_eq!(user.user_id, result.data.created_by.unwrap());
+        assert_eq!(user.user_id, result.data.created_by);
         assert_eq!(company.first_name, result.data.first_name);
         assert_eq!(company.last_name, result.data.last_name);
     }
@@ -134,7 +134,7 @@ mod update {
         };
 
         let request = test::TestRequest::put()
-            .uri(&format!("/company/{}", company.user_id))
+            .uri(&format!("/company/{}", company.company_id))
             .set_json(company)
             .to_request();
 
@@ -156,7 +156,7 @@ mod update {
         };
 
         let request = test::TestRequest::put()
-            .uri(&format!("/company/{}", company.user_id))
+            .uri(&format!("/company/{}", company.company_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .set_json(company)
             .to_request();
@@ -181,7 +181,7 @@ mod update {
         company.last_name = Uuid::new_v4().to_string();
 
         let request = test::TestRequest::put()
-            .uri(&format!("/company/{}", company.user_id))
+            .uri(&format!("/company/{}", company.company_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .set_json(&company)
             .to_request();
@@ -191,7 +191,7 @@ mod update {
 
         let result = process::parse_body::<Company>(response).await;
 
-        assert_eq!(user.user_id, result.data.created_by.unwrap());
+        assert_eq!(user.user_id, result.data.created_by);
         assert_eq!(company.first_name, result.data.first_name);
         assert_eq!(company.last_name, result.data.last_name);
     }
@@ -213,7 +213,7 @@ mod delete {
         };
 
         let request = test::TestRequest::delete()
-            .uri(&format!("/company/{}", company.user_id))
+            .uri(&format!("/company/{}", company.company_id))
             .to_request();
 
         let response = test::call_service(&app, request).await;
@@ -234,7 +234,7 @@ mod delete {
         };
 
         let request = test::TestRequest::delete()
-            .uri(&format!("/company/{}", company.user_id))
+            .uri(&format!("/company/{}", company.company_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 
@@ -255,7 +255,7 @@ mod delete {
         };
 
         let request = test::TestRequest::delete()
-            .uri(&format!("/company/{}", company.user_id))
+            .uri(&format!("/company/{}", company.company_id))
             .insert_header((AUTHORIZATION, format!("Bearer {token}")))
             .to_request();
 

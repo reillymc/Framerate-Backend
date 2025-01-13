@@ -60,11 +60,9 @@ impl PermissionLevel {
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub user_id: Uuid,
-    #[schema(nullable = false)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
+    pub email: String,
     #[serde(skip)]
-    pub password: Option<String>,
+    pub password: String,
     pub first_name: String,
     pub last_name: String,
     #[schema(nullable = false)]
@@ -130,9 +128,7 @@ pub struct UserResponse {
 #[serde(rename_all = "camelCase")]
 pub struct UserFindResponse {
     pub user_id: Uuid,
-    #[schema(nullable = false)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
+    pub email: String,
     pub first_name: String,
     pub last_name: String,
     #[schema(nullable = false)]
@@ -141,34 +137,38 @@ pub struct UserFindResponse {
     pub configuration: serde_json::Value,
 }
 
-impl From<NewUser> for User {
-    fn from(user: NewUser) -> Self {
-        User {
+impl TryFrom<NewUser> for User {
+    type Error = AppError;
+
+    fn try_from(value: NewUser) -> Result<Self, AppError> {
+        let password = User::hash_password(&value.password)?;
+
+        Ok(User {
             user_id: Uuid::new_v4(),
-            email: Some(user.email),
-            password: None,
-            first_name: user.first_name,
-            last_name: user.last_name,
+            email: value.email,
+            password,
+            first_name: value.first_name,
+            last_name: value.last_name,
             date_created: chrono::Local::now().naive_local(),
-            permission_level: if user.is_admin.unwrap_or(false) {
+            permission_level: if value.is_admin.unwrap_or(false) {
                 i16::from(PermissionLevel::AdminUser)
             } else {
                 i16::from(PermissionLevel::GeneralUser)
             },
             public: false,
-            avatar_uri: user.avatar_uri,
+            avatar_uri: value.avatar_uri,
             configuration: serde_json::json!({
                 "people": [],
                 "venues": [],
             }),
             created_by: None,
-        }
+        })
     }
 }
 
 impl User {
     pub fn password(mut self, password: String) -> Self {
-        self.password = Some(password);
+        self.password = password;
         self
     }
 
@@ -220,9 +220,7 @@ impl User {
     }
 
     pub fn create(conn: &mut DbConnection, user: NewUser) -> Result<Self, AppError> {
-        let password = Self::hash_password(&user.password)?;
-
-        let user_to_save = User::from(user).password(password);
+        let user_to_save = User::try_from(user)?;
 
         let new_user = diesel::insert_into(users::table)
             .values(user_to_save)
@@ -231,11 +229,7 @@ impl User {
     }
 
     pub fn create_admin(conn: &mut DbConnection, user: NewUser) -> Result<Self, AppError> {
-        let password = Self::hash_password(&user.password)?;
-
-        let user_to_save = User::from(user)
-            .password(password)
-            .permission_level(PermissionLevel::AdminUser);
+        let user_to_save = User::try_from(user)?.permission_level(PermissionLevel::AdminUser);
 
         let new_user = diesel::insert_into(users::table)
             .values(user_to_save)
@@ -295,11 +289,7 @@ impl AuthUser {
             },
         }?;
 
-        let Some(password) = &user.password else {
-            return Err(AppError::external(401, "Invalid email or password"));
-        };
-
-        let Ok(verify_password) = verify(&self.password, password) else {
+        let Ok(verify_password) = verify(&self.password, &user.password) else {
             return Err(AppError::external(401, "Invalid email or password"));
         };
 

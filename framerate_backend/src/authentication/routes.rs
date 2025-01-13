@@ -44,7 +44,7 @@ pub async fn login(
 
     let permission_level = PermissionLevel::from(user_details.permission_level);
 
-    if !permission_level.is_at_least_general() || user_details.email.is_none() {
+    if !permission_level.is_at_least_general() {
         return Err(AppError::external(401, "Invalid account"))?;
     };
 

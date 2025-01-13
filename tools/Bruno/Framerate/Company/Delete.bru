@@ -1,20 +1,13 @@
 meta {
-  name: Update
+  name: Delete
   type: http
   seq: 4
 }
 
-put {
+delete {
   url: {{host}}/{{endpoint}}/{{userId}}
-  body: json
+  body: none
   auth: inherit
-}
-
-body:json {
-  {
-    "firstName": "company2",
-    "lastName": "company2"
-  }
 }
 
 vars:pre-request {

@@ -39,18 +39,18 @@ async fn create(
 }
 
 #[utoipa::path(tag = "Company", responses((status = OK, body = Company)))]
-#[put("/company/{user_id}")]
+#[put("/company/{company_id}")]
 async fn update(
     pool: web::Data<DbPool>,
     auth: Auth,
-    user_id: web::Path<Uuid>,
+    company_id: web::Path<Uuid>,
     company: web::Json<SaveCompany>,
 ) -> actix_web::Result<impl Responder> {
     let company = web::block(move || {
         let mut conn = pool.get()?;
         Company::update(
             &mut conn,
-            user_id.into_inner(),
+            company_id.into_inner(),
             company.into_inner(),
             &auth.user_id,
         )
@@ -65,15 +65,15 @@ async fn update(
 }
 
 #[utoipa::path(tag = "Company", responses((status = OK, body = DeleteResponse)))]
-#[delete("/company/{user_id}")]
+#[delete("/company/{company_id}")]
 async fn delete(
     pool: web::Data<DbPool>,
     auth: Auth,
-    user_id: web::Path<Uuid>,
+    company_id: web::Path<Uuid>,
 ) -> actix_web::Result<impl Responder> {
     let count = web::block(move || {
         let mut conn = pool.get()?;
-        Company::delete(&mut conn, user_id.into_inner(), &auth.user_id)
+        Company::delete(&mut conn, company_id.into_inner(), &auth.user_id)
     })
     .await??;
 

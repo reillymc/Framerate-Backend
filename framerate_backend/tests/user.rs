@@ -1,9 +1,7 @@
 pub mod common;
 
-mod find_all {
-    use crate::common::{data, process, setup};
-    use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::user::find_all;
+mod user_common {
+    use chrono::NaiveDateTime;
     use serde::Deserialize;
     use uuid::Uuid;
 
@@ -18,7 +16,20 @@ mod find_all {
         pub configuration: Option<serde_json::Value>,
         // Added field to enable testing that password is never returned
         pub password: Option<String>,
+        pub permission_level: Option<i16>,
+        pub public: Option<bool>,
+        pub date_created: Option<NaiveDateTime>,
+        pub created_by: Option<Uuid>,
     }
+}
+
+mod find_all {
+    use crate::{
+        common::{data, process, setup},
+        user_common::TestUserResponse,
+    };
+    use actix_web::{http::header::AUTHORIZATION, test};
+    use framerate::user::find_all;
 
     #[actix_web::test]
     async fn should_require_authentication() {
@@ -110,23 +121,11 @@ mod find {
     use actix_http::header::AUTHORIZATION;
     use actix_web::test;
     use framerate::user::find;
-    use serde::Deserialize;
-    use uuid::Uuid;
 
-    use crate::common::{data, process, setup};
-
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct TestUserResponse {
-        pub user_id: Uuid,
-        pub email: Option<String>,
-        pub first_name: String,
-        pub last_name: String,
-        pub avatar_uri: Option<String>,
-        pub configuration: Option<serde_json::Value>,
-        // Added field to enable testing that password is never returned
-        pub password: Option<String>,
-    }
+    use crate::{
+        common::{data, process, setup},
+        user_common::TestUserResponse,
+    };
 
     #[actix_web::test]
     async fn should_require_authentication() {
@@ -197,7 +196,7 @@ mod find {
 
         assert_eq!(None, result.data.password);
 
-        assert_eq!(current_user.email, result.data.email);
+        assert_eq!(current_user.email, result.data.email.unwrap());
         assert_eq!(Some(current_user.configuration), result.data.configuration);
         assert_eq!(current_user.user_id, result.data.user_id);
         assert_eq!(current_user.avatar_uri, result.data.avatar_uri);
@@ -207,12 +206,12 @@ mod find {
 }
 
 mod create {
-    use crate::common::{data, process, setup};
-    use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::{
-        user::create,
-        user::{PermissionLevel, User},
+    use crate::{
+        common::{data, process, setup},
+        user_common::TestUserResponse,
     };
+    use actix_web::{http::header::AUTHORIZATION, test};
+    use framerate::{user::create, user::PermissionLevel};
 
     #[actix_web::test]
     async fn should_require_authentication() {
@@ -270,29 +269,29 @@ mod create {
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<User>(response).await;
+        let result = process::parse_body::<TestUserResponse>(response).await;
 
         assert_eq!(None, result.data.password);
         assert_eq!(None, result.data.created_by);
 
-        assert_eq!(Some(user.email), result.data.email);
+        assert_eq!(user.email, result.data.email.unwrap());
         assert_eq!(user.avatar_uri, result.data.avatar_uri);
         assert_eq!(user.first_name, result.data.first_name);
         assert_eq!(user.last_name, result.data.last_name);
         assert_eq!(
             PermissionLevel::GeneralUser,
-            result.data.permission_level.into()
+            result.data.permission_level.unwrap().into()
         );
     }
 }
 
 mod update {
-    use crate::common::{data, process, setup};
-    use actix_web::{http::header::AUTHORIZATION, test};
-    use framerate::{
-        user::update,
-        user::{PermissionLevel, User},
+    use crate::{
+        common::{data, process, setup},
+        user_common::TestUserResponse,
     };
+    use actix_web::{http::header::AUTHORIZATION, test};
+    use framerate::{user::update, user::PermissionLevel};
     use uuid::Uuid;
 
     #[actix_web::test]
@@ -359,21 +358,21 @@ mod update {
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
 
-        let result = process::parse_body::<User>(response).await;
+        let result = process::parse_body::<TestUserResponse>(response).await;
 
         assert_eq!(None, result.data.password);
         assert_eq!(None, result.data.created_by);
 
-        assert_eq!(user.email, result.data.email);
+        assert_eq!(user.email, result.data.email.unwrap());
         assert_eq!(user.avatar_uri, result.data.avatar_uri);
         assert_eq!(user.first_name, result.data.first_name);
         assert_eq!(user.last_name, result.data.last_name);
-        assert_eq!(user.configuration, result.data.configuration);
-        assert_eq!(user.date_created, result.data.date_created);
-        assert_eq!(user.public, result.data.public);
+        assert_eq!(user.configuration, result.data.configuration.unwrap());
+        assert_eq!(user.date_created, result.data.date_created.unwrap());
+        assert_eq!(user.public, result.data.public.unwrap());
         assert_eq!(
             PermissionLevel::GeneralUser,
-            result.data.permission_level.into()
+            result.data.permission_level.unwrap().into()
         );
     }
 }

@@ -31,7 +31,7 @@ pub fn create_authed_user(
 
     let mut user = User::create(conn, new_user.clone()).unwrap();
 
-    user.password = Some(new_user.password);
+    user.password = new_user.password;
 
     let token = create_token(user.user_id, PermissionLevel::GeneralUser).unwrap();
 
@@ -45,7 +45,7 @@ pub fn create_authed_admin_user(
 
     let mut user = User::create_admin(conn, new_user.clone()).unwrap();
 
-    user.password = Some(new_user.password);
+    user.password = new_user.password;
 
     let token = create_token(user.user_id, PermissionLevel::AdminUser).unwrap();
 
@@ -174,6 +174,14 @@ pub fn generate_save_new_user() -> NewUser {
     }
 }
 
+pub fn generate_save_new_company() -> SaveCompany {
+    SaveCompany {
+        first_name: Uuid::new_v4().to_string(),
+        last_name: Uuid::new_v4().to_string(),
+        user_id: None,
+    }
+}
+
 pub fn generate_save_show_review() -> SaveShowReviewRequest {
     let mut rng = rand::thread_rng();
 
@@ -243,6 +251,7 @@ pub fn generate_save_company() -> SaveCompany {
     SaveCompany {
         first_name: Uuid::new_v4().to_string(),
         last_name: Uuid::new_v4().to_string(),
+        user_id: None,
     }
 }
 

@@ -295,7 +295,7 @@ mod create {
 
         let movie = data::generate_sample_movie();
         let review = data::generate_save_movie_review().company(vec![ReviewCompanySummary {
-            user_id: Uuid::new_v4(),
+            company_id: Uuid::new_v4(),
         }]);
 
         let request = test::TestRequest::post()
@@ -358,15 +358,15 @@ mod create {
 
         let (token, company_details) = {
             let mut conn = pool.get().unwrap();
-            let (token, _) = data::create_authed_user(&mut conn);
-            let company_details = data::create_user(&mut conn);
+            let (token, user) = data::create_authed_user(&mut conn);
+            let company_details = data::create_company(&mut conn, &user);
             (token, company_details)
         };
 
         let movie = data::generate_sample_movie();
 
         let review = data::generate_save_movie_review().company(vec![ReviewCompanySummary {
-            user_id: company_details.user_id,
+            company_id: company_details.company_id,
         }]);
 
         let request = test::TestRequest::post()
@@ -390,7 +390,7 @@ mod create {
         let review_company = review_company.first().unwrap();
         let result_company = result_company.first().unwrap();
 
-        assert_eq!(review_company.user_id, result_company.user_id);
+        assert_eq!(review_company.company_id, result_company.company_id);
         assert_eq!(company_details.first_name, result_company.first_name);
         assert_eq!(company_details.last_name, result_company.last_name);
     }
@@ -472,7 +472,7 @@ mod update {
 
         let updated_review =
             data::generate_save_movie_review().company(vec![ReviewCompanySummary {
-                user_id: Uuid::new_v4(),
+                company_id: Uuid::new_v4(),
             }]);
 
         let request = test::TestRequest::put()
@@ -554,14 +554,14 @@ mod update {
             let (token, user) = data::create_authed_user(&mut conn);
             let review = data::create_review(&mut conn, &user);
             let movie_review = data::create_movie_review(&mut conn, &user, &review);
-            let company_user1 = data::create_user(&mut conn);
-            let company_user2 = data::create_user(&mut conn);
+            let company_user1 = data::create_company(&mut conn, &user);
+            let company_user2 = data::create_company(&mut conn, &user);
 
             ReviewCompany::replace(
                 &mut conn,
                 movie_review.review_id,
                 Some(&vec![ReviewCompanySummary {
-                    user_id: company_user1.user_id,
+                    company_id: company_user1.company_id,
                 }]),
             )
             .unwrap();
@@ -572,10 +572,10 @@ mod update {
         // Add a user to review company
         let updated_review = data::generate_save_movie_review().company(vec![
             ReviewCompanySummary {
-                user_id: company_user1.user_id,
+                company_id: company_user1.company_id,
             },
             ReviewCompanySummary {
-                user_id: company_user2.user_id,
+                company_id: company_user2.company_id,
             },
         ]);
 
@@ -599,17 +599,17 @@ mod update {
         assert_eq!(&2, &company.len());
         assert!(&company
             .iter()
-            .find(|company| company.user_id == company_user1.user_id)
+            .find(|company| company.company_id == company_user1.company_id)
             .is_some());
         assert!(&company
             .iter()
-            .find(|company| company.user_id == company_user2.user_id)
+            .find(|company| company.company_id == company_user2.company_id)
             .is_some());
 
         // Remove a user from review company
         let updated_review =
             data::generate_save_movie_review().company(vec![ReviewCompanySummary {
-                user_id: company_user2.user_id,
+                company_id: company_user2.company_id,
             }]);
 
         let request = test::TestRequest::put()
@@ -632,7 +632,7 @@ mod update {
         assert_eq!(&1, &company.len());
         assert!(&company
             .iter()
-            .find(|company| company.user_id == company_user2.user_id)
+            .find(|company| company.company_id == company_user2.company_id)
             .is_some());
 
         // Clear review company

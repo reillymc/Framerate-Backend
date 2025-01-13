@@ -14,10 +14,8 @@ mod login {
 
     #[derive(Serialize)]
     pub struct LoginBody {
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub email: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub password: Option<String>,
+        pub email: String,
+        pub password: String,
     }
 
     impl From<User> for LoginBody {
@@ -53,38 +51,8 @@ mod login {
         let request = test::TestRequest::post()
             .uri("/auth/login")
             .set_json(LoginBody {
-                email: None,
-                password: None,
-            })
-            .to_request();
-        let response = test::call_service(&app, request).await;
-        assert_eq!(400, response.status().as_u16());
-
-        let request = test::TestRequest::post()
-            .uri("/auth/login")
-            .set_json(LoginBody {
-                email: user.email.clone(),
-                password: None,
-            })
-            .to_request();
-        let response = test::call_service(&app, request).await;
-        assert_eq!(400, response.status().as_u16());
-
-        let request = test::TestRequest::post()
-            .uri("/auth/login")
-            .set_json(LoginBody {
-                email: None,
-                password: user.password.clone(),
-            })
-            .to_request();
-        let response = test::call_service(&app, request).await;
-        assert_eq!(400, response.status().as_u16());
-
-        let request = test::TestRequest::post()
-            .uri("/auth/login")
-            .set_json(LoginBody {
-                email: Some("".to_string()),
-                password: Some("".to_string()),
+                email: "".to_string(),
+                password: "".to_string(),
             })
             .to_request();
         let response = test::call_service(&app, request).await;
@@ -94,7 +62,7 @@ mod login {
             .uri("/auth/login")
             .set_json(LoginBody {
                 email: user.email,
-                password: Some("".to_string()),
+                password: "".to_string(),
             })
             .to_request();
         let response = test::call_service(&app, request).await;
@@ -103,7 +71,7 @@ mod login {
         let request = test::TestRequest::post()
             .uri("/auth/login")
             .set_json(LoginBody {
-                email: Some("".to_string()),
+                email: "".to_string(),
                 password: user.password,
             })
             .to_request();
@@ -119,7 +87,7 @@ mod login {
             data::create_user(&mut conn)
         };
 
-        user.password = Some(Uuid::new_v4().to_string());
+        user.password = Uuid::new_v4().to_string();
 
         let request = test::TestRequest::post()
             .uri("/auth/login")
@@ -137,8 +105,8 @@ mod login {
             let mut conn = pool.get().unwrap();
             let registered_user = User {
                 user_id: Uuid::new_v4(),
-                email: Some(Uuid::new_v4().to_string()),
-                password: Some(Uuid::new_v4().to_string()),
+                email: Uuid::new_v4().to_string(),
+                password: Uuid::new_v4().to_string(),
                 first_name: Uuid::new_v4().to_string(),
                 last_name: Uuid::new_v4().to_string(),
                 date_created: chrono::Local::now().naive_local(),
@@ -154,8 +122,8 @@ mod login {
 
             let non_authenticatable_user = User {
                 user_id: Uuid::new_v4(),
-                email: Some(Uuid::new_v4().to_string()),
-                password: Some(Uuid::new_v4().to_string()),
+                email: Uuid::new_v4().to_string(),
+                password: Uuid::new_v4().to_string(),
                 first_name: Uuid::new_v4().to_string(),
                 last_name: Uuid::new_v4().to_string(),
                 date_created: chrono::Local::now().naive_local(),
@@ -174,12 +142,11 @@ mod login {
 
             diesel::insert_into(users::table)
                 .values(vec![
-                    registered_user_save.clone().password(
-                        User::hash_password(&registered_user_save.password.unwrap()).unwrap(),
-                    ),
+                    registered_user_save
+                        .clone()
+                        .password(User::hash_password(&registered_user_save.password).unwrap()),
                     non_authenticatable_user_save.clone().password(
-                        User::hash_password(&non_authenticatable_user_save.password.unwrap())
-                            .unwrap(),
+                        User::hash_password(&non_authenticatable_user_save.password).unwrap(),
                     ),
                 ])
                 .execute(&mut conn)

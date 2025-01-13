@@ -11,6 +11,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    company (company_id) {
+        company_id -> Uuid,
+        first_name -> Text,
+        last_name -> Text,
+        date_created -> Timestamp,
+        created_by -> Uuid,
+        user_id -> Nullable<Uuid>,
+    }
+}
+
+diesel::table! {
     movie_entries (collection_id, movie_id) {
         collection_id -> Uuid,
         movie_id -> Int4,
@@ -37,9 +48,9 @@ diesel::table! {
 }
 
 diesel::table! {
-    review_company (review_id, user_id) {
+    review_company (review_id, company_id) {
         review_id -> Uuid,
-        user_id -> Uuid,
+        company_id -> Uuid,
     }
 }
 
@@ -98,8 +109,8 @@ diesel::table! {
 diesel::table! {
     users (user_id) {
         user_id -> Uuid,
-        email -> Nullable<Text>,
-        password -> Nullable<Text>,
+        email -> Text,
+        password -> Text,
         first_name -> Text,
         last_name -> Text,
         avatar_uri -> Nullable<Text>,
@@ -116,8 +127,8 @@ diesel::joinable!(movie_entries -> collections (collection_id));
 diesel::joinable!(movie_entries -> users (user_id));
 diesel::joinable!(movie_reviews -> reviews (review_id));
 diesel::joinable!(movie_reviews -> users (user_id));
+diesel::joinable!(review_company -> company (company_id));
 diesel::joinable!(review_company -> reviews (review_id));
-diesel::joinable!(review_company -> users (user_id));
 diesel::joinable!(reviews -> users (user_id));
 diesel::joinable!(season_reviews -> reviews (review_id));
 diesel::joinable!(season_reviews -> users (user_id));
@@ -128,6 +139,7 @@ diesel::joinable!(show_reviews -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     collections,
+    company,
     movie_entries,
     movie_reviews,
     review_company,
