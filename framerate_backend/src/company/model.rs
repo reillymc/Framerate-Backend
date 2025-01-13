@@ -1,15 +1,16 @@
 use crate::{
     db::DbConnection,
-    utils::AppError,
     schema::users::{self},
     user::{PermissionLevel, User},
+    utils::AppError,
 };
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Selectable, Queryable)]
+#[derive(Serialize, Deserialize, Selectable, Queryable, ToSchema)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct Company {
@@ -17,10 +18,12 @@ pub struct Company {
     pub first_name: String,
     pub last_name: String,
     pub date_created: NaiveDateTime,
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub created_by: Option<Uuid>,
 }
 
-#[derive(AsChangeset, Insertable, Serialize, Deserialize)]
+#[derive(AsChangeset, Insertable, Serialize, Deserialize, ToSchema)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveCompany {

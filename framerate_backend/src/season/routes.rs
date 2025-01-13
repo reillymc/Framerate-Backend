@@ -5,6 +5,7 @@ use crate::{
 };
 use actix_web::{get, web, Responder};
 
+#[utoipa::path(tag = "Season", responses((status = OK, body = Season),(status = NOT_FOUND)))]
 #[get("/shows/{show_id}/seasons/{season_number}/details")]
 async fn details(
     _: Auth,

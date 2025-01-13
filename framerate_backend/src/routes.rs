@@ -27,75 +27,63 @@ async fn health() -> HttpResponse {
 
 pub fn init_routes(config: &mut ServiceConfig) {
     config
+        .service(authentication::login)
+        .service(authentication::setup)
+        .service(company::create)
+        .service(company::delete)
+        .service(company::find_all)
+        .service(company::update)
+        .service(movie_collection::create_entry)
+        .service(movie_collection::create)
+        .service(movie_collection::delete_entry)
+        .service(movie_collection::delete)
+        .service(movie_collection::find_all)
+        .service(movie_collection::find_by_movie)
+        .service(movie_collection::find)
+        .service(movie_collection::update)
+        .service(movie_review::create)
+        .service(movie_review::find_all)
+        .service(movie_review::find_by_movie_id)
+        .service(movie_review::find_by_review_id)
+        .service(movie_review::update)
+        .service(movie_watchlist::create_entry)
+        .service(movie_watchlist::delete_entry)
+        .service(movie_watchlist::find_entry)
+        .service(movie_watchlist::find)
         .service(movie::details)
         .service(movie::popular)
-        .service(movie::search);
+        .service(movie::search)
+        .service(season_review::create)
+        .service(season_review::find_by_review_id)
+        .service(season_review::find_by_show_season)
+        .service(season_review::update)
+        .service(season::details)
+        .service(show_collection::create_entry)
+        .service(show_collection::create)
+        .service(show_collection::delete_entry)
+        .service(show_collection::delete)
+        .service(show_collection::find_all)
+        .service(show_collection::find_by_show)
+        .service(show_collection::find)
+        .service(show_collection::update)
+        .service(show_review::create)
+        .service(show_review::find_all)
+        .service(show_review::find_by_review_id)
+        .service(show_review::find_by_show_id)
+        .service(show_review::update)
+        .service(show_watchlist::create_entry)
+        .service(show_watchlist::delete_entry)
+        .service(show_watchlist::find_entry)
+        .service(show_watchlist::find)
+        .service(show::details)
+        .service(show::popular)
+        .service(show::search)
+        .service(user::create)
+        .service(user::find_all)
+        .service(user::find)
+        .service(user::update);
 }
 
-pub fn init_undocumented_routes(config: &mut web::ServiceConfig) {
+pub fn init_extra_routes(config: &mut web::ServiceConfig) {
     config.service(health);
-
-    config.service(authentication::login);
-    config.service(authentication::setup);
-
-    config.service(company::find_all);
-    config.service(company::create);
-    config.service(company::update);
-    config.service(company::delete);
-
-    config.service(movie_collection::find_all);
-    config.service(movie_collection::find);
-    config.service(movie_collection::create);
-    config.service(movie_collection::update);
-    config.service(movie_collection::delete);
-    config.service(movie_collection::create_entry);
-    config.service(movie_collection::delete_entry);
-    config.service(movie_collection::find_by_movie);
-
-    config.service(movie_review::find_by_review_id);
-    config.service(movie_review::find_by_movie_id);
-    config.service(movie_review::find_all);
-    config.service(movie_review::create);
-    config.service(movie_review::update);
-
-    config.service(movie_watchlist::find);
-    config.service(movie_watchlist::find_entry);
-    config.service(movie_watchlist::create_entry);
-    config.service(movie_watchlist::delete_entry);
-
-    config.service(season::details);
-
-    config.service(season_review::find_by_show_season);
-    config.service(season_review::find_by_review_id);
-    config.service(season_review::create);
-    config.service(season_review::update);
-
-    config.service(show::details);
-    config.service(show::popular);
-    config.service(show::search);
-
-    config.service(show_collection::find_all);
-    config.service(show_collection::find);
-    config.service(show_collection::create);
-    config.service(show_collection::update);
-    config.service(show_collection::delete);
-    config.service(show_collection::create_entry);
-    config.service(show_collection::delete_entry);
-    config.service(show_collection::find_by_show);
-
-    config.service(show_review::find_by_review_id);
-    config.service(show_review::find_by_show_id);
-    config.service(show_review::find_all);
-    config.service(show_review::create);
-    config.service(show_review::update);
-
-    config.service(show_watchlist::find);
-    config.service(show_watchlist::find_entry);
-    config.service(show_watchlist::create_entry);
-    config.service(show_watchlist::delete_entry);
-
-    config.service(user::find);
-    config.service(user::find_all);
-    config.service(user::create);
-    config.service(user::update);
 }

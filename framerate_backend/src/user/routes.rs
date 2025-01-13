@@ -3,17 +3,19 @@ use crate::user::NewUser;
 use crate::utils::{jwt::Auth, response_body::Success, AppError};
 use actix_web::{get, post, put, web, Responder};
 use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::{UpdatedUser, User, UserFindResponse, UserResponse};
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(untagged)]
 enum UserRead {
     Type1(UserFindResponse),
     Type2(UserResponse),
 }
 
+#[utoipa::path(tag = "User", responses((status = OK, body = Vec<User>)))]
 #[get("/users")]
 async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Responder> {
     if !auth.is_at_least_admin() {
@@ -29,6 +31,7 @@ async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl
     Ok(Success::new(users))
 }
 
+#[utoipa::path(tag = "User", responses((status = OK, body = UserRead)))]
 #[get("/users/{user_id}")]
 async fn find(
     pool: web::Data<DbPool>,
@@ -49,6 +52,7 @@ async fn find(
     Ok(Success::new(user))
 }
 
+#[utoipa::path(tag = "User", responses((status = OK, body = User)))]
 #[post("/users")]
 async fn create(
     pool: web::Data<DbPool>,
@@ -72,6 +76,7 @@ async fn create(
     Ok(Success::new(user))
 }
 
+#[utoipa::path(tag = "User", responses((status = OK, body = User)))]
 #[put("/users/{user_id}")]
 async fn update(
     pool: web::Data<DbPool>,

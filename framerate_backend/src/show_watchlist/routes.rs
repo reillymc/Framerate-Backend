@@ -9,26 +9,33 @@ use actix_web::{delete, Responder};
 use actix_web::{get, post, web};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 const DEFAULT_WATCHLIST: &str = "watchlist";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ShowWatchlistEntry {
     pub show_id: i32,
     pub name: String,
     pub updated_at: NaiveDate,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imdb_id: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub poster_path: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub first_air_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_air_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_air_date: Option<NaiveDate>,
 }
@@ -49,10 +56,12 @@ impl From<ShowEntry> for ShowWatchlistEntry {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ShowWatchlist {
     pub name: String,
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub entries: Option<Vec<ShowWatchlistEntry>>,
 }
 
@@ -72,12 +81,13 @@ impl From<Collection> for ShowWatchlist {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveShowWatchlistEntryRequest {
     pub show_id: i32,
 }
 
+#[utoipa::path(tag = "Show Watchlist", responses((status = OK, body = ShowWatchlist)))]
 #[get("/shows/watchlist")]
 async fn find(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Responder> {
     let watchlist = web::block(move || {
@@ -108,6 +118,7 @@ async fn find(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Res
     Ok(Success::new(watchlist))
 }
 
+#[utoipa::path(tag = "Show Watchlist", responses((status = OK, body = ShowWatchlistEntry)))]
 #[get("/shows/watchlist/{show_id}")]
 async fn find_entry(
     pool: web::Data<DbPool>,
@@ -127,6 +138,7 @@ async fn find_entry(
     Ok(Success::new(ShowWatchlistEntry::from(show_entry)))
 }
 
+#[utoipa::path(tag = "Show Watchlist", responses((status = OK, body = ShowWatchlistEntry)))]
 #[post("/shows/watchlist")]
 async fn create_entry(
     pool: web::Data<DbPool>,
@@ -168,6 +180,7 @@ async fn create_entry(
     Ok(Success::new(ShowWatchlistEntry::from(show_entry)))
 }
 
+#[utoipa::path(tag = "Show Watchlist", responses((status = OK, body = DeleteResponse)))]
 #[delete("/shows/watchlist/{show_id}")]
 async fn delete_entry(
     pool: web::Data<DbPool>,

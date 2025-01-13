@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::{
     db::{DbConnection, DEFAULT_PAGE_SIZE},
     movie::Movie,
-    review::{self, Order, Review, ReviewFindParameters, Sort},
+    review::{self, Review, ReviewFindParameters, ReviewOrder, ReviewSort},
     schema::{movie_reviews, review_company, reviews},
     user,
     utils::AppError,
@@ -94,24 +94,24 @@ impl MovieReview {
             .filter(reviews::rating.is_not_null())
             .into_boxed();
 
-        let order_by = params.order_by.unwrap_or(Order::Date);
-        let sort = params.sort.unwrap_or(Sort::Desc);
+        let order_by = params.order_by.unwrap_or(ReviewOrder::Date);
+        let sort = params.sort.unwrap_or(ReviewSort::Desc);
         query = match sort {
-            Sort::Asc => match order_by {
-                Order::Date => query.order(reviews::date.asc().nulls_first()),
-                Order::MediaReleaseDate => {
+            ReviewSort::Asc => match order_by {
+                ReviewOrder::Date => query.order(reviews::date.asc().nulls_first()),
+                ReviewOrder::MediaReleaseDate => {
                     query.order(movie_reviews::release_date.asc().nulls_first())
                 }
-                Order::Rating => query.order(reviews::rating.asc()),
-                Order::MediaTitle => query.order(movie_reviews::title.asc().nulls_first()),
+                ReviewOrder::Rating => query.order(reviews::rating.asc()),
+                ReviewOrder::MediaTitle => query.order(movie_reviews::title.asc().nulls_first()),
             },
-            Sort::Desc => match order_by {
-                Order::Date => query.order(reviews::date.desc().nulls_last()),
-                Order::MediaReleaseDate => {
+            ReviewSort::Desc => match order_by {
+                ReviewOrder::Date => query.order(reviews::date.desc().nulls_last()),
+                ReviewOrder::MediaReleaseDate => {
                     query.order(movie_reviews::release_date.desc().nulls_last())
                 }
-                Order::Rating => query.order(reviews::rating.desc()),
-                Order::MediaTitle => query.order(movie_reviews::title.desc().nulls_last()),
+                ReviewOrder::Rating => query.order(reviews::rating.desc()),
+                ReviewOrder::MediaTitle => query.order(movie_reviews::title.desc().nulls_last()),
             },
         };
 

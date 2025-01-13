@@ -5,12 +5,14 @@ use crate::{
 };
 use actix_web::{get, web, Responder};
 use serde::Deserialize;
+use utoipa::IntoParams;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
 struct SearchParameters {
     query: String,
 }
 
+#[utoipa::path(tag = "Show", params(SearchParameters), responses((status = OK, body = Vec<Show>)))]
 #[get("/shows/search")]
 async fn search(
     _: Auth,
@@ -22,6 +24,7 @@ async fn search(
     Ok(Success::new(shows))
 }
 
+#[utoipa::path(tag = "Show", responses((status = OK, body = Vec<Show>)))]
 #[get("/shows/popular")]
 async fn popular(_: Auth, client: web::Data<TmdbClient>) -> actix_web::Result<impl Responder> {
     let shows = Show::popular(&client).await?;
@@ -29,6 +32,7 @@ async fn popular(_: Auth, client: web::Data<TmdbClient>) -> actix_web::Result<im
     Ok(Success::new(shows))
 }
 
+#[utoipa::path(tag = "Show", responses((status = OK, body = Show),(status = NOT_FOUND)))]
 #[get("/shows/{show_id}/details")]
 async fn details(
     _: Auth,

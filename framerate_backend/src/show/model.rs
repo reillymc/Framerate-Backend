@@ -7,65 +7,75 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tmdb_api::{show, utils::serialization::empty_string_as_none};
+use utoipa::ToSchema;
 
 pub const SHOW_MEDIA_TYPE: &str = "show";
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(ToSchema, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Role {
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub character: Option<String>,
     pub episode_count: i64,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(ToSchema, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Job {
     pub job: String,
     pub episode_count: i64,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(ToSchema, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Cast {
+pub struct ShowCast {
     pub id: i64,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub known_for_department: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     pub popularity: f64,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub profile_path: Option<String>,
     pub roles: Vec<Role>,
     pub total_episode_count: i64,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(ToSchema, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Crew {
+pub struct ShowCrew {
     pub id: i64,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub known_for_department: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     pub popularity: f64,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub profile_path: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub department: Option<String>,
     pub jobs: Vec<Job>,
     pub total_episode_count: i64,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(ToSchema, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Credits {
-    pub cast: Vec<Cast>,
-    pub crew: Vec<Crew>,
+pub struct ShowCredits {
+    pub cast: Vec<ShowCast>,
+    pub crew: Vec<ShowCrew>,
 }
 
-impl From<show::Crew> for Crew {
+impl From<show::Crew> for ShowCrew {
     fn from(crew: show::Crew) -> Self {
-        Crew {
+        ShowCrew {
             id: crew.id,
             known_for_department: crew.known_for_department,
             name: crew.name,
@@ -77,9 +87,9 @@ impl From<show::Crew> for Crew {
         }
     }
 }
-impl From<show::Cast> for Cast {
+impl From<show::Cast> for ShowCast {
     fn from(cast: show::Cast) -> Self {
-        Cast {
+        ShowCast {
             id: cast.id,
             known_for_department: cast.known_for_department,
             name: cast.name,
@@ -109,59 +119,78 @@ impl From<show::Role> for Role {
     }
 }
 
-impl From<show::Credits> for Credits {
+impl From<show::Credits> for ShowCredits {
     fn from(credits: show::Credits) -> Self {
         let mut cast = credits.cast;
         cast.sort_by(|a, b| a.order.cmp(&b.order));
-        let cast = cast.into_iter().take(20).map(Cast::from).collect();
+        let cast = cast.into_iter().take(20).map(ShowCast::from).collect();
 
-        let crew = credits.crew.into_iter().take(20).map(Crew::from).collect();
+        let crew = credits
+            .crew
+            .into_iter()
+            .take(20)
+            .map(ShowCrew::from)
+            .collect();
 
-        Credits { cast, crew }
+        ShowCredits { cast, crew }
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(ToSchema, Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct ExternalIds {
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imdb_id: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tvdb_id: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(ToSchema, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Show {
     pub id: i32,
     pub name: String,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub poster_path: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub backdrop_path: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub first_air_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub last_air_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub next_air_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tagline: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub popularity: Option<f32>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub external_ids: Option<ExternalIds>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub seasons: Option<Vec<Season>>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub credits: Option<Credits>,
+    pub credits: Option<ShowCredits>,
 }
 
 pub const SHOW_ACTIVE_STATUSES: [&str; 4] =
@@ -228,7 +257,7 @@ impl From<show::Show> for Show {
         };
 
         let credits = if let Some(credits) = show.aggregate_credits {
-            Some(Credits::from(credits))
+            Some(ShowCredits::from(credits))
         } else {
             None
         };

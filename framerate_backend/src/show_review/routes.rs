@@ -12,16 +12,23 @@ use actix_web::{put, Responder};
 use chrono::NaiveDate;
 use diesel::Connection;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveShowReviewRequest {
+    #[schema(nullable = false)]
     pub rating: Option<i16>,
+    #[schema(nullable = false)]
     pub date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     pub title: Option<String>,
+    #[schema(nullable = false)]
     pub description: Option<String>,
+    #[schema(nullable = false)]
     pub venue: Option<String>,
+    #[schema(nullable = false)]
     pub company: Option<Vec<ReviewCompanySummary>>,
 }
 
@@ -32,21 +39,27 @@ impl SaveShowReviewRequest {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ShowReviewResponse {
     pub review_id: Uuid,
     pub user_id: Uuid,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rating: Option<i16>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub venue: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub company: Option<Vec<ReviewCompanyDetails>>,
     pub show: Show,
@@ -75,6 +88,7 @@ impl ShowReviewResponse {
     }
 }
 
+#[utoipa::path(tag = "Show Review", params(ReviewFindParameters), responses((status = OK, body = Vec<ShowReviewResponse>)))]
 #[get("/shows/reviews")]
 async fn find_all(
     pool: web::Data<DbPool>,
@@ -95,6 +109,7 @@ async fn find_all(
     ))
 }
 
+#[utoipa::path(tag = "Show Review", responses((status = OK, body = ShowReviewResponse)))]
 #[get("/shows/reviews/{review_id}")]
 async fn find_by_review_id(
     pool: web::Data<DbPool>,
@@ -114,6 +129,7 @@ async fn find_by_review_id(
     Ok(Success::new(review))
 }
 
+#[utoipa::path(tag = "Show Review", responses((status = OK, body = Vec<ShowReviewResponse>)))]
 #[get("/shows/{show_id}/reviews")]
 async fn find_by_show_id(
     pool: web::Data<DbPool>,
@@ -134,6 +150,7 @@ async fn find_by_show_id(
     ))
 }
 
+#[utoipa::path(tag = "Show Review", responses((status = OK, body = ShowReviewResponse)))]
 #[post("/shows/{show_id}/reviews")]
 async fn create(
     pool: web::Data<DbPool>,
@@ -205,6 +222,7 @@ async fn create(
     Ok(Success::new(review))
 }
 
+#[utoipa::path(tag = "Show Review", responses((status = OK, body = ShowReviewResponse)))]
 #[put("/shows/{show_id}/reviews/{review_id}")]
 async fn update(
     pool: web::Data<DbPool>,

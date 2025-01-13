@@ -11,7 +11,7 @@ pub const MOVIE_MEDIA_TYPE: &str = "movie";
 
 #[derive(ToSchema, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Cast {
+pub struct MovieCast {
     pub id: i64,
     #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -34,7 +34,7 @@ pub struct Cast {
 
 #[derive(ToSchema, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Crew {
+pub struct MovieCrew {
     pub id: i64,
     #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -59,14 +59,14 @@ pub struct Crew {
 
 #[derive(ToSchema, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Credits {
-    pub cast: Vec<Cast>,
-    pub crew: Vec<Crew>,
+pub struct MovieCredits {
+    pub cast: Vec<MovieCast>,
+    pub crew: Vec<MovieCrew>,
 }
 
-impl From<movie::Crew> for Crew {
+impl From<movie::Crew> for MovieCrew {
     fn from(crew: movie::Crew) -> Self {
-        Crew {
+        MovieCrew {
             credit_id: crew.credit_id,
             id: crew.id,
             known_for_department: crew.known_for_department,
@@ -78,9 +78,9 @@ impl From<movie::Crew> for Crew {
         }
     }
 }
-impl From<movie::Cast> for Cast {
+impl From<movie::Cast> for MovieCast {
     fn from(cast: movie::Cast) -> Self {
-        Cast {
+        MovieCast {
             cast_id: cast.cast_id,
             character: cast.character,
             credit_id: cast.credit_id,
@@ -93,15 +93,20 @@ impl From<movie::Cast> for Cast {
     }
 }
 
-impl From<movie::Credits> for Credits {
+impl From<movie::Credits> for MovieCredits {
     fn from(credits: movie::Credits) -> Self {
         let mut cast = credits.cast;
         cast.sort_by(|a, b| a.order.cmp(&b.order));
-        let cast = cast.into_iter().take(20).map(Cast::from).collect();
+        let cast = cast.into_iter().take(20).map(MovieCast::from).collect();
 
-        let crew = credits.crew.into_iter().take(20).map(Crew::from).collect();
+        let crew = credits
+            .crew
+            .into_iter()
+            .take(20)
+            .map(MovieCrew::from)
+            .collect();
 
-        Credits { cast, crew }
+        MovieCredits { cast, crew }
     }
 }
 
@@ -140,7 +145,7 @@ pub struct Movie {
     pub runtime: Option<i32>,
     #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub credits: Option<Credits>,
+    pub credits: Option<MovieCredits>,
 }
 
 pub const MOVIE_ACTIVE_STATUSES: [&str; 4] =
@@ -172,7 +177,7 @@ impl From<movie::Movie> for Movie {
         };
 
         let credits = if let Some(credits) = movie.credits {
-            Some(Credits::from(credits))
+            Some(MovieCredits::from(credits))
         } else {
             None
         };

@@ -5,37 +5,48 @@ use crate::{
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use tmdb_api::{episode, season, utils::serialization::empty_string_as_none};
+use utoipa::ToSchema;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(ToSchema, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Episode {
     pub episode_number: i32,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub still_path: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub air_date: Option<NaiveDate>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(ToSchema, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Season {
     pub show_id: i32,
     pub season_number: i32,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub poster_path: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overview: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub air_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub episode_count: Option<i32>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub episodes: Option<Vec<Episode>>,
 }

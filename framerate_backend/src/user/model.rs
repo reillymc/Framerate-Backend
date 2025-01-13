@@ -5,6 +5,7 @@ use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::NaiveDateTime;
 use diesel::{dsl, prelude::*};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(PartialEq, PartialOrd, Serialize, Deserialize, Debug)]
@@ -54,17 +55,19 @@ impl PermissionLevel {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Queryable, Selectable, Insertable)]
+#[derive(Serialize, Deserialize, Clone, Queryable, Selectable, Insertable, ToSchema)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub user_id: Uuid,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
     #[serde(skip)]
     pub password: Option<String>,
     pub first_name: String,
     pub last_name: String,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
     pub date_created: NaiveDateTime,
@@ -77,31 +80,39 @@ pub struct User {
     pub permission_level: i16,
     pub public: bool,
     pub configuration: serde_json::Value,
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub created_by: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NewUser {
     pub email: String,
     pub password: String,
     pub first_name: String,
     pub last_name: String,
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub is_admin: Option<bool>,
     pub configuration: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize, AsChangeset)]
+#[derive(Debug, Deserialize, AsChangeset, ToSchema)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatedUser {
+    #[schema(nullable = false)]
     pub first_name: Option<String>,
+    #[schema(nullable = false)]
     pub last_name: Option<String>,
     pub configuration: Option<serde_json::Value>,
 }
 
-#[derive(Serialize, Debug, Queryable)]
+#[derive(Serialize, Debug, Queryable, ToSchema)]
 #[diesel(table_name = users)]
 #[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase")]
@@ -109,19 +120,22 @@ pub struct UserResponse {
     pub user_id: Uuid,
     pub first_name: String,
     pub last_name: String,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
 }
 
-#[derive(Serialize, Debug, Queryable)]
+#[derive(Serialize, Debug, Queryable, ToSchema)]
 #[diesel(table_name = users)]
 #[serde(rename_all = "camelCase")]
 pub struct UserFindResponse {
     pub user_id: Uuid,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
     pub first_name: String,
     pub last_name: String,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
     pub configuration: serde_json::Value,
@@ -257,7 +271,7 @@ impl User {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct AuthUser {
     pub email: String,
     pub password: String,

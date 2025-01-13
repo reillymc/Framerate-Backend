@@ -70,7 +70,7 @@ async fn main() -> std::io::Result<()> {
                     .config(Config::default().persist_authorization(true))
             })
             .into_app()
-            .configure(routes::init_undocumented_routes)
+            .configure(routes::init_extra_routes)
     })
     .bind(format!("{host}:{port}"))?
     .run()

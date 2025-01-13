@@ -9,14 +9,17 @@ use actix_web::{delete, put, Responder};
 use actix_web::{get, post, web};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MovieCollection {
     pub collection_id: Uuid,
     pub user_id: Uuid,
     pub name: String,
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub entries: Option<Vec<MovieEntry>>,
 }
 
@@ -38,18 +41,19 @@ impl MovieCollection {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NewMovieCollection {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveMovieCollectionEntryRequest {
     pub movie_id: i32,
 }
 
+#[utoipa::path(tag = "Movie Collection", responses((status = OK, body = Vec<MovieCollection>)))]
 #[get("/movies/collections")]
 async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Responder> {
     let collections = web::block(move || {
@@ -66,6 +70,7 @@ async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl
     Ok(Success::new(collections))
 }
 
+#[utoipa::path(tag = "Movie Collection", responses((status = OK, body = MovieCollection)))]
 #[get("/movies/collections/{collection_id}")]
 async fn find(
     pool: web::Data<DbPool>,
@@ -84,6 +89,7 @@ async fn find(
     Ok(Success::new(movie_collection))
 }
 
+#[utoipa::path(tag = "Movie Collection", responses((status = OK, body = MovieCollection)))]
 #[post("/movies/collections")]
 async fn create(
     pool: web::Data<DbPool>,
@@ -109,6 +115,7 @@ async fn create(
     Ok(Success::new(MovieCollection::from(collection)))
 }
 
+#[utoipa::path(tag = "Movie Collection", responses((status = OK, body = MovieCollection)))]
 #[put("/movies/collections/{collection_id}")]
 async fn update(
     pool: web::Data<DbPool>,
@@ -127,6 +134,7 @@ async fn update(
     Ok(Success::new(MovieCollection::from(collection)))
 }
 
+#[utoipa::path(tag = "Movie Collection", responses((status = OK, body = DeleteResponse)))]
 #[delete("/movies/collections/{collection_id}")]
 async fn delete(
     pool: web::Data<DbPool>,
@@ -146,6 +154,7 @@ async fn delete(
     Ok(Success::new(DeleteResponse { count }))
 }
 
+#[utoipa::path(tag = "Movie Collection", responses((status = OK, body = MovieEntry)))]
 #[post("/movies/collections/{collection_id}")]
 async fn create_entry(
     pool: web::Data<DbPool>,
@@ -180,6 +189,7 @@ async fn create_entry(
     Ok(Success::new(movie_entry))
 }
 
+#[utoipa::path(tag = "Movie Collection", responses((status = OK, body = DeleteResponse)))]
 #[delete("/movies/collections/{collection_id}/{movie_id}")]
 async fn delete_entry(
     pool: web::Data<DbPool>,
@@ -203,6 +213,7 @@ async fn delete_entry(
     Ok(Success::new(DeleteResponse { count }))
 }
 
+#[utoipa::path(tag = "Movie Collection", responses((status = OK, body = Vec<Uuid>)))]
 #[get("/movies/collections/movie/{movie_id}")]
 async fn find_by_movie(
     pool: web::Data<DbPool>,

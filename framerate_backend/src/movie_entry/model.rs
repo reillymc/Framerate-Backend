@@ -7,6 +7,7 @@ use crate::{collection, user};
 use chrono::{NaiveDate, TimeDelta, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(
@@ -19,6 +20,7 @@ use uuid::Uuid;
     Queryable,
     Debug,
     PartialEq,
+    ToSchema,
 )]
 #[diesel(belongs_to(user::User))]
 #[diesel(belongs_to(collection::Collection))]
@@ -29,12 +31,16 @@ pub struct MovieEntry {
     pub movie_id: i32,
     pub user_id: Uuid,
     pub title: String,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imdb_id: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub poster_path: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub release_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
     pub updated_at: NaiveDate,

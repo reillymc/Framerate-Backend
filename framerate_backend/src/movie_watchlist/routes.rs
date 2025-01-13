@@ -9,23 +9,26 @@ use actix_web::{delete, Responder};
 use actix_web::{get, post, web};
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 const DEFAULT_WATCHLIST: &str = "watchlist";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MovieWatchlistEntry {
-    pub collection_id: Uuid,
     pub movie_id: i32,
-    pub user_id: Uuid,
     pub title: String,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imdb_id: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub poster_path: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub release_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
     pub updated_at: NaiveDate,
@@ -34,9 +37,7 @@ pub struct MovieWatchlistEntry {
 impl From<MovieEntry> for MovieWatchlistEntry {
     fn from(value: MovieEntry) -> Self {
         MovieWatchlistEntry {
-            collection_id: value.collection_id,
             movie_id: value.movie_id,
-            user_id: value.user_id,
             imdb_id: value.imdb_id,
             title: value.title,
             poster_path: value.poster_path,
@@ -47,10 +48,12 @@ impl From<MovieEntry> for MovieWatchlistEntry {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MovieWatchlist {
     pub name: String,
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub entries: Option<Vec<MovieWatchlistEntry>>,
 }
 
@@ -70,12 +73,13 @@ impl From<Collection> for MovieWatchlist {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveMovieWatchlistEntryRequest {
     pub movie_id: i32,
 }
 
+#[utoipa::path(tag = "Movie Watchlist", responses((status = OK, body = MovieWatchlist)))]
 #[get("/movies/watchlist")]
 async fn find(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Responder> {
     let watchlist = web::block(move || {
@@ -106,6 +110,7 @@ async fn find(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Res
     Ok(Success::new(watchlist))
 }
 
+#[utoipa::path(tag = "Movie Watchlist", responses((status = OK, body = MovieWatchlistEntry)))]
 #[get("/movies/watchlist/{movie_id}")]
 async fn find_entry(
     pool: web::Data<DbPool>,
@@ -125,6 +130,7 @@ async fn find_entry(
     Ok(Success::new(MovieWatchlistEntry::from(movie_entry)))
 }
 
+#[utoipa::path(tag = "Movie Watchlist", responses((status = OK, body = MovieWatchlistEntry)))]
 #[post("/movies/watchlist")]
 async fn create_entry(
     pool: web::Data<DbPool>,
@@ -158,6 +164,7 @@ async fn create_entry(
     Ok(Success::new(MovieWatchlistEntry::from(movie_entry)))
 }
 
+#[utoipa::path(tag = "Movie Watchlist", responses((status = OK, body = DeleteResponse)))]
 #[delete("/movies/watchlist/{movie_id}")]
 async fn delete_entry(
     pool: web::Data<DbPool>,

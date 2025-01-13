@@ -6,6 +6,7 @@ use crate::utils::AppError;
 use crate::{review, user};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, AsChangeset, Insertable, Associations, Selectable, Queryable)]
@@ -18,7 +19,7 @@ pub struct ReviewCompany {
     pub user_id: Uuid,
 }
 
-#[derive(Serialize, Deserialize, AsChangeset, Associations, Selectable, Queryable)]
+#[derive(Serialize, Deserialize, AsChangeset, Associations, Selectable, Queryable, ToSchema)]
 #[diesel(belongs_to(user::User))]
 #[diesel(table_name = review_company)]
 #[serde(rename_all = "camelCase")]
@@ -34,7 +35,7 @@ impl From<ReviewCompany> for ReviewCompanySummary {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewCompanyDetails {
     pub user_id: Uuid,

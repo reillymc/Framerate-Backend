@@ -9,14 +9,17 @@ use actix_web::{delete, put, Responder};
 use actix_web::{get, post, web};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ShowCollection {
     pub collection_id: Uuid,
     pub user_id: Uuid,
     pub name: String,
+    #[schema(nullable = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub entries: Option<Vec<ShowEntry>>,
 }
 
@@ -38,18 +41,19 @@ impl ShowCollection {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NewShowCollection {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveShowCollectionEntryRequest {
     pub show_id: i32,
 }
 
+#[utoipa::path(tag = "Show Collection", responses((status = OK, body = Vec<ShowCollection>)))]
 #[get("/shows/collections")]
 async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Responder> {
     let collections = web::block(move || {
@@ -66,6 +70,7 @@ async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl
     Ok(Success::new(collections))
 }
 
+#[utoipa::path(tag = "Show Collection", responses((status = OK, body = ShowCollection)))]
 #[get("/shows/collections/{collection_id}")]
 async fn find(
     pool: web::Data<DbPool>,
@@ -84,6 +89,7 @@ async fn find(
     Ok(Success::new(show_collection))
 }
 
+#[utoipa::path(tag = "Show Collection", responses((status = OK, body = ShowCollection)))]
 #[post("/shows/collections")]
 async fn create(
     pool: web::Data<DbPool>,
@@ -109,6 +115,7 @@ async fn create(
     Ok(Success::new(ShowCollection::from(collection)))
 }
 
+#[utoipa::path(tag = "Show Collection", responses((status = OK, body = ShowCollection)))]
 #[put("/shows/collections/{collection_id}")]
 async fn update(
     pool: web::Data<DbPool>,
@@ -127,6 +134,7 @@ async fn update(
     Ok(Success::new(ShowCollection::from(collection)))
 }
 
+#[utoipa::path(tag = "Show Collection", responses((status = OK, body = DeleteResponse)))]
 #[delete("/shows/collections/{collection_id}")]
 async fn delete(
     pool: web::Data<DbPool>,
@@ -146,6 +154,7 @@ async fn delete(
     Ok(Success::new(DeleteResponse { count }))
 }
 
+#[utoipa::path(tag = "Show Collection", responses((status = OK, body = ShowEntry)))]
 #[post("/shows/collections/{collection_id}")]
 async fn create_entry(
     pool: web::Data<DbPool>,
@@ -188,6 +197,7 @@ async fn create_entry(
     Ok(Success::new(show_entry))
 }
 
+#[utoipa::path(tag = "Show Collection", responses((status = OK, body = DeleteResponse)))]
 #[delete("/shows/collections/{collection_id}/{show_id}")]
 async fn delete_entry(
     pool: web::Data<DbPool>,
@@ -211,6 +221,7 @@ async fn delete_entry(
     Ok(Success::new(DeleteResponse { count }))
 }
 
+#[utoipa::path(tag = "Show Collection", responses((status = OK, body = Vec<Uuid>)))]
 #[get("/shows/collections/show/{show_id}")]
 async fn find_by_show(
     pool: web::Data<DbPool>,

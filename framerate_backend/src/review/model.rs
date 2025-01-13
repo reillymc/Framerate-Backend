@@ -5,6 +5,7 @@ use crate::utils::AppError;
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 #[derive(AsChangeset, Insertable, Associations, Selectable, Queryable)]
@@ -22,32 +23,43 @@ pub struct Review {
     pub venue: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub enum Order {
+pub enum ReviewOrder {
     Rating,
     Date,
     MediaTitle,
     MediaReleaseDate,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub enum Sort {
+pub enum ReviewSort {
     Asc,
     Desc,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewFindParameters {
-    pub order_by: Option<Order>,
-    pub sort: Option<Sort>,
+    #[param(nullable = false)]
+    // Workaround for duplicate schemas generated when inline, or not at all without inline
+    #[param(value_type=Option<String>)]
+    pub order_by: Option<ReviewOrder>,
+    #[param(nullable = false)]
+    #[param(value_type=Option<String>)]
+    pub sort: Option<ReviewSort>,
+    #[param(nullable = false)]
     pub page: Option<i64>,
+    #[param(nullable = false)]
     pub page_size: Option<i64>,
+    #[param(nullable = false)]
     pub rating_min: Option<i16>,
+    #[param(nullable = false)]
     pub rating_max: Option<i16>,
+    #[param(nullable = false)]
     pub at_venue: Option<String>,
+    #[param(nullable = false)]
     pub with_company: Option<Uuid>,
 }
 

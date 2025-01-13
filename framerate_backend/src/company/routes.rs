@@ -10,6 +10,7 @@ use crate::{
 use actix_web::{delete, get, post, put, web, Responder};
 use uuid::Uuid;
 
+#[utoipa::path(tag = "Company", responses((status = OK, body = Vec<Company>)))]
 #[get("/company")]
 async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl Responder> {
     let company = web::block(move || {
@@ -21,6 +22,7 @@ async fn find_all(pool: web::Data<DbPool>, auth: Auth) -> actix_web::Result<impl
     Ok(Success::new(company))
 }
 
+#[utoipa::path(tag = "Company", responses((status = OK, body = Company)))]
 #[post("/company")]
 async fn create(
     pool: web::Data<DbPool>,
@@ -36,6 +38,7 @@ async fn create(
     Ok(Success::new(company))
 }
 
+#[utoipa::path(tag = "Company", responses((status = OK, body = Company)))]
 #[put("/company/{user_id}")]
 async fn update(
     pool: web::Data<DbPool>,
@@ -61,6 +64,7 @@ async fn update(
     Ok(Success::new(company))
 }
 
+#[utoipa::path(tag = "Company", responses((status = OK, body = DeleteResponse)))]
 #[delete("/company/{user_id}")]
 async fn delete(
     pool: web::Data<DbPool>,

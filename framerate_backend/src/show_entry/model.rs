@@ -7,6 +7,7 @@ use crate::{collection, user};
 use chrono::{Duration, NaiveDate, TimeDelta, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(
@@ -19,6 +20,7 @@ use uuid::Uuid;
     Queryable,
     Debug,
     PartialEq,
+    ToSchema,
 )]
 #[diesel(belongs_to(user::User))]
 #[diesel(belongs_to(collection::Collection))]
@@ -30,16 +32,22 @@ pub struct ShowEntry {
     pub user_id: Uuid,
     pub name: String,
     pub updated_at: NaiveDate,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imdb_id: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub poster_path: Option<String>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub first_air_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_air_date: Option<NaiveDate>,
+    #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_air_date: Option<NaiveDate>,
 }

@@ -4,6 +4,7 @@ use crate::user;
 use crate::utils::AppError;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(AsChangeset, Insertable, Associations, Selectable, Queryable)]
@@ -24,7 +25,7 @@ pub struct NewCollection {
     pub media_type: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, AsChangeset)]
+#[derive(Debug, Deserialize, Serialize, AsChangeset, ToSchema)]
 #[diesel(table_name = collections)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatedCollection {

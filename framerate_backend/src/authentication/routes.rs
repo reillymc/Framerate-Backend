@@ -11,20 +11,22 @@ use crate::{
 };
 use actix_web::{post, web, Responder};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 struct Secret {
     secret: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct LoginResponse {
     token: String,
     user_id: Uuid,
 }
 
+#[utoipa::path(tag = "Authentication", responses((status = OK, body = LoginResponse),(status = BAD_REQUEST),(status = UNAUTHORIZED)))]
 #[post("/auth/login")]
 pub async fn login(
     pool: web::Data<DbPool>,
@@ -54,6 +56,7 @@ pub async fn login(
     }))
 }
 
+#[utoipa::path(tag = "Authentication", responses((status = OK, body = String),(status = INTERNAL_SERVER_ERROR),(status = UNAUTHORIZED)))]
 #[post("/auth/setup")]
 pub async fn setup(
     pool: web::Data<DbPool>,
