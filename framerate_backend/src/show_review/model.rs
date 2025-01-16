@@ -93,7 +93,6 @@ impl ShowReview {
         let mut query = show_reviews::table
             .filter(show_reviews::user_id.eq(user_id))
             .inner_join(reviews::table)
-            .filter(reviews::rating.is_not_null())
             .into_boxed();
 
         let order_by = params.order_by.unwrap_or(ReviewOrder::Date);

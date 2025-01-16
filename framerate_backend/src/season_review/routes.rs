@@ -198,7 +198,7 @@ async fn create(
 }
 
 #[utoipa::path(tag = "Season Review", responses((status = OK, body = SeasonReviewResponse)))]
-#[put("shows/{show_id}/seasons/{season_number}/reviews/{review_id}")]
+#[put("/shows/{show_id}/seasons/{season_number}/reviews/{review_id}")]
 async fn update(
     pool: web::Data<DbPool>,
     client: web::Data<TmdbClient>,
