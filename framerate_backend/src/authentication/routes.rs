@@ -2,32 +2,23 @@ use std::env;
 
 use crate::{
     db::DbPool,
-    user::{AuthUser, PermissionLevel, User},
-    utils::{
-        jwt::{create_temp_token, create_token},
-        response_body::Success,
-        AppError,
-    },
+    user::{AuthUser, NewUser, PermissionLevel, RegisteringUser, User},
+    utils::{invite::decode_invite, jwt::create_token, response_body::Success, AppError},
 };
 use actix_web::{post, web, Responder};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Deserialize, ToSchema)]
-struct Secret {
-    secret: String,
-}
-
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-struct LoginResponse {
-    token: String,
-    user_id: Uuid,
+pub struct LoginResponse {
+    pub token: String,
+    pub user_id: Uuid,
 }
 
 #[utoipa::path(tag = "Authentication", responses((status = OK, body = LoginResponse),(status = BAD_REQUEST),(status = UNAUTHORIZED)))]
-#[post("/auth/login")]
+#[post("/authentication/login")]
 pub async fn login(
     pool: web::Data<DbPool>,
     auth_user: web::Json<AuthUser>,
@@ -56,38 +47,71 @@ pub async fn login(
     }))
 }
 
-#[utoipa::path(tag = "Authentication", responses((status = OK, body = String),(status = INTERNAL_SERVER_ERROR),(status = UNAUTHORIZED)))]
-#[post("/auth/setup")]
-pub async fn setup(
+#[utoipa::path(tag = "Authentication", responses((status = OK, body = LoginResponse),(status = BAD_REQUEST),(status = UNAUTHORIZED)))]
+#[post("/authentication/register")]
+pub async fn register(
     pool: web::Data<DbPool>,
-    secret: web::Json<Secret>,
+    registering_user: web::Json<RegisteringUser>,
 ) -> actix_web::Result<impl Responder> {
-    let Ok(setup_secret) = env::var("SETUP_SECRET") else {
-        return Err(AppError::external(500, "Unable to run setup procedure"))?;
-    };
-
-    if secret.secret != setup_secret {
+    let Ok(registration_mode) = env::var("REGISTRATION_MODE") else {
         return Err(AppError::external(
             401,
-            "Unauthorized to run setup procedure",
+            "Registrations are not currently open",
+        ))?;
+    };
+
+    if !(registration_mode == "open".to_string() || registration_mode == "invite".to_string()) {
+        return Err(AppError::external(
+            401,
+            "Registrations are not currently open",
         ))?;
     }
 
-    let any_users = web::block(move || {
+    let registering_user = registering_user.into_inner();
+
+    if registering_user.email.is_empty() || registering_user.password.is_empty() {
+        return Err(AppError::external(400, "Email and password are required"))?;
+    }
+
+    if registration_mode == "invite".to_string() {
+        let Some(invite_code) = &registering_user.invite_code else {
+            return Err(AppError::external(
+                401,
+                "You do not have a valid invite code",
+            ))?;
+        };
+
+        let invite_details = decode_invite(invite_code)?;
+
+        if invite_details.email != registering_user.email {
+            return Err(AppError::external(
+                401,
+                "You do not have a valid invite code",
+            ))?;
+        };
+    };
+
+    let user = web::block(move || {
         let mut conn = pool.get()?;
-        User::find_any(&mut conn)
+        User::create(
+            &mut conn,
+            NewUser {
+                avatar_uri: None,
+                configuration: None,
+                email: registering_user.email,
+                first_name: registering_user.first_name,
+                last_name: registering_user.last_name,
+                password: registering_user.password,
+                is_admin: Some(false),
+            },
+        )
     })
     .await??;
 
-    if any_users {
-        return Err(AppError::external(401, "Setup procedure already run"))?;
-    };
+    let token = create_token(user.user_id, user.permission_level.into())?;
 
-    let token = create_temp_token(Uuid::default(), PermissionLevel::AdminUser);
-
-    let Ok(token_string) = token else {
-        return Err(AppError::external(500, "Unable to create token"))?;
-    };
-
-    Ok(Success::new(token_string))
+    Ok(Success::new(LoginResponse {
+        user_id: user.user_id,
+        token,
+    }))
 }

@@ -3,6 +3,7 @@ use actix_web::web;
 use actix_web::HttpResponse;
 use utoipa_actix_web::service_config::ServiceConfig;
 
+use crate::administration;
 use crate::authentication;
 use crate::company;
 use crate::movie;
@@ -27,8 +28,10 @@ async fn health() -> HttpResponse {
 
 pub fn init_routes(config: &mut ServiceConfig) {
     config
+        .service(administration::generate_invite)
+        .service(administration::generate_setup_token)
         .service(authentication::login)
-        .service(authentication::setup)
+        .service(authentication::register)
         .service(company::create)
         .service(company::delete)
         .service(company::find_all)

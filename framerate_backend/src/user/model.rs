@@ -85,6 +85,24 @@ pub struct User {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct RegisteringUser {
+    pub email: String,
+    pub password: String,
+    pub first_name: String,
+    pub last_name: String,
+    #[schema(nullable = false)]
+    pub invite_code: Option<String>,
+}
+
+impl RegisteringUser {
+    pub fn invite_code(mut self, invite_code: String) -> Self {
+        self.invite_code = Some(invite_code);
+        self
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct NewUser {
     pub email: String,
     pub password: String,
@@ -123,8 +141,7 @@ pub struct UserResponse {
     pub avatar_uri: Option<String>,
 }
 
-#[derive(Serialize, Debug, Queryable, ToSchema)]
-#[diesel(table_name = users)]
+#[derive(Serialize, Debug, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserFindResponse {
     pub user_id: Uuid,
@@ -135,6 +152,33 @@ pub struct UserFindResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_uri: Option<String>,
     pub configuration: serde_json::Value,
+    pub is_admin: bool,
+}
+
+#[derive(Debug, Queryable)]
+#[diesel(table_name = users)]
+pub struct InternalUserFindResponse {
+    pub user_id: Uuid,
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub avatar_uri: Option<String>,
+    pub configuration: serde_json::Value,
+    pub permission_level: i16,
+}
+
+impl From<InternalUserFindResponse> for UserFindResponse {
+    fn from(value: InternalUserFindResponse) -> Self {
+        UserFindResponse {
+            user_id: value.user_id,
+            email: value.email,
+            first_name: value.first_name,
+            last_name: value.last_name,
+            is_admin: PermissionLevel::from(value.permission_level).is_at_least_admin(),
+            avatar_uri: value.avatar_uri,
+            configuration: value.configuration,
+        }
+    }
 }
 
 impl TryFrom<NewUser> for User {
@@ -180,7 +224,7 @@ impl User {
 
 impl User {
     pub fn find(conn: &mut DbConnection, user_id: Uuid) -> Result<UserFindResponse, AppError> {
-        let users = users::table
+        let user: InternalUserFindResponse = users::table
             .select((
                 users::user_id,
                 users::email,
@@ -188,10 +232,11 @@ impl User {
                 users::last_name,
                 users::avatar_uri,
                 users::configuration,
+                users::permission_level,
             ))
             .filter(users::user_id.eq(user_id))
             .first(conn)?;
-        Ok(users)
+        Ok(user.into())
     }
 
     pub fn find_summary(conn: &mut DbConnection, user_id: Uuid) -> Result<UserResponse, AppError> {

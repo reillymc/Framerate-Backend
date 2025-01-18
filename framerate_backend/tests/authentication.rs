@@ -44,12 +44,14 @@ mod login {
             data::create_user(&mut conn)
         };
 
-        let request = test::TestRequest::post().uri("/auth/login").to_request();
+        let request = test::TestRequest::post()
+            .uri("/authentication/login")
+            .to_request();
         let response = test::call_service(&app, request).await;
         assert_eq!(400, response.status().as_u16());
 
         let request = test::TestRequest::post()
-            .uri("/auth/login")
+            .uri("/authentication/login")
             .set_json(LoginBody {
                 email: "".to_string(),
                 password: "".to_string(),
@@ -59,7 +61,7 @@ mod login {
         assert_eq!(400, response.status().as_u16());
 
         let request = test::TestRequest::post()
-            .uri("/auth/login")
+            .uri("/authentication/login")
             .set_json(LoginBody {
                 email: user.email,
                 password: "".to_string(),
@@ -69,7 +71,7 @@ mod login {
         assert_eq!(400, response.status().as_u16());
 
         let request = test::TestRequest::post()
-            .uri("/auth/login")
+            .uri("/authentication/login")
             .set_json(LoginBody {
                 email: "".to_string(),
                 password: user.password,
@@ -90,7 +92,7 @@ mod login {
         user.password = Uuid::new_v4().to_string();
 
         let request = test::TestRequest::post()
-            .uri("/auth/login")
+            .uri("/authentication/login")
             .set_json(LoginBody::from(user))
             .to_request();
 
@@ -156,7 +158,7 @@ mod login {
         };
 
         let request = test::TestRequest::post()
-            .uri("/auth/login")
+            .uri("/authentication/login")
             .set_json(LoginBody::from(&registered_user))
             .to_request();
 
@@ -164,7 +166,7 @@ mod login {
         assert_eq!(401, response.status().as_u16());
 
         let request = test::TestRequest::post()
-            .uri("/auth/login")
+            .uri("/authentication/login")
             .set_json(LoginBody::from(&non_authenticatable_user))
             .to_request();
 
@@ -183,7 +185,7 @@ mod login {
         let user = LoginBody::from(user);
 
         let request = test::TestRequest::post()
-            .uri("/auth/login")
+            .uri("/authentication/login")
             .set_json(user)
             .to_request();
 
@@ -192,96 +194,109 @@ mod login {
     }
 }
 
-mod setup {
-    use std::env;
-
+mod register {
     use crate::common::{data, process, setup};
     use actix_web::test;
-    use framerate::authentication::setup as setupRoute;
-    use serde::Serialize;
+    use framerate::{
+        authentication::{register, LoginResponse},
+        utils::invite::create_invite,
+    };
+    use std::env;
     use uuid::Uuid;
 
-    #[derive(Serialize)]
-    pub struct SecretBody {
-        pub secret: String,
-    }
-
     #[actix_web::test]
-    async fn should_prevent_setup_when_secret_unset() {
-        let (app, pool) = setup::create_app(setupRoute).await;
-        let _ = {
-            let mut conn = pool.get().unwrap();
-            data::create_user(&mut conn)
-        };
+    async fn should_prevent_registration_when_secret_unset_or_unknown() {
+        let (app, _) = setup::create_app(register).await;
 
-        let secret = Uuid::new_v4().to_string();
-
-        env::remove_var("SETUP_SECRET");
+        env::remove_var("REGISTRATION_MODE");
 
         let request = test::TestRequest::post()
-            .uri("/auth/setup")
-            .set_json(SecretBody { secret })
+            .uri("/authentication/register")
+            .set_json(data::generate_save_registering_user())
             .to_request();
         let response = test::call_service(&app, request).await;
-        assert!(response.status().is_server_error());
+        assert_eq!(401, response.status());
+
+        env::set_var("REGISTRATION_MODE", Uuid::new_v4().to_string());
+
+        let request = test::TestRequest::post()
+            .uri("/authentication/register")
+            .set_json(data::generate_save_registering_user())
+            .to_request();
+        let response = test::call_service(&app, request).await;
+        assert_eq!(401, response.status());
     }
 
     #[actix_web::test]
-    async fn should_prevent_setup_when_secret_incorrect() {
-        let (app, pool) = setup::create_app(setupRoute).await;
-        let _ = {
-            let mut conn = pool.get().unwrap();
-            data::create_user(&mut conn)
-        };
+    async fn should_prevent_invite_registration_with_no_invite() {
+        let (app, _) = setup::create_app(register).await;
 
-        env::set_var("SETUP_SECRET", Uuid::new_v4().to_string());
+        env::set_var("REGISTRATION_MODE", "invite");
+
+        let registering_user = data::generate_save_registering_user();
 
         let request = test::TestRequest::post()
-            .uri("/auth/setup")
-            .set_json(SecretBody {
-                secret: Uuid::new_v4().to_string(),
-            })
+            .uri("/authentication/register")
+            .set_json(&registering_user)
             .to_request();
         let response = test::call_service(&app, request).await;
         assert_eq!(401, response.status().as_u16());
     }
 
     #[actix_web::test]
-    async fn should_prevent_setup_when_db_has_users() {
-        let (app, pool) = setup::create_app(setupRoute).await;
-        let _ = {
-            let mut conn = pool.get().unwrap();
-            data::create_user(&mut conn)
-        };
+    async fn should_prevent_invite_registration_with_invalid_invite() {
+        let (app, _) = setup::create_app(register).await;
 
-        let secret = Uuid::new_v4().to_string();
+        env::set_var("REGISTRATION_MODE", "invite");
 
-        env::set_var("SETUP_SECRET", secret.clone());
+        let registering_user = data::generate_save_registering_user()
+            .invite_code(create_invite(Uuid::new_v4().to_string()).unwrap());
 
         let request = test::TestRequest::post()
-            .uri("/auth/setup")
-            .set_json(SecretBody { secret })
+            .uri("/authentication/register")
+            .set_json(&registering_user)
             .to_request();
         let response = test::call_service(&app, request).await;
         assert_eq!(401, response.status().as_u16());
     }
 
     #[actix_web::test]
-    async fn should_return_setup_token() {
-        let (app, _) = setup::create_app(setupRoute).await;
+    async fn should_register_user_with_valid_invite() {
+        let (app, _) = setup::create_app(register).await;
 
-        let secret = Uuid::new_v4().to_string();
+        env::set_var("REGISTRATION_MODE", "invite");
 
-        env::set_var("SETUP_SECRET", secret.clone());
+        let registering_user = data::generate_save_registering_user();
+
+        let invite_code = create_invite(registering_user.email.clone()).unwrap();
+
+        let registering_user = registering_user.invite_code(invite_code);
 
         let request = test::TestRequest::post()
-            .uri("/auth/setup")
-            .set_json(SecretBody { secret })
+            .uri("/authentication/register")
+            .set_json(&registering_user)
             .to_request();
         let response = test::call_service(&app, request).await;
         assert!(response.status().is_success());
+        let body = process::parse_body::<LoginResponse>(response).await;
+        assert!(body.data.token.len() > 0)
+    }
 
-        let body = process::parse_body::<String>(response).await;
-        assert!(body.data.len() > 0)
+    #[actix_web::test]
+    async fn should_register_user_when_mode_open() {
+        let (app, _) = setup::create_app(register).await;
+
+        env::set_var("REGISTRATION_MODE", "open");
+
+        let registering_user = data::generate_save_registering_user();
+
+        let request = test::TestRequest::post()
+            .uri("/authentication/register")
+            .set_json(&registering_user)
+            .to_request();
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_success());
+        let body = process::parse_body::<LoginResponse>(response).await;
+        assert!(body.data.token.len() > 0)
     }
 }

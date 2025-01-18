@@ -1,0 +1,21 @@
+meta {
+  name: Register
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/{{endpoint}}/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "example@email.com",
+    "password": "password",
+    "firstName": "Example",
+    "lastName": "Registering",
+    "inviteCode": ""
+  }
+}

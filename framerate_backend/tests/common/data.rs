@@ -20,7 +20,7 @@ use framerate::{
     show_entry::ShowEntry,
     show_review::{SaveShowReviewRequest, ShowReview},
     show_watchlist::SaveShowWatchlistEntryRequest,
-    user::{NewUser, PermissionLevel, User},
+    user::{NewUser, PermissionLevel, RegisteringUser, User},
     utils::jwt::create_token,
 };
 
@@ -159,6 +159,16 @@ pub fn generate_save_movie_review() -> SaveMovieReviewRequest {
         description: Some(Uuid::new_v4().to_string()),
         venue: Some(Uuid::new_v4().to_string()),
         company: None,
+    }
+}
+
+pub fn generate_save_registering_user() -> RegisteringUser {
+    RegisteringUser {
+        email: Uuid::new_v4().to_string(),
+        first_name: Uuid::new_v4().to_string(),
+        last_name: Uuid::new_v4().to_string(),
+        password: Uuid::new_v4().to_string(),
+        invite_code: None,
     }
 }
 

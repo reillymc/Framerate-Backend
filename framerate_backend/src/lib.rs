@@ -1,3 +1,4 @@
+pub mod administration;
 pub mod authentication;
 pub mod collection;
 pub mod company;

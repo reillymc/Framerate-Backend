@@ -1,0 +1,17 @@
+meta {
+  name: Generate Invite
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/{{endpoint}}/generate_invite
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "example@email.com"
+  }
+}
