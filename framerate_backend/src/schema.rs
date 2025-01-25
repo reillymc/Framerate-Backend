@@ -79,6 +79,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    server_meta (key) {
+        key -> Text,
+        value -> Jsonb,
+    }
+}
+
+diesel::table! {
     show_entries (collection_id, show_id) {
         collection_id -> Uuid,
         show_id -> Int4,
@@ -145,6 +152,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     review_company,
     reviews,
     season_reviews,
+    server_meta,
     show_entries,
     show_reviews,
     users,

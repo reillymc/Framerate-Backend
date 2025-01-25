@@ -3,6 +3,7 @@ pub mod authentication;
 pub mod collection;
 pub mod company;
 pub mod db;
+pub mod meta;
 pub mod movie;
 pub mod movie_collection;
 pub mod movie_entry;

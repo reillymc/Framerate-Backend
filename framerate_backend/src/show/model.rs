@@ -137,7 +137,7 @@ impl From<show::Credits> for ShowCredits {
 }
 
 #[derive(ToSchema, Debug, Deserialize, Serialize)]
-#[serde(rename_all(serialize = "camelCase"))]
+#[serde(rename_all = "camelCase")]
 pub struct ExternalIds {
     #[schema(nullable = false)]
     #[serde(skip_serializing_if = "Option::is_none")]

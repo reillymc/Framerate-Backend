@@ -6,6 +6,7 @@ use utoipa_actix_web::service_config::ServiceConfig;
 use crate::administration;
 use crate::authentication;
 use crate::company;
+use crate::meta;
 use crate::movie;
 use crate::movie_collection;
 use crate::movie_review;
@@ -36,6 +37,8 @@ pub fn init_routes(config: &mut ServiceConfig) {
         .service(company::delete)
         .service(company::find_all)
         .service(company::update)
+        .service(meta::get_client_config)
+        .service(meta::update_client_config)
         .service(movie_collection::create_entry)
         .service(movie_collection::create)
         .service(movie_collection::delete_entry)
