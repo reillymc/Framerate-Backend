@@ -1,5 +1,6 @@
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_json::Map;
 use utoipa::ToSchema;
 
 use crate::{db::DbConnection, schema::server_meta, utils::AppError};
@@ -51,7 +52,7 @@ pub struct MediaExternalLink {
 fn default_media_external_links() -> Vec<MediaExternalLink> {
     Vec::from([
         MediaExternalLink {
-            name: "tmdb".to_string(),
+            name: "TMDB".to_string(),
             icon: LinkIcon {
                 uri: "https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bdc75aaebeb75dc7ae79426ddd9be3b2be1e342510f8202baf6bffa71d7f5c4.svg".to_string(),
                 uri_dark: None
@@ -64,7 +65,7 @@ fn default_media_external_links() -> Vec<MediaExternalLink> {
             }
         },
         MediaExternalLink {
-            name: "imdb".to_string(),
+            name: "IMDB".to_string(),
             icon: LinkIcon {
                 uri: "https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg".to_string(),
                 uri_dark: None
@@ -150,7 +151,7 @@ impl MetaEntry {
 
         return MetaEntry::try_from(MetaEntryInternal {
             key,
-            value: serde_json::Value::default(),
+            value: serde_json::Value::Object(Map::<String, serde_json::Value>::new()),
         });
     }
 
