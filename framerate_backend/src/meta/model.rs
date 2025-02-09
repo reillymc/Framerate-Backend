@@ -45,6 +45,8 @@ pub struct LinkIcon {
 #[serde(rename_all = "camelCase")]
 pub struct MediaExternalLink {
     name: String,
+    #[serde(default)]
+    enabled: bool,
     links: LinkRoutes,
     icon: LinkIcon,
 }
@@ -53,6 +55,7 @@ fn default_media_external_links() -> Vec<MediaExternalLink> {
     Vec::from([
         MediaExternalLink {
             name: "TMDB".to_string(),
+            enabled: true,
             icon: LinkIcon {
                 uri: "https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bdc75aaebeb75dc7ae79426ddd9be3b2be1e342510f8202baf6bffa71d7f5c4.svg".to_string(),
                 uri_dark: None
@@ -66,6 +69,7 @@ fn default_media_external_links() -> Vec<MediaExternalLink> {
         },
         MediaExternalLink {
             name: "IMDB".to_string(),
+            enabled: true,
             icon: LinkIcon {
                 uri: "https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg".to_string(),
                 uri_dark: None
