@@ -85,6 +85,7 @@ pub fn init_routes(config: &mut ServiceConfig) {
         .service(show::popular)
         .service(show::search)
         .service(user::create)
+        .service(user::delete)
         .service(user::find_all)
         .service(user::find)
         .service(user::update);

@@ -1,0 +1,15 @@
+meta {
+  name: Delete
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{host}}/{{endpoint}}/{{userId}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  userId: a0757357-0338-46b8-b9c8-be285755fcd7
+}

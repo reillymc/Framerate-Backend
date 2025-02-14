@@ -1,7 +1,8 @@
 use crate::db::DbPool;
 use crate::user::NewUser;
+use crate::utils::response_body::DeleteResponse;
 use crate::utils::{jwt::Auth, response_body::Success, AppError};
-use actix_web::{get, post, put, web, Responder};
+use actix_web::{delete, get, post, put, web, Responder};
 use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -95,4 +96,24 @@ async fn update(
     .await??;
 
     Ok(Success::new(user))
+}
+
+#[utoipa::path(tag = "User", responses((status = OK, body = DeleteResponse)))]
+#[delete("/users/{user_id}")]
+async fn delete(
+    pool: web::Data<DbPool>,
+    auth: Auth,
+    user_id: web::Path<Uuid>,
+) -> actix_web::Result<impl Responder> {
+    if auth.user_id != *user_id {
+        return Err(AppError::external(404, "User not found"))?;
+    }
+
+    let count = web::block(move || {
+        let mut conn = pool.get()?;
+        User::delete(&mut conn, user_id.into_inner())
+    })
+    .await??;
+
+    Ok(Success::new(DeleteResponse { count }))
 }
