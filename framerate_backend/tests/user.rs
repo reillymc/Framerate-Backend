@@ -376,3 +376,109 @@ mod update {
         );
     }
 }
+
+mod delete {
+    use crate::common::{data, process, setup};
+    use actix_web::{http::header::AUTHORIZATION, test};
+    use framerate::{company::Company, user::delete, utils::response_body::DeleteResponse};
+
+    #[actix_web::test]
+    async fn should_require_authentication() {
+        let (app, pool) = setup::create_app(delete).await;
+
+        let (_, user) = {
+            let mut conn = pool.get().unwrap();
+            data::create_authed_user(&mut conn)
+        };
+
+        let request = test::TestRequest::delete()
+            .uri(&format!("/users/{}", user.user_id))
+            .set_json(user)
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(401, response.status());
+    }
+
+    #[actix_web::test]
+    async fn should_not_delete_other_user() {
+        let (app, pool) = setup::create_app(delete).await;
+
+        let (token, other_user) = {
+            let mut conn = pool.get().unwrap();
+            let (token, _) = data::create_authed_user(&mut conn);
+            let other_user = data::create_user(&mut conn);
+            (token, other_user)
+        };
+
+        let request = test::TestRequest::delete()
+            .uri(&format!("/users/{}", other_user.user_id))
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert_eq!(404, response.status());
+    }
+
+    #[actix_web::test]
+    async fn should_delete_user() {
+        let (app, pool) = setup::create_app(delete).await;
+
+        let (token, user) = {
+            let mut conn = pool.get().unwrap();
+            data::create_authed_user(&mut conn)
+        };
+
+        let request = test::TestRequest::delete()
+            .uri(&format!("/users/{}", user.user_id))
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_success());
+
+        let result = process::parse_body::<DeleteResponse>(response).await;
+        assert_eq!(1, result.data.count);
+    }
+
+    #[actix_web::test]
+    async fn should_perform_expected_cascades_and_set_nulls_on_user_delete() {
+        let (app, pool) = setup::create_app(delete).await;
+
+        let (token, user, _, _) = {
+            let mut conn = pool.get().unwrap();
+            let (token, user) = data::create_authed_user(&mut conn);
+
+            let _company = data::create_company(&mut conn, &user);
+            let other_user = data::create_user(&mut conn);
+            let linked_company_for_other_user =
+                data::create_linked_company(&mut conn, &other_user, &user);
+
+            let movie_collection = data::create_movie_collection(&mut conn, &user);
+            let _movie_entry = data::create_movie_entry(&mut conn, &user, &movie_collection);
+            let review = data::create_review(&mut conn, &user);
+            let _movie_review = data::create_movie_review(&mut conn, &user, &review);
+
+            let review = data::create_review(&mut conn, &user);
+            let _season_review = data::create_season_review(&mut conn, &user, &review);
+
+            let show_collection = data::create_show_collection(&mut conn, &user);
+            let _show_entry = data::create_show_entry(&mut conn, &user, &show_collection);
+            let review = data::create_review(&mut conn, &user);
+            let _show_review = data::create_show_review(&mut conn, &user, &review);
+
+            (token, user, other_user, linked_company_for_other_user)
+        };
+
+        let request = test::TestRequest::delete()
+            .uri(&format!("/users/{}", user.user_id))
+            .insert_header((AUTHORIZATION, format!("Bearer {token}")))
+            .to_request();
+
+        let response = test::call_service(&app, request).await;
+        assert!(response.status().is_success());
+
+        let result = process::parse_body::<DeleteResponse>(response).await;
+        assert_eq!(1, result.data.count);
+    }
+}

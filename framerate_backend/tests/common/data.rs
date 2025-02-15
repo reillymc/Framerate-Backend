@@ -7,6 +7,7 @@ use uuid::Uuid;
 use framerate::{
     collection::{Collection, UpdatedCollection},
     company::{Company, SaveCompany},
+    meta::ClientConfig,
     movie::{Movie, MOVIE_MEDIA_TYPE},
     movie_collection::{NewMovieCollection, SaveMovieCollectionEntryRequest},
     movie_entry::MovieEntry,
@@ -147,6 +148,25 @@ pub fn create_company(
     Company::create(conn, generate_save_company(), user.user_id).unwrap()
 }
 
+pub fn create_linked_company(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    user: &User,
+    company_user: &User,
+) -> Company {
+    Company::create(
+        conn,
+        generate_save_linked_company(&company_user),
+        user.user_id,
+    )
+    .unwrap()
+}
+
+pub fn create_client_config(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+) -> ClientConfig {
+    ClientConfig::save(conn, generate_client_config()).unwrap()
+}
+
 // Generate save request items
 
 pub fn generate_save_movie_review() -> SaveMovieReviewRequest {
@@ -181,14 +201,6 @@ pub fn generate_save_new_user() -> NewUser {
         last_name: Uuid::new_v4().to_string(),
         password: Uuid::new_v4().to_string(),
         is_admin: Some(false),
-    }
-}
-
-pub fn generate_save_new_company() -> SaveCompany {
-    SaveCompany {
-        first_name: Uuid::new_v4().to_string(),
-        last_name: Uuid::new_v4().to_string(),
-        user_id: None,
     }
 }
 
@@ -262,6 +274,14 @@ pub fn generate_save_company() -> SaveCompany {
         first_name: Uuid::new_v4().to_string(),
         last_name: Uuid::new_v4().to_string(),
         user_id: None,
+    }
+}
+
+pub fn generate_save_linked_company(user: &User) -> SaveCompany {
+    SaveCompany {
+        first_name: Uuid::new_v4().to_string(),
+        last_name: Uuid::new_v4().to_string(),
+        user_id: Some(user.user_id),
     }
 }
 
@@ -470,5 +490,11 @@ fn generate_season_review(user_id: Uuid, review_id: Uuid) -> SeasonReview {
         name: season.name,
         poster_path: season.poster_path,
         air_date: season.air_date,
+    }
+}
+
+pub fn generate_client_config() -> ClientConfig {
+    ClientConfig {
+        media_external_links: vec![],
     }
 }

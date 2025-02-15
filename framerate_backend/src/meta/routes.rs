@@ -1,4 +1,4 @@
-use super::{ClientConfig, MetaEntry, MetaEntryKey};
+use super::ClientConfig;
 use crate::db::DbPool;
 use crate::utils::AppError;
 use crate::utils::{jwt::Auth, response_body::Success};
@@ -9,7 +9,7 @@ use actix_web::{get, put, web, Responder};
 async fn get_client_config(pool: web::Data<DbPool>, _: Auth) -> actix_web::Result<impl Responder> {
     let entry = web::block(move || {
         let mut conn = pool.get()?;
-        MetaEntry::find(&mut conn, MetaEntryKey::ClientConfig)
+        ClientConfig::find(&mut conn)
     })
     .await??;
 
@@ -32,10 +32,7 @@ async fn update_client_config(
 
     let entry = web::block(move || {
         let mut conn = pool.get()?;
-        MetaEntry::update(
-            &mut conn,
-            MetaEntry::ClientConfig(client_config.into_inner()),
-        )
+        ClientConfig::save(&mut conn, client_config.into_inner())
     })
     .await??;
 

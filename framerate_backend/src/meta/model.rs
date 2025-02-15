@@ -3,16 +3,22 @@ use serde::{Deserialize, Serialize};
 use serde_json::Map;
 use utoipa::ToSchema;
 
-use crate::{db::DbConnection, schema::server_meta, utils::AppError};
+use crate::{
+    db::DbConnection,
+    schema::server_meta,
+    utils::{AppError, CustomError},
+};
 
 pub enum MetaEntryKey {
     ClientConfig,
+    ServerConfig,
 }
 
 #[derive(Serialize, ToSchema)]
 #[serde(untagged)]
 pub enum MetaEntry {
     ClientConfig(ClientConfig),
+    ServerConfig(ServerConfig),
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -91,10 +97,14 @@ pub struct ClientConfig {
     pub media_external_links: Vec<MediaExternalLink>,
 }
 
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct ServerConfig {}
+
 impl From<MetaEntryKey> for String {
     fn from(value: MetaEntryKey) -> Self {
         match value {
             MetaEntryKey::ClientConfig => "client_config".to_string(),
+            MetaEntryKey::ServerConfig => "server_config".to_string(),
         }
     }
 }
@@ -104,11 +114,15 @@ impl TryFrom<MetaEntry> for MetaEntryInternal {
 
     fn try_from(value: MetaEntry) -> Result<Self, AppError> {
         let (key, value) = match value {
-            MetaEntry::ClientConfig(value) => (MetaEntryKey::ClientConfig, value),
+            MetaEntry::ClientConfig(value) => {
+                (MetaEntryKey::ClientConfig, serde_json::to_value(&value))
+            }
+            MetaEntry::ServerConfig(value) => {
+                (MetaEntryKey::ServerConfig, serde_json::to_value(&value))
+            }
         };
 
-        let value = serde_json::to_value(&value)
-            .map_err(|_| AppError::external(500, "unable to serialise config"))?;
+        let value = value.map_err(|_| AppError::external(500, "unable to serialise config"))?;
 
         Ok(MetaEntryInternal {
             key: key.into(),
@@ -126,6 +140,11 @@ impl TryFrom<MetaEntryInternal> for MetaEntry {
                 let value = ClientConfig::deserialize(value.value)
                     .map_err(|_| AppError::external(500, "unable to parse config"))?;
                 Ok(MetaEntry::ClientConfig(value))
+            }
+            "server_config" => {
+                let value = ServerConfig::deserialize(value.value)
+                    .map_err(|_| AppError::external(500, "unable to parse config"))?;
+                Ok(MetaEntry::ServerConfig(value))
             }
             _ => Err(AppError::external(404, "entry not found")),
         }?;
@@ -159,7 +178,7 @@ impl MetaEntry {
         });
     }
 
-    pub fn update(conn: &mut DbConnection, entry: MetaEntry) -> Result<Self, AppError> {
+    pub fn save(conn: &mut DbConnection, entry: MetaEntry) -> Result<Self, AppError> {
         let entry = MetaEntryInternal::try_from(entry)?;
         let updated_entry: MetaEntryInternal = diesel::insert_into(server_meta::table)
             .values(&entry)
@@ -169,5 +188,31 @@ impl MetaEntry {
             .get_result(conn)?;
 
         MetaEntry::try_from(updated_entry)
+    }
+}
+
+impl TryFrom<MetaEntry> for ClientConfig {
+    type Error = AppError;
+
+    fn try_from(value: MetaEntry) -> Result<Self, AppError> {
+        let value = match value {
+            MetaEntry::ClientConfig(value) => Ok(value),
+            _ => Err(AppError::CustomExternal(CustomError {
+                message: "Unknown config type".to_string(),
+                status_code: 500,
+            })),
+        }?;
+
+        Ok(value)
+    }
+}
+
+impl ClientConfig {
+    pub fn find(conn: &mut DbConnection) -> Result<Self, AppError> {
+        ClientConfig::try_from(MetaEntry::find(conn, MetaEntryKey::ClientConfig)?)
+    }
+
+    pub fn save(conn: &mut DbConnection, config: ClientConfig) -> Result<Self, AppError> {
+        ClientConfig::try_from(MetaEntry::save(conn, MetaEntry::ClientConfig(config))?)
     }
 }
