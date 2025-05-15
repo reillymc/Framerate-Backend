@@ -1,6 +1,6 @@
 # Framerate Backend
 
-Framerate is a movie and TV watch journal that tracks ratings and viewing habits over time. By tracking this data, Framerate helps users identify trends in their viewing preferences and refine their opinions.
+Framerate is a movie and TV watch journal that tracks ratings and viewing habits over time. With this data, Framerate helps users identify trends in their viewing preferences and refine their opinions.
 
 ## Features
 
@@ -46,4 +46,4 @@ The included [Dockerfile](./Dockerfile) and [compose](./compose.yml) file can be
 
 ## Contributing
 
-I created Framerate as a way to learn some of the basics of Rust and also because I felt existing tools / services did not cater to the 'historical' journaling of watches and ratings. There are many features I intend to add and parts I aim to improve, but further work is not guaranteed. Pull requests are welcome if they are within the the projects current scope and / or goals, otherwise raise an issue and I would be happy to discuss problems and suggestions.
+I created Framerate as a way to learn some of the basics of Rust and also because I felt existing tools / services did not cater to the 'historical' journaling of watches and ratings. There are many features I intend to add and parts I aim to improve, but further work is not guaranteed. Pull requests are welcome if they are within the the projects current scope and / or goals, otherwise raise an issue and I would be happy to discuss problems or suggestions.
