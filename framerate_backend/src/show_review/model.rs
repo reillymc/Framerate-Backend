@@ -122,12 +122,19 @@ impl ShowReview {
             query = query.filter(reviews::venue.eq(venue));
         }
 
-        if let Some(rating_min) = params.rating_min {
-            query = query.filter(reviews::rating.ge(rating_min));
-        }
-
         if let Some(rating_max) = params.rating_max {
-            query = query.filter(reviews::rating.le(rating_max));
+            if rating_max < 0 {
+                query = query.filter(reviews::rating.is_null());
+            } else {
+                query = query.filter(reviews::rating.le(rating_max));
+                if let Some(rating_min) = params.rating_min {
+                    query = query.filter(reviews::rating.ge(rating_min));
+                }
+            }
+        } else {
+            if let Some(rating_min) = params.rating_min {
+                query = query.filter(reviews::rating.ge(rating_min));
+            }
         }
 
         if let Some(with_company) = params.with_company {
